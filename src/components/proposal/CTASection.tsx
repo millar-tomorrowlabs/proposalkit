@@ -19,9 +19,7 @@ const CTASection = ({ ctaEmail, studioName, confirmedBody }: CTASectionProps) =>
     <section id="cta" className="px-6 py-24">
       <div className="mx-auto max-w-3xl text-center">
         <h2 className="scroll-reveal font-display text-5xl font-semibold leading-[1.05] tracking-tight text-foreground md:text-7xl lg:text-8xl">
-          Next
-          <br />
-          Steps
+          Next Steps
         </h2>
 
         <div className="scroll-reveal delay-100 mx-auto mt-12 max-w-xl text-left">

@@ -1,3 +1,4 @@
+import React from "react"
 import { useScrollReveal } from "@/hooks/useScrollReveal"
 import { ChevronDown } from "lucide-react"
 
@@ -32,9 +33,8 @@ const HeroSection = ({ clientName, heroImageUrl, tagline, description }: HeroSec
 
         <div className="mb-12 flex flex-col items-center gap-2 md:flex-row md:items-baseline md:gap-4">
           {clientName.split("+").map((name, i, arr) => (
-            <>
+            <React.Fragment key={name}>
               <span
-                key={name}
                 className={`font-merchant-display text-3xl tracking-wide text-white md:text-5xl ${
                   i === 0 ? "font-semibold" : "font-light"
                 }`}
@@ -49,7 +49,7 @@ const HeroSection = ({ clientName, heroImageUrl, tagline, description }: HeroSec
                   +
                 </span>
               )}
-            </>
+            </React.Fragment>
           ))}
         </div>
 
