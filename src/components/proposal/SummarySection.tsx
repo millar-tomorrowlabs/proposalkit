@@ -1,10 +1,8 @@
-import { useScrollRevealAll } from "@/hooks/useScrollReveal"
 import type { ProposalData } from "@/types/proposal"
 
 type Props = { data: ProposalData["summary"] }
 
 const SummarySection = ({ data }: Props) => {
-  useScrollRevealAll()
 
   return (
     <section id="summary" className="px-6 py-24">

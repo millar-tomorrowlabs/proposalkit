@@ -1,4 +1,3 @@
-import { useScrollRevealAll } from "@/hooks/useScrollReveal"
 import { ArrowRight } from "lucide-react"
 
 interface CTASectionProps {
@@ -8,7 +7,6 @@ interface CTASectionProps {
 }
 
 const CTASection = ({ ctaEmail, studioName, confirmedBody }: CTASectionProps) => {
-  useScrollRevealAll()
 
   const mailtoHref =
     `mailto:${ctaEmail}?subject=` +

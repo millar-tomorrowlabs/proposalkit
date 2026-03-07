@@ -1,11 +1,9 @@
-import { useScrollRevealAll } from "@/hooks/useScrollReveal"
 import { Check } from "lucide-react"
 import type { ProposalData } from "@/types/proposal"
 
 type Props = { data: ProposalData["scope"] }
 
 const ScopeSection = ({ data }: Props) => {
-  useScrollRevealAll()
 
   return (
     <section id="scope" className="px-6 py-24">

@@ -1,4 +1,5 @@
 import { useState, Fragment } from "react"
+import { useScrollRevealAll } from "@/hooks/useScrollReveal"
 import type { ProposalData, SectionKey } from "@/types/proposal"
 import ProposalNav from "./ProposalNav"
 import HeroSection from "./HeroSection"
@@ -16,6 +17,7 @@ const STUDIO_NAME = "Tomorrow Studios."
 
 const ProposalWrapper = ({ proposal }: ProposalWrapperProps) => {
   const [confirmedBody, setConfirmedBody] = useState<string | null>(null)
+  useScrollRevealAll()
 
   const sectionMap: Record<SectionKey, React.ReactNode> = {
     summary: <SummarySection key="summary" data={proposal.summary} />,

@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { useScrollRevealAll } from "@/hooks/useScrollReveal"
 import { Check, Star } from "lucide-react"
 import type { InvestmentConfig } from "@/types/proposal"
 
@@ -21,7 +20,6 @@ const InvestmentSection = ({
   recommendation,
   onConfirm,
 }: InvestmentSectionProps) => {
-  useScrollRevealAll()
 
   const [activePackageId, setActivePackageId] = useState(data.packages[0].id)
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(new Set())
@@ -321,7 +319,7 @@ const InvestmentSection = ({
         </div>
 
         {/* Project Total */}
-        <div className="mt-6 rounded-lg border-2 border-foreground bg-card p-6">
+        <div className="scroll-reveal mt-6 rounded-lg border-2 border-foreground bg-card p-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">{currentPackage.label} package</span>
@@ -432,7 +430,7 @@ const InvestmentSection = ({
         )}
 
         {/* Confirm */}
-        <div className="mt-6">
+        <div className="scroll-reveal mt-6">
           {!confirmed ? (
             <button
               onClick={() => {

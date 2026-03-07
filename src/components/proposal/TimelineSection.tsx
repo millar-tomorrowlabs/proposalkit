@@ -1,11 +1,9 @@
 import { useState } from "react"
-import { useScrollRevealAll } from "@/hooks/useScrollReveal"
 import type { ProposalData } from "@/types/proposal"
 
 type Props = { data: ProposalData["timeline"] }
 
 const TimelineSection = ({ data }: Props) => {
-  useScrollRevealAll()
   const [active, setActive] = useState(0)
 
   const phases = data.phases
