@@ -50,6 +50,13 @@ export interface ScopeConfig {
   responsibilities: string[]
 }
 
+export type SectionKey =
+  | "summary"
+  | "scope"
+  | "timeline"
+  | "investment"
+  | "cta"
+
 export interface ProposalMeta {
   id: string
   slug: string
@@ -58,24 +65,24 @@ export interface ProposalMeta {
   brandColor1: string
   brandColor2: string
   heroImageUrl: string
+  tagline: string
+  heroDescription: string
   ctaEmail: string
+  recommendation?: string
   sections: SectionKey[]
   createdAt: string
   updatedAt: string
 }
 
-export type SectionKey =
-  | "summary"
-  | "scope"
-  | "timeline"
-  | "investment"
-  | "cta"
-
 export interface ProposalData extends ProposalMeta {
   summary: {
+    studioTagline: string
     studioDescription: string
+    studioDescription2: string
     projectOverview: string
     projectDetail: string
+    projectDetail2?: string
+    pillarsTagline: string
     pillars: { label: string; description: string }[]
   }
   scope: ScopeConfig
