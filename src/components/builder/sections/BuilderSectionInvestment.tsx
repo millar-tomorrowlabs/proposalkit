@@ -1,7 +1,370 @@
-const BuilderSectionInvestment = () => (
-  <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-border">
-    <p className="text-sm text-muted-foreground">Investment section — coming soon</p>
-  </div>
-)
+import { useBuilderStore } from "@/store/builderStore"
+import { Plus, Trash2 } from "lucide-react"
+import type { ProposalPackage, AddOn, AddOnCategory, RetainerConfig } from "@/types/proposal"
+import { v4 as uuidv4 } from "uuid"
+
+const formatPrice = (n: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(n)
+
+const BuilderSectionInvestment = () => {
+  const { proposal, updateField } = useBuilderStore()
+  const inv = proposal.investment
+
+  const updateInv = (key: keyof typeof inv, value: unknown) => {
+    updateField("investment", { ...inv, [key]: value })
+  }
+
+  // ── Packages ──────────────────────────────────────────────────────────────
+
+  const addPackage = () => {
+    const pkg: ProposalPackage = {
+      id: uuidv4().slice(0, 8),
+      label: "",
+      basePrice: 0,
+      baseDiscount: 0,
+      isRecommended: false,
+      highlights: [],
+    }
+    updateInv("packages", [...inv.packages, pkg])
+  }
+
+  const updatePackage = (index: number, key: keyof ProposalPackage, value: unknown) => {
+    updateInv("packages", inv.packages.map((p, i) => i === index ? { ...p, [key]: value } : p))
+  }
+
+  const removePackage = (index: number) => {
+    const removed = inv.packages[index]
+    // Remove this package from all add-on configs
+    const addOns = inv.addOns.map((a) => {
+      const { [removed.id]: _, ...rest } = a.packages
+      return { ...a, packages: rest }
+    })
+    updateField("investment", { ...inv, packages: inv.packages.filter((_, i) => i !== index), addOns })
+  }
+
+  // ── Add-ons ───────────────────────────────────────────────────────────────
+
+  const addAddOn = () => {
+    const id = uuidv4().slice(0, 8)
+    const packages: AddOn["packages"] = {}
+    inv.packages.forEach((p) => { packages[p.id] = {} }) // default: unavailable
+    const addOn: AddOn = { id, label: "", description: "", category: inv.addOnCategories[0]?.id ?? "", packages }
+    updateInv("addOns", [...inv.addOns, addOn])
+  }
+
+  const updateAddOn = (index: number, key: keyof AddOn, value: unknown) => {
+    updateInv("addOns", inv.addOns.map((a, i) => i === index ? { ...a, [key]: value } : a))
+  }
+
+  const removeAddOn = (index: number) => {
+    updateInv("addOns", inv.addOns.filter((_, i) => i !== index))
+  }
+
+  // Per-cell: cycle Unavailable → Available ($0) → Included → Unavailable
+  const cycleCell = (addOnIndex: number, packageId: string) => {
+    const addOn = inv.addOns[addOnIndex]
+    const config = addOn.packages[packageId]
+    let next: AddOn["packages"][string]
+    if (!config || (!config.price && !config.included)) {
+      next = { price: 0 }
+    } else if (config.price !== undefined) {
+      next = { included: true }
+    } else {
+      next = {}
+    }
+    const updatedPackages = { ...addOn.packages, [packageId]: next }
+    updateAddOn(addOnIndex, "packages", updatedPackages)
+  }
+
+  const setCellPrice = (addOnIndex: number, packageId: string, price: number) => {
+    const addOn = inv.addOns[addOnIndex]
+    const updatedPackages = { ...addOn.packages, [packageId]: { price } }
+    updateAddOn(addOnIndex, "packages", updatedPackages)
+  }
+
+  // ── Categories ────────────────────────────────────────────────────────────
+
+  const addCategory = () => {
+    const cat: AddOnCategory = { id: uuidv4().slice(0, 8), label: "" }
+    updateInv("addOnCategories", [...inv.addOnCategories, cat])
+  }
+
+  const updateCategory = (index: number, label: string) => {
+    updateInv("addOnCategories", inv.addOnCategories.map((c, i) => i === index ? { ...c, label } : c))
+  }
+
+  const removeCategory = (index: number) => {
+    updateInv("addOnCategories", inv.addOnCategories.filter((_, i) => i !== index))
+  }
+
+  // ── Retainer ──────────────────────────────────────────────────────────────
+
+  const updateRetainer = (key: keyof RetainerConfig, value: number) => {
+    updateField("investment", { ...inv, retainer: { ...(inv.retainer ?? { hourlyRate: 150, minHours: 3, maxHours: 10, requiredMonths: 6 }), [key]: value } })
+  }
+
+  const toggleRetainer = () => {
+    if (inv.retainer) {
+      const { retainer: _, ...rest } = inv
+      updateField("investment", rest)
+    } else {
+      updateField("investment", { ...inv, retainer: { hourlyRate: 150, minHours: 3, maxHours: 10, requiredMonths: 6 } })
+    }
+  }
+
+  return (
+    <div className="space-y-8">
+
+      {/* ── Packages ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Packages</h2>
+          <button onClick={addPackage} className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Plus className="h-3.5 w-3.5" /> Add
+          </button>
+        </div>
+        {inv.packages.map((pkg, i) => (
+          <div key={pkg.id} className="rounded-lg border border-border p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <input
+                type="text"
+                value={pkg.label}
+                onChange={(e) => updatePackage(i, "label", e.target.value)}
+                placeholder="Total"
+                className="builder-input max-w-[120px] text-sm font-medium"
+              />
+              <button onClick={() => removePackage(i)} className="text-muted-foreground hover:text-foreground transition-colors">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">Base price</p>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">$</span>
+                  <input
+                    type="number"
+                    value={pkg.basePrice}
+                    onChange={(e) => updatePackage(i, "basePrice", Number(e.target.value))}
+                    className="builder-input"
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">Discount</p>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">$</span>
+                  <input
+                    type="number"
+                    value={pkg.baseDiscount}
+                    onChange={(e) => updatePackage(i, "baseDiscount", Number(e.target.value))}
+                    className="builder-input"
+                  />
+                </div>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={pkg.isRecommended ?? false}
+                onChange={(e) => updatePackage(i, "isRecommended", e.target.checked)}
+                className="accent-[var(--brand-1)]"
+              />
+              Mark as recommended
+            </label>
+          </div>
+        ))}
+        {inv.packages.length === 0 && (
+          <button onClick={addPackage} className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border py-2.5 text-xs font-medium text-muted-foreground hover:border-foreground hover:text-foreground transition-colors">
+            <Plus className="h-3.5 w-3.5" /> Add first package
+          </button>
+        )}
+      </div>
+
+      {/* ── Add-on Matrix ── */}
+      {inv.packages.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">Add-on pricing</h2>
+            <button onClick={addAddOn} className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <Plus className="h-3.5 w-3.5" /> Add
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">Click a cell to cycle: Unavailable → Available → Included</p>
+
+          {inv.addOns.length > 0 && (
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40">
+                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Add-on</th>
+                    {inv.packages.map((pkg) => (
+                      <th key={pkg.id} className="px-3 py-2 text-center font-medium text-muted-foreground whitespace-nowrap">
+                        {pkg.label || "Package"}
+                      </th>
+                    ))}
+                    <th className="w-8 px-2 py-2" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {inv.addOns.map((addOn, ai) => (
+                    <tr key={addOn.id} className="hover:bg-muted/20">
+                      <td className="px-3 py-2">
+                        <span className="font-medium text-foreground">{addOn.label || <span className="text-muted-foreground italic">unnamed</span>}</span>
+                        {addOn.category && (
+                          <span className="ml-2 text-muted-foreground">· {inv.addOnCategories.find(c => c.id === addOn.category)?.label}</span>
+                        )}
+                      </td>
+                      {inv.packages.map((pkg) => {
+                        const config = addOn.packages[pkg.id]
+                        const isIncluded = config?.included === true
+                        const hasPrice = config?.price !== undefined
+                        return (
+                          <td key={pkg.id} className="px-3 py-2 text-center">
+                            {isIncluded ? (
+                              <button
+                                onClick={() => cycleCell(ai, pkg.id)}
+                                className="rounded-full bg-brand-1 px-2 py-0.5 text-xs font-medium text-white"
+                              >
+                                Included
+                              </button>
+                            ) : hasPrice ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <span className="text-muted-foreground">$</span>
+                                <input
+                                  type="number"
+                                  value={config!.price}
+                                  onChange={(e) => setCellPrice(ai, pkg.id, Number(e.target.value))}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-16 rounded border border-border bg-transparent px-1 py-0.5 text-center text-xs text-foreground focus:border-foreground outline-none"
+                                />
+                                <button onClick={() => cycleCell(ai, pkg.id)} className="text-muted-foreground hover:text-foreground transition-colors">↻</button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => cycleCell(ai, pkg.id)}
+                                className="text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                              >
+                                —
+                              </button>
+                            )}
+                          </td>
+                        )
+                      })}
+                      <td className="px-2 py-2">
+                        <button onClick={() => removeAddOn(ai)} className="text-muted-foreground hover:text-foreground transition-colors">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {inv.addOns.length === 0 && (
+            <button onClick={addAddOn} className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border py-2.5 text-xs font-medium text-muted-foreground hover:border-foreground hover:text-foreground transition-colors">
+              <Plus className="h-3.5 w-3.5" /> Add first add-on
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Add-on Detail Cards ── */}
+      {inv.addOns.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Add-on details</h2>
+          {inv.addOns.map((addOn, ai) => (
+            <div key={addOn.id} className="rounded-lg border border-border p-4 space-y-2">
+              <input
+                type="text"
+                value={addOn.label}
+                onChange={(e) => updateAddOn(ai, "label", e.target.value)}
+                placeholder="Add-on name"
+                className="builder-input text-sm font-medium"
+              />
+              <input
+                type="text"
+                value={addOn.description}
+                onChange={(e) => updateAddOn(ai, "description", e.target.value)}
+                placeholder="Short description shown on the card"
+                className="builder-input"
+              />
+              <select
+                value={addOn.category}
+                onChange={(e) => updateAddOn(ai, "category", e.target.value)}
+                className="builder-input"
+              >
+                <option value="">No category</option>
+                {inv.addOnCategories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Categories ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Categories</h2>
+          <button onClick={addCategory} className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Plus className="h-3.5 w-3.5" /> Add
+          </button>
+        </div>
+        <div className="space-y-2">
+          {inv.addOnCategories.map((cat, i) => (
+            <div key={cat.id} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={cat.label}
+                onChange={(e) => updateCategory(i, e.target.value)}
+                placeholder="Brand"
+                className="builder-input"
+              />
+              <button onClick={() => removeCategory(i)} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Retainer ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Retainer</h2>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+            <input type="checkbox" checked={!!inv.retainer} onChange={toggleRetainer} className="accent-[var(--brand-1)]" />
+            Include retainer
+          </label>
+        </div>
+        {inv.retainer && (
+          <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-4">
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">Hourly rate ($)</p>
+              <input type="number" value={inv.retainer.hourlyRate} onChange={(e) => updateRetainer("hourlyRate", Number(e.target.value))} className="builder-input" />
+            </div>
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">Required months</p>
+              <input type="number" value={inv.retainer.requiredMonths} onChange={(e) => updateRetainer("requiredMonths", Number(e.target.value))} className="builder-input" />
+            </div>
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">Min hours/mo</p>
+              <input type="number" value={inv.retainer.minHours} onChange={(e) => updateRetainer("minHours", Number(e.target.value))} className="builder-input" />
+            </div>
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">Max hours/mo</p>
+              <input type="number" value={inv.retainer.maxHours} onChange={(e) => updateRetainer("maxHours", Number(e.target.value))} className="builder-input" />
+            </div>
+          </div>
+        )}
+      </div>
+
+    </div>
+  )
+}
 
 export default BuilderSectionInvestment
