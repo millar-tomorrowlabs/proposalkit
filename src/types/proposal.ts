@@ -18,6 +18,7 @@ export interface AddOn {
   description: string
   category: string
   packages: { [packageId: string]: AddOnPackageConfig }
+  highlightInPackage?: string[]
 }
 
 export interface AddOnCategory {
@@ -64,7 +65,8 @@ export interface ProposalMeta {
   clientName: string
   brandColor1: string
   brandColor2: string
-  heroImageUrl: string
+  heroImageUrl?: string
+  clientLogoUrl?: string
   tagline: string
   heroDescription: string
   ctaEmail: string

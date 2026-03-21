@@ -30,6 +30,14 @@ const InvestmentSection = ({
 
   const currentPackage = data.packages.find((p) => p.id === activePackageId)!
 
+  // Assemble highlights: generic perks from package + add-ons flagged for this package
+  const assembledHighlights = [
+    ...currentPackage.highlights,
+    ...data.addOns
+      .filter((a) => a.highlightInPackage?.includes(activePackageId))
+      .map((a) => a.label),
+  ]
+
   const switchPackage = (packageId: string) => {
     setActivePackageId(packageId)
     setSelectedAddOnIds((prev) => {
@@ -173,9 +181,9 @@ const InvestmentSection = ({
                     </span>
                   )}
                 </div>
-                {currentPackage.highlights[0] && (
+                {assembledHighlights[0] && (
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {currentPackage.highlights[0]}
+                    {assembledHighlights[0]}
                   </p>
                 )}
               </div>
@@ -191,13 +199,13 @@ const InvestmentSection = ({
               </div>
             </div>
 
-            {currentPackage.highlights.length > 1 && (
+            {assembledHighlights.length > 1 && (
               <div className="mt-6 border-t border-border pt-6">
                 <p className="mb-4 text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
                   Included
                 </p>
                 <ul className="space-y-3">
-                  {currentPackage.highlights.slice(1).map((item) => (
+                  {assembledHighlights.slice(1).map((item) => (
                     <li
                       key={item}
                       className="flex items-start gap-3 text-sm text-foreground"

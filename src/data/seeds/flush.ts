@@ -121,13 +121,6 @@ export const flushProposal: ProposalData = {
           "Two independent stores set up (Flush + Seawards): ecommerce + POS for each",
           "Shopify Payments enabled for both businesses",
           "Catalog + inventory setup from supplier spreadsheets",
-          "Flush brand refresh: logo, color palette, typography, messaging & brand guidelines",
-          "QuickBooks integration: connector setup + validation",
-          "SEO-optimized product descriptions across the full catalog (~3,000 SKUs)",
-          "Blog setup + 5 posts (delivered post-launch)",
-          "Bundles setup (delivered post-launch)",
-          "Loyalty setup (delivered post-launch)",
-          "Subscriptions enablement (delivered post-launch)",
           "1 in-person support session (4-hour on-site)",
           "Leadership support for first two months post-launch",
           "Discounted pricing on select add-ons",
@@ -161,6 +154,7 @@ export const flushProposal: ProposalData = {
         label: "Flush brand refresh",
         description: "Logo, color palette, typography, messaging & brand guidelines",
         category: "brand",
+        highlightInPackage: ["total"],
         packages: {
           total: { included: true },
           light: { price: 3000 },
@@ -181,6 +175,7 @@ export const flushProposal: ProposalData = {
         label: "QuickBooks connector",
         description: "Connector setup + validation",
         category: "integrations",
+        highlightInPackage: ["total"],
         packages: {
           total: { included: true },
           light: { price: 1500 },
@@ -221,6 +216,7 @@ export const flushProposal: ProposalData = {
         label: "SEO product descriptions",
         description: "Optimized descriptions across the full catalog (~3,000 SKUs)",
         category: "content",
+        highlightInPackage: ["total"],
         packages: {
           total: { included: true },
           light: { price: 2000 },
@@ -231,6 +227,7 @@ export const flushProposal: ProposalData = {
         label: "Blog setup + 5 posts",
         description: "Blog configuration & 5 posts on merchant-provided topics",
         category: "content",
+        highlightInPackage: ["total"],
         packages: {
           total: { included: true },
           light: { price: 1000 },
@@ -241,6 +238,7 @@ export const flushProposal: ProposalData = {
         label: "Bundles, Loyalty & Subscriptions",
         description: "Full setup for bundles, loyalty program & subscription enablement",
         category: "content",
+        highlightInPackage: ["total"],
         packages: {
           total: { included: true },
           light: { price: 3000 },
