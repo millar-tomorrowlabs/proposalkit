@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { v4 as uuidv4 } from "uuid"
-import type { ProposalData, SectionKey } from "@/types/proposal"
+import type { ProposalData, AISuggestions, ContextBlob } from "@/types/proposal"
 
 const DEFAULT_PROPOSAL: ProposalData = {
   id: uuidv4(),
@@ -50,6 +50,11 @@ interface BuilderState {
   saveStatus: SaveStatus
   activeSection: string
   isNewProposal: boolean
+  isDirty: boolean
+  contextBlobs: ContextBlob[]
+  suggestions: AISuggestions | null
+  dismissedSuggestions: string[]
+  suggestionsLoading: boolean
 
   // Actions
   setProposal: (proposal: ProposalData) => void
@@ -59,20 +64,30 @@ interface BuilderState {
   setActiveSection: (section: string) => void
   initNew: () => void
   initExisting: (proposal: ProposalData) => void
+  setContextBlobs: (blobs: ContextBlob[]) => void
+  setSuggestions: (s: AISuggestions | null) => void
+  dismissSuggestion: (path: string) => void
+  setSuggestionsLoading: (loading: boolean) => void
 }
 
-export const useBuilderStore = create<BuilderState>((set, get) => ({
+export const useBuilderStore = create<BuilderState>((set) => ({
   proposal: DEFAULT_PROPOSAL,
   previewProposal: DEFAULT_PROPOSAL,
   saveStatus: "idle",
   activeSection: "meta",
   isNewProposal: true,
+  isDirty: false,
+  contextBlobs: [],
+  suggestions: null,
+  dismissedSuggestions: [],
+  suggestionsLoading: false,
 
   setProposal: (proposal) => set({ proposal, previewProposal: proposal }),
 
   updateField: (key, value) => {
     set((state) => ({
       proposal: { ...state.proposal, [key]: value, updatedAt: new Date().toISOString() },
+      isDirty: true,
     }))
   },
 
@@ -86,10 +101,19 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   initNew: () => {
     const fresh = { ...DEFAULT_PROPOSAL, id: uuidv4(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-    set({ proposal: fresh, previewProposal: fresh, isNewProposal: true, saveStatus: "idle" })
+    set({ proposal: fresh, previewProposal: fresh, isNewProposal: true, isDirty: false, saveStatus: "idle" })
   },
 
   initExisting: (proposal) => {
-    set({ proposal, previewProposal: proposal, isNewProposal: false, saveStatus: "idle" })
+    set({ proposal, previewProposal: proposal, isNewProposal: false, isDirty: false, saveStatus: "idle" })
   },
+
+  setContextBlobs: (contextBlobs) => set({ contextBlobs }),
+
+  setSuggestions: (suggestions) => set({ suggestions, dismissedSuggestions: [] }),
+
+  dismissSuggestion: (path) =>
+    set((state) => ({ dismissedSuggestions: [...state.dismissedSuggestions, path] })),
+
+  setSuggestionsLoading: (suggestionsLoading) => set({ suggestionsLoading }),
 }))

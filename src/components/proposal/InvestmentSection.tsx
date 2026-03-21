@@ -21,12 +21,25 @@ const InvestmentSection = ({
   onConfirm,
 }: InvestmentSectionProps) => {
 
-  const [activePackageId, setActivePackageId] = useState(data.packages[0].id)
+  const [activePackageId, setActivePackageId] = useState(data.packages[0]?.id ?? "")
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(new Set())
   const [retainerHours, setRetainerHours] = useState(
     data.retainer ? data.retainer.minHours + 2 : 0
   )
   const [confirmed, setConfirmed] = useState(false)
+
+  if (data.packages.length === 0) {
+    return (
+      <section id="investment" className="px-6 pt-24 pb-16">
+        <div className="mx-auto max-w-3xl">
+          <h2 className="font-display text-5xl font-semibold leading-[1.05] tracking-tight text-foreground md:text-7xl lg:text-8xl">
+            Investment
+          </h2>
+          <p className="mt-6 text-sm text-muted-foreground">No packages configured yet.</p>
+        </div>
+      </section>
+    )
+  }
 
   const currentPackage = data.packages.find((p) => p.id === activePackageId)!
 
@@ -80,7 +93,12 @@ const InvestmentSection = ({
     return sum + (maxPrice - currentPrice)
   }, 0)
 
-  const totalSavings = (currentPackage.baseDiscount ?? 0) + addOnSavings
+  // Auto-calculated: sum of max prices for add-ons included in this package
+  const includedAddOnValue = data.addOns
+    .filter((a) => a.packages[activePackageId]?.included === true)
+    .reduce((sum, a) => sum + getMaxPrice(a.id), 0)
+
+  const totalSavings = addOnSavings
 
   const selectedAddOns = Array.from(selectedAddOnIds).map((id) => {
     const addOn = data.addOns.find((a) => a.id === id)!
@@ -191,9 +209,9 @@ const InvestmentSection = ({
                 <p className="font-display text-3xl font-semibold text-foreground">
                   {formatPrice(currentPackage.basePrice)}
                 </p>
-                {currentPackage.baseDiscount > 0 && (
+                {includedAddOnValue > 0 && (
                   <p className="mt-1 text-xs font-medium text-brand-1">
-                    Saving {formatPrice(currentPackage.baseDiscount)} vs. base
+                    Includes {formatPrice(includedAddOnValue)} in add-ons
                   </p>
                 )}
               </div>

@@ -4,6 +4,7 @@ import BuilderSectionSummary from "./sections/BuilderSectionSummary"
 import BuilderSectionScope from "./sections/BuilderSectionScope"
 import BuilderSectionTimeline from "./sections/BuilderSectionTimeline"
 import BuilderSectionInvestment from "./sections/BuilderSectionInvestment"
+import BuilderSectionContext from "./sections/BuilderSectionContext"
 
 const NAV_ITEMS = [
   { id: "meta", label: "Proposal" },
@@ -11,6 +12,7 @@ const NAV_ITEMS = [
   { id: "scope", label: "Scope" },
   { id: "timeline", label: "Timeline" },
   { id: "investment", label: "Investment" },
+  { id: "context", label: "Context" },
 ] as const
 
 const BuilderForm = () => {
@@ -42,6 +44,7 @@ const BuilderForm = () => {
         {activeSection === "scope" && <BuilderSectionScope />}
         {activeSection === "timeline" && <BuilderSectionTimeline />}
         {activeSection === "investment" && <BuilderSectionInvestment />}
+        {activeSection === "context" && <BuilderSectionContext />}
       </div>
     </div>
   )

@@ -9,6 +9,22 @@ const TimelineSection = ({ data }: Props) => {
   const phases = data.phases
   const colors = ["bg-brand-1", "bg-brand-1", "bg-brand-2", "bg-brand-2", "bg-foreground", "bg-foreground"]
 
+  if (phases.length === 0) {
+    return (
+      <section id="timeline" className="px-6 py-24">
+        <div className="mx-auto max-w-3xl">
+          <h2 className="scroll-reveal font-display text-5xl font-semibold leading-[1.05] tracking-tight text-foreground md:text-7xl lg:text-8xl">
+            Timeline
+          </h2>
+          {data.subtitle && (
+            <p className="scroll-reveal delay-100 mt-6 text-lg text-muted-foreground">{data.subtitle}</p>
+          )}
+          <p className="mt-6 text-sm text-muted-foreground">No phases configured yet.</p>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section id="timeline" className="px-6 py-24">
       <div className="mx-auto max-w-3xl">

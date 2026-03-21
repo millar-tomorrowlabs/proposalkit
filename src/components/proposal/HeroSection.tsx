@@ -4,23 +4,33 @@ import { ChevronDown } from "lucide-react"
 
 interface HeroSectionProps {
   clientName: string
-  heroImageUrl: string
+  heroImageUrl?: string
+  clientLogoUrl?: string
   tagline: string
   description: string
 }
 
-const HeroSection = ({ clientName, heroImageUrl, tagline, description }: HeroSectionProps) => {
+const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, tagline, description }: HeroSectionProps) => {
   const ref = useScrollReveal()
 
   return (
     <section className="relative min-h-screen overflow-hidden">
       <div className="absolute inset-0">
-        <img
-          src={heroImageUrl}
-          alt={clientName}
-          className="h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/40" />
+        {heroImageUrl ? (
+          <>
+            <img
+              src={heroImageUrl}
+              alt={clientName}
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/40" />
+          </>
+        ) : (
+          <div
+            className="h-full w-full"
+            style={{ background: "linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 100%)" }}
+          />
+        )}
       </div>
 
       <div
@@ -30,6 +40,14 @@ const HeroSection = ({ clientName, heroImageUrl, tagline, description }: HeroSec
         <p className="mb-6 text-xs font-medium uppercase tracking-[0.35em] text-white/60">
           Prepared for
         </p>
+
+        {clientLogoUrl && (
+          <img
+            src={clientLogoUrl}
+            alt={clientName}
+            className="mb-6 h-10 w-auto object-contain opacity-90 md:h-12"
+          />
+        )}
 
         <div className="mb-12 flex flex-col items-center gap-2 md:flex-row md:items-baseline md:gap-4">
           {clientName.split("+").map((name, i, arr) => (

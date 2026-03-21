@@ -1,10 +1,11 @@
 import { useBuilderStore } from "@/store/builderStore"
 import BuilderField from "../BuilderField"
+import SuggestionChip from "../SuggestionChip"
 import { Plus, Trash2 } from "lucide-react"
 import type { TimelinePhase } from "@/types/proposal"
 
 const BuilderSectionTimeline = () => {
-  const { proposal, updateField } = useBuilderStore()
+  const { proposal, updateField, suggestions, dismissedSuggestions, dismissSuggestion } = useBuilderStore()
   const timeline = proposal.timeline
 
   const updatePhase = (index: number, key: keyof TimelinePhase, value: string) => {
@@ -39,6 +40,11 @@ const BuilderSectionTimeline = () => {
           onChange={(e) => updateField("timeline", { ...timeline, subtitle: e.target.value })}
           placeholder="Launch by end of May."
           className="builder-input"
+        />
+        <SuggestionChip
+          suggestion={suggestions?.timeline?.subtitle}
+          path="timeline.subtitle"
+          onAccept={(v) => updateField("timeline", { ...timeline, subtitle: v })}
         />
       </BuilderField>
 
@@ -83,6 +89,41 @@ const BuilderSectionTimeline = () => {
         >
           <Plus className="h-3.5 w-3.5" /> Add phase
         </button>
+
+        {/* Suggested phases */}
+        {suggestions?.timeline?.phases && suggestions.timeline.phases.length > 0 && !dismissedSuggestions.includes("timeline.phases") && (
+          <div className="rounded border border-brand-1/25 bg-brand-1/5 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">Suggested phases</p>
+              <button onClick={() => dismissSuggestion("timeline.phases")} className="text-xs text-muted-foreground hover:text-foreground">Dismiss</button>
+            </div>
+            {suggestions.timeline.phases.map((phase, i) => (
+              <div key={i} className="flex items-start justify-between gap-2 rounded bg-background/60 px-2 py-1.5">
+                <div>
+                  <span className="text-xs font-medium text-foreground">{phase.name}</span>
+                  <span className="mx-1 text-xs text-muted-foreground">·</span>
+                  <span className="text-xs text-muted-foreground">{phase.duration}</span>
+                  <p className="mt-0.5 text-xs text-muted-foreground/80">{phase.description}</p>
+                </div>
+                <button
+                  onClick={() => updateField("timeline", { ...timeline, phases: [...timeline.phases, phase] })}
+                  className="shrink-0 text-xs font-medium text-brand-1 hover:underline"
+                >
+                  Add
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                updateField("timeline", { ...timeline, phases: [...timeline.phases, ...suggestions!.timeline!.phases!] })
+                dismissSuggestion("timeline.phases")
+              }}
+              className="text-xs font-medium text-brand-1 hover:underline"
+            >
+              Add all
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

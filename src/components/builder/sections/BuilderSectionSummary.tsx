@@ -1,9 +1,10 @@
 import { useBuilderStore } from "@/store/builderStore"
 import BuilderField from "../BuilderField"
+import SuggestionChip from "../SuggestionChip"
 import { Plus, Trash2 } from "lucide-react"
 
 const BuilderSectionSummary = () => {
-  const { proposal, updateField } = useBuilderStore()
+  const { proposal, updateField, suggestions, dismissSuggestion, dismissedSuggestions } = useBuilderStore()
   const summary = proposal.summary
 
   const update = (key: keyof typeof summary, value: unknown) => {
@@ -37,6 +38,7 @@ const BuilderSectionSummary = () => {
           placeholder="Designing the next generation of commerce systems."
           className="builder-input"
         />
+        <SuggestionChip suggestion={suggestions?.summary?.studioTagline} path="summary.studioTagline" onAccept={(v) => update("studioTagline", v)} />
       </BuilderField>
 
       <BuilderField label="Studio description">
@@ -46,6 +48,7 @@ const BuilderSectionSummary = () => {
           rows={3}
           className="builder-input resize-none"
         />
+        <SuggestionChip suggestion={suggestions?.summary?.studioDescription} path="summary.studioDescription" onAccept={(v) => update("studioDescription", v)} />
       </BuilderField>
 
       <BuilderField label="Studio description (continued)">
@@ -55,6 +58,7 @@ const BuilderSectionSummary = () => {
           rows={3}
           className="builder-input resize-none"
         />
+        <SuggestionChip suggestion={suggestions?.summary?.studioDescription2} path="summary.studioDescription2" onAccept={(v) => update("studioDescription2", v)} />
       </BuilderField>
 
       <hr className="border-border" />
@@ -67,6 +71,7 @@ const BuilderSectionSummary = () => {
           rows={2}
           className="builder-input resize-none"
         />
+        <SuggestionChip suggestion={suggestions?.summary?.projectOverview} path="summary.projectOverview" onAccept={(v) => update("projectOverview", v)} />
       </BuilderField>
 
       <BuilderField label="Project detail">
@@ -76,6 +81,7 @@ const BuilderSectionSummary = () => {
           rows={4}
           className="builder-input resize-none"
         />
+        <SuggestionChip suggestion={suggestions?.summary?.projectDetail} path="summary.projectDetail" onAccept={(v) => update("projectDetail", v)} />
       </BuilderField>
 
       <BuilderField label="Project detail (continued)" hint="Optional second paragraph">
@@ -85,6 +91,7 @@ const BuilderSectionSummary = () => {
           rows={3}
           className="builder-input resize-none"
         />
+        <SuggestionChip suggestion={suggestions?.summary?.projectDetail2} path="summary.projectDetail2" onAccept={(v) => update("projectDetail2", v)} />
       </BuilderField>
 
       <hr className="border-border" />
@@ -98,7 +105,43 @@ const BuilderSectionSummary = () => {
           placeholder="Three workstreams that define this engagement."
           className="builder-input"
         />
+        <SuggestionChip suggestion={suggestions?.summary?.pillarsTagline} path="summary.pillarsTagline" onAccept={(v) => update("pillarsTagline", v)} />
       </BuilderField>
+
+      {/* Suggested pillars panel */}
+      {suggestions?.summary?.pillars && suggestions.summary.pillars.length > 0 && !dismissedSuggestions.includes("summary.pillars") && (
+        <div className="rounded border border-brand-1/25 bg-brand-1/5 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-muted-foreground">Suggested pillars</p>
+            <button onClick={() => dismissSuggestion("summary.pillars")} className="text-xs text-muted-foreground hover:text-foreground">Dismiss</button>
+          </div>
+          {suggestions.summary.pillars.map((p, i) => (
+            <div key={i} className="flex items-start justify-between gap-2 rounded bg-background/60 px-2 py-1.5">
+              <div>
+                <span className="text-xs font-medium text-foreground">{p.label}</span>
+                <span className="ml-2 text-xs text-muted-foreground">{p.description}</span>
+              </div>
+              <button
+                onClick={() => {
+                  update("pillars", [...summary.pillars, { label: p.label, description: p.description }])
+                }}
+                className="shrink-0 text-xs font-medium text-brand-1 hover:underline"
+              >
+                Add
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={() => {
+              update("pillars", [...summary.pillars, ...suggestions!.summary!.pillars!.map(p => ({ label: p.label, description: p.description }))])
+              dismissSuggestion("summary.pillars")
+            }}
+            className="text-xs font-medium text-brand-1 hover:underline"
+          >
+            Add all
+          </button>
+        </div>
+      )}
 
       <div className="space-y-3">
         {summary.pillars.map((pillar, i) => (

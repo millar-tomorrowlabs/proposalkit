@@ -3,11 +3,8 @@ import { Plus, Trash2 } from "lucide-react"
 import type { ProposalPackage, AddOn, AddOnCategory, RetainerConfig } from "@/types/proposal"
 import { v4 as uuidv4 } from "uuid"
 
-const formatPrice = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(n)
-
 const BuilderSectionInvestment = () => {
-  const { proposal, updateField } = useBuilderStore()
+  const { proposal, updateField, suggestions, dismissedSuggestions, dismissSuggestion } = useBuilderStore()
   const inv = proposal.investment
 
   const updateInv = (key: keyof typeof inv, value: unknown) => {
@@ -21,7 +18,6 @@ const BuilderSectionInvestment = () => {
       id: uuidv4().slice(0, 8),
       label: "",
       basePrice: 0,
-      baseDiscount: 0,
       isRecommended: false,
       highlights: [],
     }
@@ -146,18 +142,6 @@ const BuilderSectionInvestment = () => {
                     type="number"
                     value={pkg.basePrice}
                     onChange={(e) => updatePackage(i, "basePrice", Number(e.target.value))}
-                    className="builder-input"
-                  />
-                </div>
-              </div>
-              <div>
-                <p className="mb-1 text-xs text-muted-foreground">Discount</p>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">$</span>
-                  <input
-                    type="number"
-                    value={pkg.baseDiscount}
-                    onChange={(e) => updatePackage(i, "baseDiscount", Number(e.target.value))}
                     className="builder-input"
                   />
                 </div>
@@ -303,6 +287,61 @@ const BuilderSectionInvestment = () => {
               </select>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Suggested Add-ons ── */}
+      {suggestions?.addOns && suggestions.addOns.length > 0 && !dismissedSuggestions.includes("addOns") && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">Suggested add-ons</h2>
+            <button onClick={() => dismissSuggestion("addOns")} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Dismiss all</button>
+          </div>
+          <p className="text-xs text-muted-foreground">Accept individual add-ons to add them to the matrix.</p>
+          <div className="space-y-2">
+            {suggestions.addOns.map((suggested, i) => {
+              const path = `addOns.${i}`
+              if (dismissedSuggestions.includes(path)) return null
+              return (
+                <div key={i} className="flex items-start gap-3 rounded-lg border border-brand-1/25 bg-brand-1/5 p-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-foreground">{suggested.label}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{suggested.description}</p>
+                    <span className="mt-1 inline-block rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{suggested.category}</span>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      onClick={() => {
+                        // Find or create category
+                        let catId = inv.addOnCategories.find(c => c.label.toLowerCase() === suggested.category.toLowerCase())?.id
+                        let cats = inv.addOnCategories
+                        if (!catId) {
+                          catId = uuidv4().slice(0, 8)
+                          cats = [...cats, { id: catId, label: suggested.category }]
+                        }
+                        // Build add-on with all packages unavailable by default
+                        const pkgs: AddOn["packages"] = {}
+                        inv.packages.forEach(p => { pkgs[p.id] = {} })
+                        const addOn: AddOn = {
+                          id: uuidv4().slice(0, 8),
+                          label: suggested.label,
+                          description: suggested.description,
+                          category: catId,
+                          packages: pkgs,
+                        }
+                        updateField("investment", { ...inv, addOnCategories: cats, addOns: [...inv.addOns, addOn] })
+                        dismissSuggestion(path)
+                      }}
+                      className="text-xs font-medium text-brand-1 hover:underline"
+                    >
+                      Accept
+                    </button>
+                    <button onClick={() => dismissSuggestion(path)} className="text-xs text-muted-foreground hover:text-foreground">✕</button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

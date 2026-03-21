@@ -11,7 +11,7 @@ const DEBOUNCE_SAVE_MS = 2000
 
 const BuilderHome = () => {
   const { id } = useParams<{ id?: string }>()
-  const { proposal, previewProposal, saveStatus, flushToPreview, setSaveStatus, initNew, initExisting } = useBuilderStore()
+  const { proposal, previewProposal, saveStatus, isDirty, flushToPreview, setSaveStatus, initNew, initExisting } = useBuilderStore()
 
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -47,6 +47,7 @@ const BuilderHome = () => {
   // Debounce auto-save
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current)
+    if (!isDirty) return // skip save triggered by init/load
     if (!proposal.slug && !proposal.title) return // don't save empty state
 
     setSaveStatus("saving")
@@ -101,7 +102,7 @@ const BuilderHome = () => {
         {/* Preview — right pane */}
         <div className="flex-1 overflow-y-auto bg-muted/20">
           {previewProposal.title ? (
-            <div className="pointer-events-none origin-top scale-[0.6] transform-gpu" style={{ width: "166.67%", height: "166.67%" }}>
+            <div className="pointer-events-none" style={{ zoom: 0.55 }}>
               <ProposalWrapper proposal={previewProposal} isPreview />
             </div>
           ) : (

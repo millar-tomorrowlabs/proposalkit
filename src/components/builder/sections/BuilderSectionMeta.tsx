@@ -1,8 +1,30 @@
+import { useEffect, useRef, useState } from "react"
 import { useBuilderStore } from "@/store/builderStore"
 import BuilderField from "../BuilderField"
+import SuggestionChip from "../SuggestionChip"
+import ImageUpload from "../ImageUpload"
+import { supabase } from "@/lib/supabase"
 
 const BuilderSectionMeta = () => {
-  const { proposal, updateField } = useBuilderStore()
+  const { proposal, updateField, suggestions } = useBuilderStore()
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle")
+  const slugTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (slugTimer.current) clearTimeout(slugTimer.current)
+    if (!proposal.slug) { setSlugStatus("idle"); return }
+    setSlugStatus("checking")
+    slugTimer.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from("proposals")
+        .select("id")
+        .eq("slug", proposal.slug)
+        .neq("id", proposal.id)
+        .maybeSingle()
+      setSlugStatus(data ? "taken" : "available")
+    }, 500)
+    return () => { if (slugTimer.current) clearTimeout(slugTimer.current) }
+  }, [proposal.slug, proposal.id])
 
   return (
     <div className="space-y-5">
@@ -16,6 +38,7 @@ const BuilderSectionMeta = () => {
           placeholder="Flush & Seawards — Shopify Migration"
           className="builder-input"
         />
+        <SuggestionChip suggestion={suggestions?.title} path="title" onAccept={(v) => updateField("title", v)} />
       </BuilderField>
 
       <BuilderField label="Client name">
@@ -26,6 +49,7 @@ const BuilderSectionMeta = () => {
           placeholder="Flush + Seawards"
           className="builder-input"
         />
+        <SuggestionChip suggestion={suggestions?.clientName} path="clientName" onAccept={(v) => updateField("clientName", v)} />
       </BuilderField>
 
       <BuilderField label="Slug" hint="Used in the proposal URL: /p/your-slug">
@@ -34,8 +58,11 @@ const BuilderSectionMeta = () => {
           value={proposal.slug}
           onChange={(e) => updateField("slug", e.target.value.toLowerCase().replace(/\s+/g, "-"))}
           placeholder="flush-seawards"
-          className="builder-input"
+          className={`builder-input ${slugStatus === "taken" ? "border-red-500 focus:border-red-500" : ""}`}
         />
+        {slugStatus === "checking" && <p className="text-xs text-muted-foreground">Checking...</p>}
+        {slugStatus === "taken" && <p className="text-xs text-red-500">This slug is already taken.</p>}
+        {slugStatus === "available" && <p className="text-xs text-brand-1">Available</p>}
       </BuilderField>
 
       <BuilderField label="CTA email">
@@ -86,6 +113,24 @@ const BuilderSectionMeta = () => {
       <hr className="border-border" />
       <h2 className="text-sm font-semibold text-foreground">Hero</h2>
 
+      <ImageUpload
+        value={proposal.heroImageUrl}
+        onChange={(url) => updateField("heroImageUrl", url)}
+        storagePath={`${proposal.id}/hero.jpg`}
+        label="Hero image"
+        hint="JPG, PNG or WebP"
+        aspectHint="Landscape recommended"
+      />
+
+      <ImageUpload
+        value={proposal.clientLogoUrl}
+        onChange={(url) => updateField("clientLogoUrl", url)}
+        storagePath={`${proposal.id}/logo.png`}
+        label="Client logo"
+        hint="PNG with transparency works best"
+        aspectHint="Optional"
+      />
+
       <BuilderField label="Tagline">
         <input
           type="text"
@@ -94,6 +139,7 @@ const BuilderSectionMeta = () => {
           placeholder="Two stores. One platform."
           className="builder-input"
         />
+        <SuggestionChip suggestion={suggestions?.tagline} path="tagline" onAccept={(v) => updateField("tagline", v)} />
       </BuilderField>
 
       <BuilderField label="Hero description">
@@ -104,6 +150,7 @@ const BuilderSectionMeta = () => {
           placeholder="A brief description shown under the tagline..."
           className="builder-input resize-none"
         />
+        <SuggestionChip suggestion={suggestions?.heroDescription} path="heroDescription" onAccept={(v) => updateField("heroDescription", v)} />
       </BuilderField>
 
       <BuilderField label="Recommendation" hint="Our recommendation is to... (continues the phrase)">
@@ -114,6 +161,7 @@ const BuilderSectionMeta = () => {
           placeholder="proceed with the Total package to ensure..."
           className="builder-input resize-none"
         />
+        <SuggestionChip suggestion={suggestions?.recommendation} path="recommendation" onAccept={(v) => updateField("recommendation", v)} />
       </BuilderField>
     </div>
   )

@@ -51,10 +51,11 @@ const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) 
         } as React.CSSProperties
       }
     >
-      <ProposalNav sections={proposal.sections} studioName={STUDIO_NAME} />
+      {!isPreview && <ProposalNav sections={proposal.sections} studioName={STUDIO_NAME} />}
       <HeroSection
         clientName={proposal.clientName}
         heroImageUrl={proposal.heroImageUrl}
+        clientLogoUrl={proposal.clientLogoUrl}
         tagline={proposal.tagline}
         description={proposal.heroDescription}
       />
