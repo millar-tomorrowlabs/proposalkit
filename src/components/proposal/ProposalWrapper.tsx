@@ -11,13 +11,14 @@ import CTASection from "./CTASection"
 
 interface ProposalWrapperProps {
   proposal: ProposalData
+  isPreview?: boolean
 }
 
 const STUDIO_NAME = "Tomorrow Studios."
 
-const ProposalWrapper = ({ proposal }: ProposalWrapperProps) => {
+const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) => {
   const [confirmedBody, setConfirmedBody] = useState<string | null>(null)
-  useScrollRevealAll()
+  useScrollRevealAll({ disabled: isPreview })
 
   const sectionMap: Record<SectionKey, React.ReactNode> = {
     summary: <SummarySection key="summary" data={proposal.summary} />,

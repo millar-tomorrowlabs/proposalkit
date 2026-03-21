@@ -105,6 +105,11 @@
   }
 }
 
+/* Builder form input */
+.builder-input {
+  @apply w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-foreground transition-colors;
+}
+
 /* Scroll-reveal animation */
 .scroll-reveal {
   opacity: 0;

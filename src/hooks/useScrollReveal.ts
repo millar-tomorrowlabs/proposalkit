@@ -26,11 +26,18 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
   return ref
 }
 
-export function useScrollRevealAll(
+export function useScrollRevealAll({
   selector = ".scroll-reveal",
-  threshold = 0.15
-) {
+  threshold = 0.15,
+  disabled = false,
+} = {}) {
   useEffect(() => {
+    // In preview mode, reveal all elements immediately (no animation)
+    if (disabled) {
+      document.querySelectorAll(selector).forEach((el) => el.classList.add("revealed"))
+      return
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -47,5 +54,5 @@ export function useScrollRevealAll(
     elements.forEach((el) => observer.observe(el))
 
     return () => observer.disconnect()
-  }, [selector, threshold])
+  }, [selector, threshold, disabled])
 }
