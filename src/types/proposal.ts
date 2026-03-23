@@ -1,3 +1,13 @@
+export interface ConfirmedSelection {
+  packageId: string
+  packageLabel: string
+  packagePrice: number
+  addOns: { id: string; label: string; price: number }[]
+  retainerHours?: number
+  retainerRate?: number
+  grandTotal: number
+}
+
 export interface ContextBlob {
   id: string
   label: string

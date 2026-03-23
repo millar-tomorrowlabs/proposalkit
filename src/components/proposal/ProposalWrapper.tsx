@@ -1,6 +1,6 @@
 import { useState, Fragment } from "react"
 import { useScrollRevealAll } from "@/hooks/useScrollReveal"
-import type { ProposalData, SectionKey } from "@/types/proposal"
+import type { ProposalData, SectionKey, ConfirmedSelection } from "@/types/proposal"
 import ProposalNav from "./ProposalNav"
 import HeroSection from "./HeroSection"
 import SummarySection from "./SummarySection"
@@ -17,7 +17,7 @@ interface ProposalWrapperProps {
 const STUDIO_NAME = "Tomorrow Studios."
 
 const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) => {
-  const [confirmedBody, setConfirmedBody] = useState<string | null>(null)
+  const [confirmedSelection, setConfirmedSelection] = useState<ConfirmedSelection | null>(null)
   useScrollRevealAll({ disabled: isPreview })
 
   const sectionMap: Record<SectionKey, React.ReactNode> = {
@@ -29,15 +29,18 @@ const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) 
         key="investment"
         data={proposal.investment}
         recommendation={proposal.recommendation}
-        onConfirm={setConfirmedBody}
+        onConfirm={setConfirmedSelection}
       />
     ),
     cta: (
       <CTASection
         key="cta"
+        proposalId={proposal.id}
+        proposalSlug={proposal.slug}
         ctaEmail={proposal.ctaEmail}
         studioName={STUDIO_NAME}
-        confirmedBody={confirmedBody}
+        confirmedSelection={confirmedSelection}
+        isPreview={isPreview}
       />
     ),
   }

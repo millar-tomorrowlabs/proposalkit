@@ -1,11 +1,11 @@
 import { useState } from "react"
 import { Check, Star } from "lucide-react"
-import type { InvestmentConfig } from "@/types/proposal"
+import type { InvestmentConfig, ConfirmedSelection } from "@/types/proposal"
 
 interface InvestmentSectionProps {
   data: InvestmentConfig
   recommendation?: string
-  onConfirm: (body: string | null) => void
+  onConfirm: (selection: ConfirmedSelection | null) => void
 }
 
 const formatPrice = (n: number) =>
@@ -102,36 +102,8 @@ const InvestmentSection = ({
 
   const selectedAddOns = Array.from(selectedAddOnIds).map((id) => {
     const addOn = data.addOns.find((a) => a.id === id)!
-    return { label: addOn.label, price: addOn.packages[activePackageId]?.price ?? 0 }
+    return { id: addOn.id, label: addOn.label, price: addOn.packages[activePackageId]?.price ?? 0 }
   })
-
-  const buildEmailBody = () => {
-    const addOnLines =
-      selectedAddOns.length > 0
-        ? selectedAddOns.map((a) => `  - ${a.label}: ${formatPrice(a.price)}`).join("\n")
-        : "  None"
-
-    return [
-      `Hi,`,
-      ``,
-      `I'd like to proceed with the following:`,
-      ``,
-      `Package: ${currentPackage.label} — ${formatPrice(currentPackage.basePrice)}`,
-      ``,
-      `Add-ons:`,
-      addOnLines,
-      ``,
-      `Project Total: ${formatPrice(grandTotal)}`,
-      ...(data.retainer
-        ? [
-            ``,
-            `Support Retainer: ${retainerHours} hours/mo — ${formatPrice(retainerHours * data.retainer.hourlyRate)}/mo`,
-          ]
-        : []),
-      ``,
-      `Please send over next steps.`,
-    ].join("\n")
-  }
 
   return (
     <section id="investment" className="px-6 pt-24 pb-16">
@@ -461,7 +433,15 @@ const InvestmentSection = ({
             <button
               onClick={() => {
                 setConfirmed(true)
-                onConfirm(buildEmailBody())
+                onConfirm({
+                  packageId: activePackageId,
+                  packageLabel: currentPackage.label,
+                  packagePrice: currentPackage.basePrice,
+                  addOns: selectedAddOns,
+                  retainerHours: data.retainer ? retainerHours : undefined,
+                  retainerRate: data.retainer?.hourlyRate,
+                  grandTotal,
+                })
               }}
               className="w-full rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-colors hover:bg-foreground/80"
             >
