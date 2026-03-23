@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
-import { Plus, Copy, Check } from "lucide-react"
+import { Plus, Copy, Check, LogOut } from "lucide-react"
 
 interface ProposalRow {
   id: string
@@ -16,6 +16,12 @@ const ProposalsDashboard = () => {
   const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const navigate = useNavigate()
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    navigate("/login")
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -65,13 +71,23 @@ const ProposalsDashboard = () => {
               Proposals
             </h1>
           </div>
-          <Link
-            to="/builder"
-            className="flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-foreground/80 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            New proposal
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign out
+            </button>
+            <Link
+              to="/builder"
+              className="flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-foreground/80 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              New proposal
+            </Link>
+          </div>
         </div>
 
         <div className="mt-10">

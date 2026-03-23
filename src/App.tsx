@@ -1,18 +1,25 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import AuthGuard from "@/components/AuthGuard"
 import ProposalViewer from "@/pages/ProposalViewer"
 import ProposalsDashboard from "@/pages/ProposalsDashboard"
 import BuilderHome from "@/pages/BuilderHome"
+import LoginPage from "@/pages/LoginPage"
 import NotFound from "@/pages/NotFound"
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<ProposalsDashboard />} />
-        <Route path="/proposals" element={<ProposalsDashboard />} />
-        <Route path="/builder" element={<BuilderHome />} />
-        <Route path="/builder/:id" element={<BuilderHome />} />
+        {/* Public */}
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/p/:slug" element={<ProposalViewer />} />
+
+        {/* Protected */}
+        <Route path="/" element={<AuthGuard><Navigate to="/proposals" replace /></AuthGuard>} />
+        <Route path="/proposals" element={<AuthGuard><ProposalsDashboard /></AuthGuard>} />
+        <Route path="/builder" element={<AuthGuard><BuilderHome /></AuthGuard>} />
+        <Route path="/builder/:id" element={<AuthGuard><BuilderHome /></AuthGuard>} />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
