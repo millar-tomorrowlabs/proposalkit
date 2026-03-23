@@ -81,7 +81,7 @@ const ProposalsDashboard = () => {
               Sign out
             </button>
             <Link
-              to="/builder"
+              to="/new"
               className="flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-foreground/80 transition-colors"
             >
               <Plus className="h-4 w-4" />

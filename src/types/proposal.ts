@@ -116,10 +116,12 @@ export interface ProposalMeta {
   brandColor2: string
   heroImageUrl?: string
   clientLogoUrl?: string
+  heroLogoLarge?: boolean // show large logo in hero instead of client name text
   tagline: string
   heroDescription: string
   ctaEmail: string
   recommendation?: string
+  brief?: string // AI-synthesised working understanding of the client and project
   sections: SectionKey[]
   createdAt: string
   updatedAt: string

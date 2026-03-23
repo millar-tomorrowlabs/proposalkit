@@ -6,12 +6,17 @@ interface HeroSectionProps {
   clientName: string
   heroImageUrl?: string
   clientLogoUrl?: string
+  heroLogoLarge?: boolean
   tagline: string
   description: string
 }
 
-const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, tagline, description }: HeroSectionProps) => {
+const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, tagline, description }: HeroSectionProps) => {
   const ref = useScrollReveal()
+
+  // Large logo mode: show logo prominently, hide client name text
+  const showLargeLogo = heroLogoLarge && clientLogoUrl
+  const showClientName = !showLargeLogo
 
   return (
     <section className="relative min-h-screen overflow-hidden">
@@ -41,7 +46,17 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, tagline, descrip
           Prepared for
         </p>
 
-        {clientLogoUrl && (
+        {/* Large logo mode — replaces client name entirely */}
+        {showLargeLogo && (
+          <img
+            src={clientLogoUrl}
+            alt={clientName}
+            className="mb-12 h-16 w-auto object-contain opacity-90 md:h-24"
+          />
+        )}
+
+        {/* Small logo + client name mode */}
+        {!showLargeLogo && clientLogoUrl && (
           <img
             src={clientLogoUrl}
             alt={clientName}
@@ -49,27 +64,29 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, tagline, descrip
           />
         )}
 
-        <div className="mb-12 flex flex-col items-center gap-2 md:flex-row md:items-baseline md:gap-4">
-          {clientName.split("+").map((name, i, arr) => (
-            <React.Fragment key={name}>
-              <span
-                className={`font-merchant-display text-3xl tracking-wide text-white md:text-5xl ${
-                  i === 0 ? "font-semibold" : "font-light"
-                }`}
-              >
-                {name.trim().toUpperCase()}
-              </span>
-              {i < arr.length - 1 && (
+        {showClientName && (
+          <div className="mb-12 flex flex-col items-center gap-2 md:flex-row md:items-baseline md:gap-4">
+            {clientName.split("+").map((name, i, arr) => (
+              <React.Fragment key={name}>
                 <span
-                  key={`sep-${i}`}
-                  className="self-center text-xl font-light text-white/30 md:text-3xl"
+                  className={`font-merchant-display text-3xl tracking-wide text-white md:text-5xl ${
+                    i === 0 ? "font-semibold" : "font-light"
+                  }`}
                 >
-                  +
+                  {name.trim().toUpperCase()}
                 </span>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
+                {i < arr.length - 1 && (
+                  <span
+                    key={`sep-${i}`}
+                    className="self-center text-xl font-light text-white/30 md:text-3xl"
+                  >
+                    +
+                  </span>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        )}
 
         <h1 className="font-serif text-3xl font-semibold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl">
           {tagline}

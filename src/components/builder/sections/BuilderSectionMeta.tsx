@@ -131,6 +131,20 @@ const BuilderSectionMeta = () => {
         aspectHint="Optional"
       />
 
+      {proposal.clientLogoUrl && (
+        <label className="flex cursor-pointer items-center gap-3">
+          <div
+            onClick={() => updateField("heroLogoLarge", !proposal.heroLogoLarge)}
+            className={`relative h-5 w-9 rounded-full transition-colors ${proposal.heroLogoLarge ? "bg-foreground" : "bg-border"}`}
+          >
+            <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-transform ${proposal.heroLogoLarge ? "translate-x-4" : "translate-x-0.5"}`} />
+          </div>
+          <span className="text-xs text-muted-foreground">
+            Use large logo in hero <span className="text-muted-foreground/50">(hides client name)</span>
+          </span>
+        </label>
+      )}
+
       <BuilderField label="Tagline">
         <input
           type="text"

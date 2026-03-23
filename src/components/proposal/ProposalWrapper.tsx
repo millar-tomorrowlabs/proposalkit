@@ -59,6 +59,7 @@ const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) 
         clientName={proposal.clientName}
         heroImageUrl={proposal.heroImageUrl}
         clientLogoUrl={proposal.clientLogoUrl}
+        heroLogoLarge={proposal.heroLogoLarge}
         tagline={proposal.tagline}
         description={proposal.heroDescription}
       />
