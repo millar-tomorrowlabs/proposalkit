@@ -65,7 +65,7 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, t
         )}
 
         {showClientName && (
-          <div className="mb-12 flex flex-col items-center gap-2 md:flex-row md:items-baseline md:gap-4">
+          <div data-field-path="clientName" className="mb-12 flex flex-col items-center gap-2 md:flex-row md:items-baseline md:gap-4">
             {clientName.split("+").map((name, i, arr) => (
               <React.Fragment key={name}>
                 <span
@@ -88,11 +88,11 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, t
           </div>
         )}
 
-        <h1 className="font-serif text-3xl font-semibold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl">
+        <h1 data-field-path="tagline" className="font-serif text-3xl font-semibold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl">
           {tagline}
         </h1>
 
-        <p className="mt-6 max-w-lg text-base leading-relaxed text-white/70 md:text-lg">
+        <p data-field-path="heroDescription" className="mt-6 max-w-lg text-base leading-relaxed text-white/70 md:text-lg">
           {description}
         </p>
 

@@ -36,6 +36,7 @@ const BuilderSectionSummary = () => {
           value={summary.studioTagline}
           onChange={(e) => update("studioTagline", e.target.value)}
           placeholder="Designing the next generation of commerce systems."
+          data-builder-field="summary.studioTagline"
           className="builder-input"
         />
         <SuggestionChip suggestion={suggestions?.summary?.studioTagline} path="summary.studioTagline" onAccept={(v) => update("studioTagline", v)} />
@@ -46,6 +47,7 @@ const BuilderSectionSummary = () => {
           value={summary.studioDescription}
           onChange={(e) => update("studioDescription", e.target.value)}
           rows={3}
+          data-builder-field="summary.studioDescription"
           className="builder-input resize-none"
         />
         <SuggestionChip suggestion={suggestions?.summary?.studioDescription} path="summary.studioDescription" onAccept={(v) => update("studioDescription", v)} />
@@ -56,6 +58,7 @@ const BuilderSectionSummary = () => {
           value={summary.studioDescription2}
           onChange={(e) => update("studioDescription2", e.target.value)}
           rows={3}
+          data-builder-field="summary.studioDescription2"
           className="builder-input resize-none"
         />
         <SuggestionChip suggestion={suggestions?.summary?.studioDescription2} path="summary.studioDescription2" onAccept={(v) => update("studioDescription2", v)} />
@@ -69,6 +72,7 @@ const BuilderSectionSummary = () => {
           value={summary.projectOverview}
           onChange={(e) => update("projectOverview", e.target.value)}
           rows={2}
+          data-builder-field="summary.projectOverview"
           className="builder-input resize-none"
         />
         <SuggestionChip suggestion={suggestions?.summary?.projectOverview} path="summary.projectOverview" onAccept={(v) => update("projectOverview", v)} />
@@ -79,6 +83,7 @@ const BuilderSectionSummary = () => {
           value={summary.projectDetail}
           onChange={(e) => update("projectDetail", e.target.value)}
           rows={4}
+          data-builder-field="summary.projectDetail"
           className="builder-input resize-none"
         />
         <SuggestionChip suggestion={suggestions?.summary?.projectDetail} path="summary.projectDetail" onAccept={(v) => update("projectDetail", v)} />
@@ -89,6 +94,7 @@ const BuilderSectionSummary = () => {
           value={summary.projectDetail2 ?? ""}
           onChange={(e) => update("projectDetail2", e.target.value)}
           rows={3}
+          data-builder-field="summary.projectDetail2"
           className="builder-input resize-none"
         />
         <SuggestionChip suggestion={suggestions?.summary?.projectDetail2} path="summary.projectDetail2" onAccept={(v) => update("projectDetail2", v)} />
@@ -103,6 +109,7 @@ const BuilderSectionSummary = () => {
           value={summary.pillarsTagline}
           onChange={(e) => update("pillarsTagline", e.target.value)}
           placeholder="Three workstreams that define this engagement."
+          data-builder-field="summary.pillarsTagline"
           className="builder-input"
         />
         <SuggestionChip suggestion={suggestions?.summary?.pillarsTagline} path="summary.pillarsTagline" onAccept={(v) => update("pillarsTagline", v)} />

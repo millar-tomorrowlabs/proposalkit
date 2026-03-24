@@ -11,15 +11,15 @@ const SummarySection = ({ data }: Props) => {
           About Tomorrow Studios
         </p>
 
-        <h3 className="scroll-reveal delay-100 font-display text-3xl font-semibold leading-snug tracking-tight text-foreground md:text-4xl">
+        <h3 data-field-path="summary.studioTagline" className="scroll-reveal delay-100 font-display text-3xl font-semibold leading-snug tracking-tight text-foreground md:text-4xl">
           {data.studioTagline}
         </h3>
 
-        <p className="scroll-reveal delay-200 mt-8 text-lg leading-relaxed text-muted-foreground">
+        <p data-field-path="summary.studioDescription" className="scroll-reveal delay-200 mt-8 text-lg leading-relaxed text-muted-foreground">
           {data.studioDescription}
         </p>
 
-        <p className="scroll-reveal delay-300 mt-6 text-lg leading-relaxed text-muted-foreground">
+        <p data-field-path="summary.studioDescription2" className="scroll-reveal delay-300 mt-6 text-lg leading-relaxed text-muted-foreground">
           {data.studioDescription2}
         </p>
 
@@ -31,16 +31,16 @@ const SummarySection = ({ data }: Props) => {
           Overview
         </h2>
 
-        <p className="scroll-reveal delay-100 mt-10 text-lg leading-relaxed text-muted-foreground md:text-xl">
+        <p data-field-path="summary.projectOverview" className="scroll-reveal delay-100 mt-10 text-lg leading-relaxed text-muted-foreground md:text-xl">
           {data.projectOverview}
         </p>
 
-        <p className="scroll-reveal delay-200 mt-6 text-lg leading-relaxed text-muted-foreground">
+        <p data-field-path="summary.projectDetail" className="scroll-reveal delay-200 mt-6 text-lg leading-relaxed text-muted-foreground">
           {data.projectDetail}
         </p>
 
         {data.projectDetail2 && (
-          <p className="scroll-reveal delay-300 mt-4 text-lg leading-relaxed text-muted-foreground">
+          <p data-field-path="summary.projectDetail2" className="scroll-reveal delay-300 mt-4 text-lg leading-relaxed text-muted-foreground">
             {data.projectDetail2}
           </p>
         )}

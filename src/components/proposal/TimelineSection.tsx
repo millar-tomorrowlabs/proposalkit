@@ -32,7 +32,7 @@ const TimelineSection = ({ data }: Props) => {
           Timeline
         </h2>
 
-        <p className="scroll-reveal delay-100 mt-6 text-lg text-muted-foreground">
+        <p data-field-path="timeline.subtitle" className="scroll-reveal delay-100 mt-6 text-lg text-muted-foreground">
           {data.subtitle}
         </p>
 

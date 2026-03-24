@@ -47,6 +47,7 @@ const BuilderSectionMeta = () => {
           value={proposal.clientName}
           onChange={(e) => updateField("clientName", e.target.value)}
           placeholder="Flush + Seawards"
+          data-builder-field="clientName"
           className="builder-input"
         />
         <SuggestionChip suggestion={suggestions?.clientName} path="clientName" onAccept={(v) => updateField("clientName", v)} />
@@ -151,6 +152,7 @@ const BuilderSectionMeta = () => {
           value={proposal.tagline}
           onChange={(e) => updateField("tagline", e.target.value)}
           placeholder="Two stores. One platform."
+          data-builder-field="tagline"
           className="builder-input"
         />
         <SuggestionChip suggestion={suggestions?.tagline} path="tagline" onAccept={(v) => updateField("tagline", v)} />
@@ -162,6 +164,7 @@ const BuilderSectionMeta = () => {
           onChange={(e) => updateField("heroDescription", e.target.value)}
           rows={3}
           placeholder="A brief description shown under the tagline..."
+          data-builder-field="heroDescription"
           className="builder-input resize-none"
         />
         <SuggestionChip suggestion={suggestions?.heroDescription} path="heroDescription" onAccept={(v) => updateField("heroDescription", v)} />
@@ -173,6 +176,7 @@ const BuilderSectionMeta = () => {
           onChange={(e) => updateField("recommendation", e.target.value)}
           rows={4}
           placeholder="proceed with the Total package to ensure..."
+          data-builder-field="recommendation"
           className="builder-input resize-none"
         />
         <SuggestionChip suggestion={suggestions?.recommendation} path="recommendation" onAccept={(v) => updateField("recommendation", v)} />

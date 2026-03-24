@@ -136,6 +136,29 @@
   animation: gentle-bounce 2s ease-in-out infinite;
 }
 
+/* Builder click-to-edit: preview hover highlights */
+.builder-preview [data-field-path] {
+  cursor: pointer;
+  transition: outline 0.15s ease, outline-offset 0.15s ease;
+  outline: 2px solid transparent;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.builder-preview [data-field-path]:hover {
+  outline: 2px solid var(--brand-1);
+  outline-offset: 4px;
+}
+
+/* Builder click-to-edit: form field glow when focused via preview click */
+@keyframes field-glow {
+  0% { box-shadow: 0 0 0 3px color-mix(in oklch, var(--brand-1) 40%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.builder-field-glow {
+  animation: field-glow 1.5s ease-out;
+  border-color: var(--brand-1) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .scroll-reveal {
     opacity: 1;

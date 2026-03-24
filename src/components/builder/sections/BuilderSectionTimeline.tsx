@@ -39,6 +39,7 @@ const BuilderSectionTimeline = () => {
           value={timeline.subtitle}
           onChange={(e) => updateField("timeline", { ...timeline, subtitle: e.target.value })}
           placeholder="Launch by end of May."
+          data-builder-field="timeline.subtitle"
           className="builder-input"
         />
         <SuggestionChip

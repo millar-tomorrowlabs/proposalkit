@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useCallback } from "react"
 import { useParams, Link } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { useBuilderStore } from "@/store/builderStore"
@@ -17,6 +17,46 @@ const BuilderHome = () => {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const proposalRef = useRef(proposal)
   proposalRef.current = proposal
+
+  // Map a field path from the preview to the correct builder tab
+  const fieldPathToSection = (path: string): string => {
+    if (path.startsWith("summary.")) return "summary"
+    if (path.startsWith("scope.")) return "scope"
+    if (path.startsWith("timeline.")) return "timeline"
+    if (path.startsWith("investment.")) return "investment"
+    // top-level fields like clientName, tagline, heroDescription → meta
+    return "meta"
+  }
+
+  // Click handler for the preview pane — intercept clicks on data-field-path elements
+  const handlePreviewClick = useCallback((e: React.MouseEvent) => {
+    // Walk up from the click target to find the nearest [data-field-path]
+    let el = e.target as HTMLElement | null
+    while (el) {
+      const fieldPath = el.getAttribute("data-field-path")
+      if (fieldPath) {
+        e.preventDefault()
+        e.stopPropagation()
+
+        // Switch to the correct builder tab
+        const section = fieldPathToSection(fieldPath)
+        useBuilderStore.getState().setActiveSection(section)
+
+        // After React re-renders the new tab, find & focus the matching form field
+        setTimeout(() => {
+          const input = document.querySelector(`[data-builder-field="${fieldPath}"]`) as HTMLElement | null
+          if (input) {
+            input.scrollIntoView({ behavior: "smooth", block: "center" })
+            input.focus()
+            input.classList.add("builder-field-glow")
+            setTimeout(() => input.classList.remove("builder-field-glow"), 1500)
+          }
+        }, 50)
+        return
+      }
+      el = el.parentElement
+    }
+  }, [])
 
   // Init on mount
   useEffect(() => {
@@ -102,7 +142,11 @@ const BuilderHome = () => {
         {/* Preview — right pane */}
         <div className="flex-1 overflow-y-auto bg-muted/20">
           {previewProposal.title ? (
-            <div className="pointer-events-none" style={{ zoom: 0.55 }}>
+            <div
+              className="builder-preview"
+              style={{ zoom: 0.55 }}
+              onClickCapture={handlePreviewClick}
+            >
               <ProposalWrapper proposal={previewProposal} isPreview />
             </div>
           ) : (

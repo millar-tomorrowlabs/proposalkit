@@ -59,6 +59,7 @@ const BuilderSectionScope = () => {
             onChange={(e) => updateList(key, i, e.target.value)}
             rows={2}
             placeholder={placeholder}
+            data-builder-field={`scope.${key}.${i}`}
             className="builder-input flex-1 resize-none"
           />
           <button onClick={() => removeItem(key, i)} className="mt-2 text-muted-foreground hover:text-foreground transition-colors shrink-0">
