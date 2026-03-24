@@ -127,6 +127,22 @@ export interface ProposalMeta {
   updatedAt: string
 }
 
+export interface ProposedEdit {
+  fieldPath: string
+  oldValue: unknown
+  newValue: unknown
+  label: string
+}
+
+export interface ChatMessage {
+  id: string
+  role: "user" | "assistant"
+  content: string
+  edits?: ProposedEdit[]
+  editsApplied?: boolean
+  createdAt: string
+}
+
 export interface ProposalData extends ProposalMeta {
   summary: {
     studioTagline: string

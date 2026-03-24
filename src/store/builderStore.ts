@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { v4 as uuidv4 } from "uuid"
-import type { ProposalData, AISuggestions, ContextBlob } from "@/types/proposal"
+import type { ProposalData, AISuggestions, ContextBlob, ChatMessage } from "@/types/proposal"
+import { setAtPath } from "@/lib/fieldPath"
 
 const DEFAULT_PROPOSAL: ProposalData = {
   id: uuidv4(),
@@ -56,6 +57,11 @@ interface BuilderState {
   dismissedSuggestions: string[]
   suggestionsLoading: boolean
 
+  // Chat
+  chatMessages: ChatMessage[]
+  chatLoading: boolean
+  chatPanelOpen: boolean
+
   // Actions
   setProposal: (proposal: ProposalData) => void
   updateField: <K extends keyof ProposalData>(key: K, value: ProposalData[K]) => void
@@ -63,11 +69,16 @@ interface BuilderState {
   setSaveStatus: (status: SaveStatus) => void
   setActiveSection: (section: string) => void
   initNew: () => void
-  initExisting: (proposal: ProposalData) => void
+  initExisting: (proposal: ProposalData, chatMessages?: ChatMessage[]) => void
   setContextBlobs: (blobs: ContextBlob[]) => void
   setSuggestions: (s: AISuggestions | null) => void
   dismissSuggestion: (path: string) => void
   setSuggestionsLoading: (loading: boolean) => void
+  setChatMessages: (messages: ChatMessage[]) => void
+  addChatMessage: (message: ChatMessage) => void
+  applyChatEdits: (messageId: string) => void
+  setChatLoading: (loading: boolean) => void
+  setChatPanelOpen: (open: boolean) => void
 }
 
 export const useBuilderStore = create<BuilderState>((set) => ({
@@ -81,6 +92,9 @@ export const useBuilderStore = create<BuilderState>((set) => ({
   suggestions: null,
   dismissedSuggestions: [],
   suggestionsLoading: false,
+  chatMessages: [],
+  chatLoading: false,
+  chatPanelOpen: false,
 
   setProposal: (proposal) => set({ proposal, previewProposal: proposal }),
 
@@ -104,8 +118,8 @@ export const useBuilderStore = create<BuilderState>((set) => ({
     set({ proposal: fresh, previewProposal: fresh, isNewProposal: true, isDirty: false, saveStatus: "idle" })
   },
 
-  initExisting: (proposal) => {
-    set({ proposal, previewProposal: proposal, isNewProposal: false, isDirty: false, saveStatus: "idle" })
+  initExisting: (proposal, chatMessages) => {
+    set({ proposal, previewProposal: proposal, isNewProposal: false, isDirty: false, saveStatus: "idle", chatMessages: chatMessages ?? [] })
   },
 
   setContextBlobs: (contextBlobs) => set({ contextBlobs }),
@@ -116,4 +130,38 @@ export const useBuilderStore = create<BuilderState>((set) => ({
     set((state) => ({ dismissedSuggestions: [...state.dismissedSuggestions, path] })),
 
   setSuggestionsLoading: (suggestionsLoading) => set({ suggestionsLoading }),
+
+  setChatMessages: (chatMessages) => set({ chatMessages }),
+
+  addChatMessage: (message) =>
+    set((state) => ({
+      chatMessages: [...state.chatMessages, message],
+      isDirty: true,
+    })),
+
+  applyChatEdits: (messageId) =>
+    set((state) => {
+      const msgIndex = state.chatMessages.findIndex((m) => m.id === messageId)
+      if (msgIndex === -1) return state
+      const msg = state.chatMessages[msgIndex]
+      if (!msg.edits || msg.editsApplied) return state
+
+      let updated = state.proposal
+      for (const edit of msg.edits) {
+        updated = setAtPath(updated, edit.fieldPath, edit.newValue)
+      }
+
+      const newMessages = [...state.chatMessages]
+      newMessages[msgIndex] = { ...msg, editsApplied: true }
+
+      return {
+        proposal: { ...updated, updatedAt: new Date().toISOString() },
+        isDirty: true,
+        chatMessages: newMessages,
+      }
+    }),
+
+  setChatLoading: (chatLoading) => set({ chatLoading }),
+
+  setChatPanelOpen: (chatPanelOpen) => set({ chatPanelOpen }),
 }))

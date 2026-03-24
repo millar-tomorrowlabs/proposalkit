@@ -1,8 +1,9 @@
-import { useEffect, useRef, useCallback } from "react"
+import { useEffect, useRef, useCallback, useState } from "react"
 import { useParams, Link } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { useBuilderStore } from "@/store/builderStore"
 import BuilderForm from "@/components/builder/BuilderForm"
+import ChatPanel from "@/components/builder/ChatPanel"
 import ProposalWrapper from "@/components/proposal/ProposalWrapper"
 import type { ProposalData } from "@/types/proposal"
 
@@ -11,12 +12,37 @@ const DEBOUNCE_SAVE_MS = 2000
 
 const BuilderHome = () => {
   const { id } = useParams<{ id?: string }>()
-  const { proposal, previewProposal, saveStatus, isDirty, flushToPreview, setSaveStatus, initNew, initExisting } = useBuilderStore()
+  const { proposal, previewProposal, saveStatus, isDirty, flushToPreview, setSaveStatus, initNew, initExisting, chatPanelOpen } = useBuilderStore()
 
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const proposalRef = useRef(proposal)
   proposalRef.current = proposal
+
+  // Resizable divider for form / chat split
+  const leftPaneRef = useRef<HTMLDivElement>(null)
+  const [formHeight, setFormHeight] = useState<number | null>(null)
+
+  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const startY = e.clientY
+    const startHeight = formHeight ?? (leftPaneRef.current?.offsetHeight ?? 600) * 0.6
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const paneHeight = leftPaneRef.current?.offsetHeight ?? 600
+      const delta = ev.clientY - startY
+      const newHeight = Math.max(200, Math.min(paneHeight - 200, startHeight + delta))
+      setFormHeight(newHeight)
+    }
+
+    const onMouseUp = () => {
+      document.removeEventListener("mousemove", onMouseMove)
+      document.removeEventListener("mouseup", onMouseUp)
+    }
+
+    document.addEventListener("mousemove", onMouseMove)
+    document.addEventListener("mouseup", onMouseUp)
+  }, [formHeight])
 
   // Map a field path from the preview to the correct builder tab
   const fieldPathToSection = (path: string): string => {
@@ -68,7 +94,7 @@ const BuilderHome = () => {
         .eq("id", id)
         .single()
         .then(({ data }) => {
-          if (data) initExisting({ ...data, ...data.data } as ProposalData)
+          if (data) initExisting({ ...data, ...data.data } as ProposalData, data.chat_messages ?? [])
         })
     } else {
       initNew()
@@ -105,6 +131,7 @@ const BuilderHome = () => {
           cta_email: proposal.ctaEmail,
           sections: proposal.sections,
           data: proposal,
+          chat_messages: useBuilderStore.getState().chatMessages,
         })
       setSaveStatus(error ? "error" : "saved")
     }, DEBOUNCE_SAVE_MS)
@@ -134,9 +161,34 @@ const BuilderHome = () => {
 
       {/* Split pane */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Form — left pane */}
-        <div className="w-[480px] shrink-0 overflow-y-auto border-r border-border">
-          <BuilderForm />
+        {/* Left pane — form + chat */}
+        <div ref={leftPaneRef} className="w-[480px] shrink-0 flex flex-col border-r border-border">
+          {/* Form area */}
+          <div
+            className="overflow-y-auto"
+            style={
+              chatPanelOpen
+                ? formHeight
+                  ? { height: formHeight, flexShrink: 0 }
+                  : { flex: 3 }
+                : { flex: 1 }
+            }
+          >
+            <BuilderForm />
+          </div>
+
+          {/* Resizable divider */}
+          {chatPanelOpen && (
+            <div
+              className="h-1 shrink-0 cursor-row-resize bg-border hover:bg-brand-1 transition-colors"
+              onMouseDown={handleDividerMouseDown}
+            />
+          )}
+
+          {/* Chat panel — flex:2 gives ~40% when open without explicit height */}
+          <div className={chatPanelOpen ? "flex-[2] overflow-hidden" : ""}>
+            <ChatPanel />
+          </div>
         </div>
 
         {/* Preview — right pane */}
