@@ -1,5 +1,7 @@
 import { Check } from "lucide-react"
 import type { ProposedEdit } from "@/types/proposal"
+import { useBuilderStore } from "@/store/builderStore"
+import { formatPrice } from "@/lib/currency"
 
 interface ChatDiffProps {
   edits: ProposedEdit[]
@@ -7,11 +9,11 @@ interface ChatDiffProps {
   onApply: () => void
 }
 
-const formatValue = (value: unknown, fieldPath: string): string => {
+const formatValue = (value: unknown, fieldPath: string, currency: string): string => {
   if (value == null) return "(empty)"
   if (typeof value === "number") {
     const isPrice = /price|Price|rate|Rate|basePrice|hourlyRate/.test(fieldPath)
-    return isPrice ? `$${value.toLocaleString()}` : String(value)
+    return isPrice ? formatPrice(value, currency) : String(value)
   }
   if (typeof value === "string") {
     if (value.length === 0) return "(empty)"
@@ -22,6 +24,8 @@ const formatValue = (value: unknown, fieldPath: string): string => {
 }
 
 const ChatDiff = ({ edits, applied, onApply }: ChatDiffProps) => {
+  const currency = useBuilderStore((s) => s.proposal.currency ?? "USD")
+
   return (
     <div className="mt-2 rounded-lg border border-brand-1/25 bg-brand-1/5 p-3 space-y-2">
       {edits.map((edit, i) => (
@@ -31,10 +35,10 @@ const ChatDiff = ({ edits, applied, onApply }: ChatDiffProps) => {
           </p>
           <div className="flex flex-col gap-0.5 text-xs">
             <p className="text-muted-foreground/70 line-through">
-              {formatValue(edit.oldValue, edit.fieldPath)}
+              {formatValue(edit.oldValue, edit.fieldPath, currency)}
             </p>
             <p className="text-foreground">
-              {formatValue(edit.newValue, edit.fieldPath)}
+              {formatValue(edit.newValue, edit.fieldPath, currency)}
             </p>
           </div>
         </div>

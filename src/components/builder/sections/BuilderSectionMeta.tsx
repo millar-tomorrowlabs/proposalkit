@@ -4,6 +4,7 @@ import BuilderField from "../BuilderField"
 import SuggestionChip from "../SuggestionChip"
 import ImageUpload from "../ImageUpload"
 import { supabase } from "@/lib/supabase"
+import { CURRENCIES } from "@/lib/currency"
 
 const BuilderSectionMeta = () => {
   const { proposal, updateField, suggestions } = useBuilderStore()
@@ -66,15 +67,28 @@ const BuilderSectionMeta = () => {
         {slugStatus === "available" && <p className="text-xs text-brand-1">Available</p>}
       </BuilderField>
 
-      <BuilderField label="CTA email">
-        <input
-          type="email"
-          value={proposal.ctaEmail}
-          onChange={(e) => updateField("ctaEmail", e.target.value)}
-          placeholder="you@yourcompany.com"
-          className="builder-input"
-        />
-      </BuilderField>
+      <div className="grid grid-cols-2 gap-4">
+        <BuilderField label="CTA email">
+          <input
+            type="email"
+            value={proposal.ctaEmail}
+            onChange={(e) => updateField("ctaEmail", e.target.value)}
+            placeholder="you@yourcompany.com"
+            className="builder-input"
+          />
+        </BuilderField>
+        <BuilderField label="Currency">
+          <select
+            value={proposal.currency ?? "USD"}
+            onChange={(e) => updateField("currency", e.target.value)}
+            className="builder-input"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.label}</option>
+            ))}
+          </select>
+        </BuilderField>
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <BuilderField label="Brand color 1">

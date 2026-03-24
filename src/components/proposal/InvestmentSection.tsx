@@ -1,25 +1,22 @@
 import { useState } from "react"
 import { Check, Star } from "lucide-react"
 import type { InvestmentConfig, ConfirmedSelection } from "@/types/proposal"
+import { formatPrice as formatCurrency } from "@/lib/currency"
 
 interface InvestmentSectionProps {
   data: InvestmentConfig
+  currency?: string
   recommendation?: string
   onConfirm: (selection: ConfirmedSelection | null) => void
 }
 
-const formatPrice = (n: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  }).format(n)
-
 const InvestmentSection = ({
   data,
+  currency = "USD",
   recommendation,
   onConfirm,
 }: InvestmentSectionProps) => {
+  const formatPrice = (n: number) => formatCurrency(n, currency)
 
   const [activePackageId, setActivePackageId] = useState(data.packages[0]?.id ?? "")
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(new Set())

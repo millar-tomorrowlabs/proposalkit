@@ -2,10 +2,12 @@ import { useBuilderStore } from "@/store/builderStore"
 import { Plus, Trash2 } from "lucide-react"
 import type { ProposalPackage, AddOn, AddOnCategory, RetainerConfig } from "@/types/proposal"
 import { v4 as uuidv4 } from "uuid"
+import { currencySymbol } from "@/lib/currency"
 
 const BuilderSectionInvestment = () => {
   const { proposal, updateField, suggestions, dismissedSuggestions, dismissSuggestion } = useBuilderStore()
   const inv = proposal.investment
+  const sym = currencySymbol(proposal.currency)
 
   const updateInv = (key: keyof typeof inv, value: unknown) => {
     updateField("investment", { ...inv, [key]: value })
@@ -137,7 +139,7 @@ const BuilderSectionInvestment = () => {
               <div>
                 <p className="mb-1 text-xs text-muted-foreground">Base price</p>
                 <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">$</span>
+                  <span className="text-xs text-muted-foreground">{sym}</span>
                   <input
                     type="number"
                     value={pkg.basePrice}
@@ -214,7 +216,7 @@ const BuilderSectionInvestment = () => {
                               </button>
                             ) : hasPrice ? (
                               <div className="flex items-center justify-center gap-1">
-                                <span className="text-muted-foreground">$</span>
+                                <span className="text-muted-foreground">{sym}</span>
                                 <input
                                   type="number"
                                   value={config!.price}
@@ -383,7 +385,7 @@ const BuilderSectionInvestment = () => {
         {inv.retainer && (
           <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-4">
             <div>
-              <p className="mb-1 text-xs text-muted-foreground">Hourly rate ($)</p>
+              <p className="mb-1 text-xs text-muted-foreground">Hourly rate ({sym})</p>
               <input type="number" value={inv.retainer.hourlyRate} onChange={(e) => updateRetainer("hourlyRate", Number(e.target.value))} className="builder-input" />
             </div>
             <div>

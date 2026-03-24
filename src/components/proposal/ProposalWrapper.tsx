@@ -28,6 +28,7 @@ const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) 
       <InvestmentSection
         key="investment"
         data={proposal.investment}
+        currency={proposal.currency}
         recommendation={proposal.recommendation}
         onConfirm={setConfirmedSelection}
       />

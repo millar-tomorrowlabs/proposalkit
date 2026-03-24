@@ -120,6 +120,7 @@ export interface ProposalMeta {
   tagline: string
   heroDescription: string
   ctaEmail: string
+  currency?: string // ISO 4217 code, e.g. "USD", "GBP", "EUR"
   recommendation?: string
   brief?: string // AI-synthesised working understanding of the client and project
   sections: SectionKey[]

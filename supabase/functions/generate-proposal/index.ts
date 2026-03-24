@@ -287,7 +287,7 @@ Deno.serve(async (req) => {
         },
         system: SYSTEM_PROMPT,
         tools: [TOOL_DEFINITION],
-        tool_choice: { type: "tool", name: "create_proposal_draft" },
+        tool_choice: { type: "auto" },
         messages: [{ role: "user", content: userMessageParts.join("\n") }],
       }),
     })
