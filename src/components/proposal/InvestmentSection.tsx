@@ -96,7 +96,25 @@ const InvestmentSection = ({
     .filter((a) => a.packages[activePackageId]?.included === true)
     .reduce((sum, a) => sum + getMaxPrice(a.id), 0)
 
-  const totalSavings = includedAddOnValue + addOnSavings
+  // Post-launch value included with this package (e.g. 2 weeks at €2,500/mo = €1,250)
+  const postLaunchValue = (() => {
+    if (!data.postLaunch?.includedInPackage || data.postLaunch.includedInPackage !== activePackageId) return 0
+    if (!data.postLaunch.includedWeeks || !data.postLaunch.monthlyPrice) return 0
+    return data.postLaunch.monthlyPrice * (data.postLaunch.includedWeeks / 4)
+  })()
+
+  // Base price premium: how much more this package costs vs. the cheapest alternative
+  const otherPackage = data.packages.find((p) => p.id !== activePackageId)
+  const basePricePremium = Math.max(0, currentPackage.basePrice - (otherPackage?.basePrice ?? currentPackage.basePrice))
+
+  // Net savings: total add-on + post-launch value minus the base price premium
+  const totalSavings = includedAddOnValue + addOnSavings + postLaunchValue - basePricePremium
+
+  // For "Saving X vs. Y" — reference the comparison package
+  const comparisonPackageLabel = (() => {
+    if (totalSavings <= 0) return null
+    return otherPackage ? otherPackage.label : null
+  })()
 
   const selectedAddOns = Array.from(selectedAddOnIds).map((id) => {
     const addOn = data.addOns.find((a) => a.id === id)!
@@ -181,7 +199,7 @@ const InvestmentSection = ({
                 </p>
                 {totalSavings > 0 && (
                   <p className="mt-1 text-xs font-medium text-brand-1">
-                    Save {formatPrice(totalSavings)}
+                    Saving {formatPrice(totalSavings)}{comparisonPackageLabel ? ` vs. ${comparisonPackageLabel}` : ''}
                   </p>
                 )}
               </div>
@@ -337,7 +355,7 @@ const InvestmentSection = ({
                 </p>
                 {totalSavings > 0 && (
                   <p className="mt-0.5 text-xs font-medium text-brand-1">
-                    Saving {formatPrice(totalSavings)}
+                    Saving {formatPrice(totalSavings)}{comparisonPackageLabel ? ` vs. ${comparisonPackageLabel}` : ''}
                   </p>
                 )}
               </div>
