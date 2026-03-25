@@ -24,6 +24,7 @@ const BuilderHome = () => {
   const [showSendModal, setShowSendModal] = useState(false)
   const [sendName, setSendName] = useState("")
   const [sendEmail, setSendEmail] = useState("")
+  const [sendSubject, setSendSubject] = useState("")
   const [sendMessage, setSendMessage] = useState("")
   const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
 
@@ -43,7 +44,7 @@ const BuilderHome = () => {
           body: JSON.stringify({
             recipientName: sendName.trim(),
             recipientEmail: sendEmail.trim(),
-            proposalTitle: proposal.title,
+            proposalTitle: sendSubject.trim() || proposal.title,
             proposalUrl,
             studioName: proposal.studioName,
             brandColor1: proposal.brandColor1,
@@ -217,7 +218,7 @@ const BuilderHome = () => {
           </span>
           {proposal.slug && (
             <button
-              onClick={() => { setShowSendModal(true); setSendStatus("idle") }}
+              onClick={() => { setShowSendModal(true); setSendStatus("idle"); setSendSubject(proposal.title) }}
               className="flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-colors hover:bg-foreground/80"
             >
               <Send className="h-3 w-3" />
@@ -340,6 +341,17 @@ const BuilderHome = () => {
                     value={sendEmail}
                     onChange={(e) => setSendEmail(e.target.value)}
                     placeholder="sarah@client.com"
+                    className="builder-input"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Subject line</label>
+                  <input
+                    type="text"
+                    value={sendSubject}
+                    onChange={(e) => setSendSubject(e.target.value)}
+                    placeholder={proposal.title}
                     className="builder-input"
                   />
                 </div>
