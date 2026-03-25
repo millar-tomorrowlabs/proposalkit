@@ -58,19 +58,28 @@ const BuilderSectionInvestment = () => {
     updateInv("addOns", inv.addOns.filter((_, i) => i !== index))
   }
 
-  // Per-cell: cycle Unavailable → Available ($0) → Included → Unavailable
+  // Per-cell: cycle Unavailable → Available → Included → Available (price preserved)
   const cycleCell = (addOnIndex: number, packageId: string) => {
     const addOn = inv.addOns[addOnIndex]
     const config = addOn.packages[packageId]
     let next: AddOn["packages"][string]
     if (!config || (config.price === undefined && !config.included)) {
+      // Unavailable → Available
       next = { price: 0 }
-    } else if (config.price !== undefined) {
-      next = { included: true }
+    } else if (config.price !== undefined && !config.included) {
+      // Available → Included (preserve price for recovery)
+      next = { included: true, price: config.price }
     } else {
-      next = {}
+      // Included → Available (restore preserved price)
+      next = { price: config.price ?? 0 }
     }
     const updatedPackages = { ...addOn.packages, [packageId]: next }
+    updateAddOn(addOnIndex, "packages", updatedPackages)
+  }
+
+  const clearCell = (addOnIndex: number, packageId: string) => {
+    const addOn = inv.addOns[addOnIndex]
+    const updatedPackages = { ...addOn.packages, [packageId]: {} }
     updateAddOn(addOnIndex, "packages", updatedPackages)
   }
 
@@ -199,7 +208,7 @@ const BuilderSectionInvestment = () => {
               <Plus className="h-3.5 w-3.5" /> Add
             </button>
           </div>
-          <p className="text-xs text-muted-foreground">Click a cell to cycle: Unavailable → Available → Included</p>
+          <p className="text-xs text-muted-foreground">Click a cell to toggle state. Prices are preserved when switching to Included.</p>
 
           {inv.addOns.length > 0 && (
             <div className="overflow-x-auto rounded-lg border border-border">
@@ -247,7 +256,7 @@ const BuilderSectionInvestment = () => {
                                   onClick={(e) => e.stopPropagation()}
                                   className="w-16 rounded border border-border bg-transparent px-1 py-0.5 text-center text-xs text-foreground focus:border-foreground outline-none"
                                 />
-                                <button onClick={() => cycleCell(ai, pkg.id)} className="text-muted-foreground hover:text-foreground transition-colors">↻</button>
+                                <button onClick={() => clearCell(ai, pkg.id)} className="text-muted-foreground hover:text-foreground transition-colors" title="Clear to unavailable">×</button>
                               </div>
                             ) : (
                               <button
