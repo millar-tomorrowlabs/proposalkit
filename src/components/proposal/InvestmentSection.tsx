@@ -96,7 +96,7 @@ const InvestmentSection = ({
     .filter((a) => a.packages[activePackageId]?.included === true)
     .reduce((sum, a) => sum + getMaxPrice(a.id), 0)
 
-  const totalSavings = addOnSavings
+  const totalSavings = includedAddOnValue + addOnSavings
 
   const selectedAddOns = Array.from(selectedAddOnIds).map((id) => {
     const addOn = data.addOns.find((a) => a.id === id)!
@@ -179,9 +179,9 @@ const InvestmentSection = ({
                 <p className="font-display text-3xl font-semibold text-foreground">
                   {formatPrice(currentPackage.basePrice)}
                 </p>
-                {includedAddOnValue > 0 && (
+                {totalSavings > 0 && (
                   <p className="mt-1 text-xs font-medium text-brand-1">
-                    Includes {formatPrice(includedAddOnValue)} in add-ons
+                    Save {formatPrice(totalSavings)}
                   </p>
                 )}
               </div>

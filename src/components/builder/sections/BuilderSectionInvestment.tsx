@@ -63,7 +63,7 @@ const BuilderSectionInvestment = () => {
     const addOn = inv.addOns[addOnIndex]
     const config = addOn.packages[packageId]
     let next: AddOn["packages"][string]
-    if (!config || (!config.price && !config.included)) {
+    if (!config || (config.price === undefined && !config.included)) {
       next = { price: 0 }
     } else if (config.price !== undefined) {
       next = { included: true }
