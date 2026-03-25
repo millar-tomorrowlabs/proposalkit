@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react"
 import { useParams, Link } from "react-router-dom"
+import { Send, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useBuilderStore } from "@/store/builderStore"
 import BuilderForm from "@/components/builder/BuilderForm"
@@ -18,6 +19,44 @@ const BuilderHome = () => {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const proposalRef = useRef(proposal)
   proposalRef.current = proposal
+
+  // Send proposal modal
+  const [showSendModal, setShowSendModal] = useState(false)
+  const [sendName, setSendName] = useState("")
+  const [sendEmail, setSendEmail] = useState("")
+  const [sendMessage, setSendMessage] = useState("")
+  const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
+
+  const handleSendProposal = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!sendName.trim() || !sendEmail.trim()) return
+    setSendStatus("sending")
+
+    const proposalUrl = `${window.location.origin}/p/${proposal.slug || proposal.id}`
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-proposal`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipientName: sendName.trim(),
+            recipientEmail: sendEmail.trim(),
+            proposalTitle: proposal.title,
+            proposalUrl,
+            studioName: proposal.studioName,
+            brandColor1: proposal.brandColor1,
+            brandColor2: proposal.brandColor2,
+            personalMessage: sendMessage.trim() || undefined,
+          }),
+        }
+      )
+      setSendStatus(res.ok ? "sent" : "error")
+    } catch {
+      setSendStatus("error")
+    }
+  }
 
   // Resizable divider for form / chat split
   const leftPaneRef = useRef<HTMLDivElement>(null)
@@ -167,14 +206,25 @@ const BuilderHome = () => {
         <p className="text-xs font-medium text-foreground truncate max-w-xs">
           {proposal.title || "New Proposal"}
         </p>
-        <span className={`text-xs transition-colors ${
-          saveStatus === "saving" ? "text-muted-foreground" :
-          saveStatus === "saved" ? "text-brand-1" :
-          saveStatus === "error" ? "text-red-500" :
-          "text-transparent"
-        }`}>
-          {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : saveStatus === "error" ? "Save failed" : "·"}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className={`text-xs transition-colors ${
+            saveStatus === "saving" ? "text-muted-foreground" :
+            saveStatus === "saved" ? "text-brand-1" :
+            saveStatus === "error" ? "text-red-500" :
+            "text-transparent"
+          }`}>
+            {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : saveStatus === "error" ? "Save failed" : "·"}
+          </span>
+          {proposal.slug && (
+            <button
+              onClick={() => { setShowSendModal(true); setSendStatus("idle") }}
+              className="flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-colors hover:bg-foreground/80"
+            >
+              <Send className="h-3 w-3" />
+              Send
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Split pane */}
@@ -230,6 +280,99 @@ const BuilderHome = () => {
           )}
         </div>
       </div>
+
+      {/* Send proposal modal */}
+      {showSendModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowSendModal(false) }}
+        >
+          <div className="relative w-full max-w-md rounded-2xl bg-background border border-border p-8 shadow-2xl">
+            <button
+              onClick={() => setShowSendModal(false)}
+              className="absolute right-5 top-5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {sendStatus === "sent" ? (
+              <div className="py-4 text-center">
+                <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-brand-1">
+                  <Send className="h-4 w-4 text-white" />
+                </div>
+                <h3 className="font-display text-xl font-semibold text-foreground">Sent!</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Proposal sent to {sendEmail}
+                </p>
+                <button
+                  onClick={() => setShowSendModal(false)}
+                  className="mt-4 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSendProposal} className="space-y-4">
+                <div>
+                  <h3 className="font-display text-lg font-semibold text-foreground">Send proposal</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Send a branded email with a link to view this proposal.
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Recipient name</label>
+                  <input
+                    type="text"
+                    required
+                    value={sendName}
+                    onChange={(e) => setSendName(e.target.value)}
+                    placeholder="Sarah Chen"
+                    className="builder-input"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Recipient email</label>
+                  <input
+                    type="email"
+                    required
+                    value={sendEmail}
+                    onChange={(e) => setSendEmail(e.target.value)}
+                    placeholder="sarah@client.com"
+                    className="builder-input"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Personal message <span className="font-normal text-muted-foreground/60">(optional)</span>
+                  </label>
+                  <textarea
+                    value={sendMessage}
+                    onChange={(e) => setSendMessage(e.target.value)}
+                    rows={3}
+                    placeholder="Hey Sarah, here's the proposal we discussed..."
+                    className="builder-input resize-none"
+                  />
+                </div>
+
+                {sendStatus === "error" && (
+                  <p className="text-xs text-red-500">Something went wrong. Please try again.</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={sendStatus === "sending"}
+                  className="w-full rounded-full bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-colors hover:bg-foreground/80 disabled:opacity-50"
+                >
+                  {sendStatus === "sending" ? "Sending..." : "Send proposal"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
