@@ -42,6 +42,8 @@ const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) 
         proposalTitle={proposal.title}
         ctaEmail={proposal.ctaEmail}
         studioName={studioName}
+        brandColor1={proposal.brandColor1}
+        brandColor2={proposal.brandColor2}
         currency={proposal.currency}
         confirmedSelection={confirmedSelection}
         isPreview={isPreview}

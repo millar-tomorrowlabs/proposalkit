@@ -9,6 +9,8 @@ interface CTASectionProps {
   proposalTitle: string
   ctaEmail: string
   studioName: string
+  brandColor1?: string
+  brandColor2?: string
   currency?: string
   confirmedSelection: ConfirmedSelection | null
   isPreview?: boolean
@@ -19,6 +21,8 @@ const CTASection = ({
   proposalSlug,
   proposalTitle,
   studioName,
+  brandColor1,
+  brandColor2,
   currency = "USD",
   confirmedSelection,
   isPreview = false,
@@ -54,6 +58,9 @@ const CTASection = ({
             proposalId,
             proposalSlug,
             proposalTitle,
+            studioName,
+            brandColor1,
+            brandColor2,
             clientName: name.trim(),
             clientEmail: email.trim(),
             currency,
