@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
-const NOTIFY_EMAILS = ["millar@tomorrowstudios.io", "kavi@tomorrowstudios.io"]
+const NOTIFY_EMAILS = ["millar@tomorrowstudios.io"]
 
 interface SubmissionBody {
   proposalId: string
@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
           ),
         ])
 
-        emailSent = teamRes.ok
+        emailSent = teamRes.ok || clientRes.ok
         if (!teamRes.ok) {
           const errText = await teamRes.text()
           console.error("Resend team email error:", teamRes.status, errText)
