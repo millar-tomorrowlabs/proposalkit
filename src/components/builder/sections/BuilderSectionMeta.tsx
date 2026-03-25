@@ -42,6 +42,16 @@ const BuilderSectionMeta = () => {
         <SuggestionChip suggestion={suggestions?.title} path="title" onAccept={(v) => updateField("title", v)} />
       </BuilderField>
 
+      <BuilderField label="Header text" hint="Shown in the top-left nav. Defaults to 'Tomorrow Studios.'">
+        <input
+          type="text"
+          value={proposal.studioName ?? ""}
+          onChange={(e) => updateField("studioName", e.target.value)}
+          placeholder="Tomorrow Studios."
+          className="builder-input"
+        />
+      </BuilderField>
+
       <BuilderField label="Client name">
         <input
           type="text"

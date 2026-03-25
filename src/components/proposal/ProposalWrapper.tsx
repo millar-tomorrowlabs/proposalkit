@@ -14,9 +14,10 @@ interface ProposalWrapperProps {
   isPreview?: boolean
 }
 
-const STUDIO_NAME = "Tomorrow Studios."
+const DEFAULT_STUDIO_NAME = "Tomorrow Studios."
 
 const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) => {
+  const studioName = proposal.studioName || DEFAULT_STUDIO_NAME
   const [confirmedSelection, setConfirmedSelection] = useState<ConfirmedSelection | null>(null)
   useScrollRevealAll({ disabled: isPreview })
 
@@ -39,7 +40,7 @@ const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) 
         proposalId={proposal.id}
         proposalSlug={proposal.slug}
         ctaEmail={proposal.ctaEmail}
-        studioName={STUDIO_NAME}
+        studioName={studioName}
         confirmedSelection={confirmedSelection}
         isPreview={isPreview}
       />
@@ -55,7 +56,7 @@ const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) 
         } as React.CSSProperties
       }
     >
-      {!isPreview && <ProposalNav sections={proposal.sections} studioName={STUDIO_NAME} />}
+      {!isPreview && <ProposalNav sections={proposal.sections} studioName={studioName} />}
       <HeroSection
         clientName={proposal.clientName}
         heroImageUrl={proposal.heroImageUrl}
