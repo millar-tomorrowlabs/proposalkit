@@ -26,6 +26,7 @@ interface SubmissionBody {
   retainerRate?: number
   grandTotal?: number
   message?: string
+  ctaEmail?: string
 }
 
 function formatPrice(amount: number, currency = "USD"): string {
@@ -197,7 +198,8 @@ Deno.serve(async (req) => {
     const resendKey = Deno.env.get("RESEND_API_KEY")
 
     if (resendKey) {
-      const sendEmail = (to: string[], subject: string, html: string) =>
+      const replyTo = body.ctaEmail ?? NOTIFY_EMAILS[0]
+      const sendEmail = (to: string[], subject: string, html: string, replyToAddr?: string) =>
         fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -209,6 +211,7 @@ Deno.serve(async (req) => {
             to,
             subject,
             html,
+            ...(replyToAddr ? { reply_to: replyToAddr } : {}),
           }),
         })
 
@@ -223,7 +226,8 @@ Deno.serve(async (req) => {
           sendEmail(
             [body.clientEmail],
             `Thanks for your submission — ${body.proposalTitle ?? body.proposalSlug}`,
-            buildClientEmailHtml(body)
+            buildClientEmailHtml(body),
+            replyTo
           ),
         ])
 
