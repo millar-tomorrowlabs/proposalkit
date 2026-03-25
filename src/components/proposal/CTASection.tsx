@@ -1,35 +1,33 @@
 import { useState } from "react"
 import { ArrowRight, X } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { formatPrice as formatCurrency } from "@/lib/currency"
 import type { ConfirmedSelection } from "@/types/proposal"
 
 interface CTASectionProps {
   proposalId: string
   proposalSlug: string
+  proposalTitle: string
   ctaEmail: string
   studioName: string
+  currency?: string
   confirmedSelection: ConfirmedSelection | null
   isPreview?: boolean
 }
 
-const formatPrice = (n: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  }).format(n)
-
 const CTASection = ({
   proposalId,
   proposalSlug,
-  ctaEmail,
+  proposalTitle,
   studioName,
+  currency = "USD",
   confirmedSelection,
   isPreview = false,
 }: CTASectionProps) => {
+  const formatPrice = (n: number) => formatCurrency(n, currency)
+
   const [showModal, setShowModal] = useState(false)
   const [name, setName] = useState("")
-  const [email, setEmail] = useState(ctaEmail)
+  const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -37,7 +35,6 @@ const CTASection = ({
 
   const openModal = () => {
     if (isPreview) return
-    setEmail(ctaEmail)
     setShowModal(true)
   }
 
@@ -47,29 +44,39 @@ const CTASection = ({
     setSubmitting(true)
     setError(null)
 
-    const { error: dbError } = await supabase.from("submissions").insert({
-      proposal_id: proposalId,
-      proposal_slug: proposalSlug,
-      client_name: name.trim(),
-      client_email: email.trim(),
-      package_id: confirmedSelection?.packageId ?? null,
-      package_label: confirmedSelection?.packageLabel ?? null,
-      package_price: confirmedSelection?.packagePrice ?? null,
-      add_ons: confirmedSelection?.addOns ?? [],
-      retainer_hours: confirmedSelection?.retainerHours ?? null,
-      retainer_rate: confirmedSelection?.retainerRate ?? null,
-      total_price: confirmedSelection?.grandTotal ?? null,
-      message: message.trim() || null,
-    })
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-proposal`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            proposalId,
+            proposalSlug,
+            proposalTitle,
+            clientName: name.trim(),
+            clientEmail: email.trim(),
+            currency,
+            packageId: confirmedSelection?.packageId,
+            packageLabel: confirmedSelection?.packageLabel,
+            packagePrice: confirmedSelection?.packagePrice,
+            addOns: confirmedSelection?.addOns,
+            retainerHours: confirmedSelection?.retainerHours,
+            retainerRate: confirmedSelection?.retainerRate,
+            grandTotal: confirmedSelection?.grandTotal,
+            message: message.trim() || undefined,
+          }),
+        }
+      )
 
-    if (dbError) {
+      if (!res.ok) throw new Error("Request failed")
+
+      setSubmitting(false)
+      setSubmitted(true)
+    } catch {
       setError("Something went wrong. Please try again.")
       setSubmitting(false)
-      return
     }
-
-    setSubmitting(false)
-    setSubmitted(true)
   }
 
   return (

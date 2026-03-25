@@ -39,8 +39,10 @@ const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) 
         key="cta"
         proposalId={proposal.id}
         proposalSlug={proposal.slug}
+        proposalTitle={proposal.title}
         ctaEmail={proposal.ctaEmail}
         studioName={studioName}
+        currency={proposal.currency}
         confirmedSelection={confirmedSelection}
         isPreview={isPreview}
       />
