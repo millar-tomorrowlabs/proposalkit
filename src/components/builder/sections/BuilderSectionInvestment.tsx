@@ -254,6 +254,7 @@ const BuilderSectionInvestment = () => {
                                   value={config!.price}
                                   onChange={(e) => setCellPrice(ai, pkg.id, Number(e.target.value))}
                                   onClick={(e) => e.stopPropagation()}
+                                  onFocus={(e) => e.target.select()}
                                   className="w-16 rounded border border-border bg-transparent px-1 py-0.5 text-center text-xs text-foreground focus:border-foreground outline-none"
                                 />
                                 <button onClick={() => clearCell(ai, pkg.id)} className="text-muted-foreground hover:text-foreground transition-colors" title="Clear to unavailable">×</button>
