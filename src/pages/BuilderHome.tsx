@@ -45,6 +45,7 @@ const BuilderHome = () => {
             recipientName: sendName.trim(),
             recipientEmail: sendEmail.trim(),
             proposalTitle: sendSubject.trim() || proposal.title,
+            clientName: proposal.clientName,
             proposalUrl,
             studioName: proposal.studioName,
             brandColor1: proposal.brandColor1,

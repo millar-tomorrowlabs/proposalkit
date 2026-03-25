@@ -9,6 +9,7 @@ interface SendBody {
   recipientName: string
   recipientEmail: string
   proposalTitle: string
+  clientName?: string
   proposalUrl: string
   studioName?: string
   brandColor1?: string
@@ -37,7 +38,7 @@ function buildSendEmailHtml(body: SendBody): string {
     <div style="height:3px;background:linear-gradient(90deg,${accent},${body.brandColor2 ?? accent})"></div>
     <div style="background:#fff;padding:32px 24px;border-radius:0 0 12px 12px;border:1px solid #e5e5e5;border-top:none">
       <p style="margin:0 0 16px;font-size:16px;color:#111">Hi ${firstName},</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#333;line-height:1.6">Your proposal for <strong>${body.proposalTitle}</strong> is ready to review.</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#333;line-height:1.6">Your proposal for <strong>${body.clientName ?? body.proposalTitle}</strong> is ready to review.</p>
       ${messageHtml}
       <div style="text-align:center;margin:32px 0">
         <a href="${body.proposalUrl}" style="display:inline-block;background:${accent};color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:50px">View Proposal</a>
