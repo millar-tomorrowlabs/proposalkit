@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Tomorrow Studios <onboarding@resend.dev>",
+            from: "Tomorrow Studios <notifications@tomorrowstudios.io>",
             to,
             subject,
             html,
