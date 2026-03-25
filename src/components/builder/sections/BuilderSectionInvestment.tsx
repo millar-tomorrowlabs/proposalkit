@@ -1,6 +1,6 @@
 import { useBuilderStore } from "@/store/builderStore"
 import { Plus, Trash2 } from "lucide-react"
-import type { ProposalPackage, AddOn, AddOnCategory, RetainerConfig } from "@/types/proposal"
+import type { ProposalPackage, AddOn, AddOnCategory, RetainerConfig, PostLaunchConfig } from "@/types/proposal"
 import { v4 as uuidv4 } from "uuid"
 import { currencySymbol } from "@/lib/currency"
 
@@ -107,6 +107,29 @@ const BuilderSectionInvestment = () => {
       updateField("investment", rest)
     } else {
       updateField("investment", { ...inv, retainer: { hourlyRate: 150, minHours: 3, maxHours: 10, requiredMonths: 6 } })
+    }
+  }
+
+  // ── Post-Launch Optimization ────────────────────────────────────────────
+
+  const updatePostLaunch = (key: keyof PostLaunchConfig, value: unknown) => {
+    updateField("investment", { ...inv, postLaunch: { ...(inv.postLaunch!), [key]: value } })
+  }
+
+  const togglePostLaunch = () => {
+    if (inv.postLaunch) {
+      const { postLaunch: _, ...rest } = inv
+      updateField("investment", rest)
+    } else {
+      updateField("investment", {
+        ...inv,
+        postLaunch: {
+          monthlyPrice: 2500,
+          description: "A dedicated team monitors your metrics, identifies conversion opportunities, and brings recommendations to you each month. Unlike the support retainer (reactive bug fixes and maintenance), this is proactive.",
+          features: ["Conversion monitoring", "Funnel improvements", "A/B testing", "Monthly reporting"],
+          includedWeeks: 2,
+        },
+      })
     }
   }
 
@@ -399,6 +422,69 @@ const BuilderSectionInvestment = () => {
             <div>
               <p className="mb-1 text-xs text-muted-foreground">Max hours/mo</p>
               <input type="number" value={inv.retainer.maxHours} onChange={(e) => updateRetainer("maxHours", Number(e.target.value))} className="builder-input" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Post-Launch Optimization ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Post-Launch Optimization</h2>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+            <input type="checkbox" checked={!!inv.postLaunch} onChange={togglePostLaunch} className="accent-[var(--brand-1)]" />
+            Include post-launch
+          </label>
+        </div>
+        {inv.postLaunch && (
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">Monthly price ({sym})</p>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground">{sym}</span>
+                <input type="number" value={inv.postLaunch.monthlyPrice} onChange={(e) => updatePostLaunch("monthlyPrice", Number(e.target.value))} className="builder-input" />
+              </div>
+            </div>
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">Description</p>
+              <textarea
+                value={inv.postLaunch.description}
+                onChange={(e) => updatePostLaunch("description", e.target.value)}
+                rows={3}
+                placeholder="What this service includes..."
+                className="builder-input resize-none"
+              />
+            </div>
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">Features (one per line)</p>
+              <textarea
+                value={inv.postLaunch.features.join("\n")}
+                onChange={(e) => updatePostLaunch("features", e.target.value.split("\n").filter(Boolean))}
+                rows={3}
+                placeholder={"Conversion monitoring\nFunnel improvements\nA/B testing"}
+                className="builder-input resize-none font-mono text-xs"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">Included in package</p>
+                <select
+                  value={inv.postLaunch.includedInPackage ?? ""}
+                  onChange={(e) => updatePostLaunch("includedInPackage", e.target.value || undefined)}
+                  className="builder-input"
+                >
+                  <option value="">None</option>
+                  {inv.packages.map((p) => (
+                    <option key={p.id} value={p.id}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
+              {inv.postLaunch.includedInPackage && (
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">Included weeks</p>
+                  <input type="number" value={inv.postLaunch.includedWeeks ?? 0} onChange={(e) => updatePostLaunch("includedWeeks", Number(e.target.value))} className="builder-input" />
+                </div>
+              )}
             </div>
           </div>
         )}

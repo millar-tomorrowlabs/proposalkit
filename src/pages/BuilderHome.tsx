@@ -23,6 +23,24 @@ const BuilderHome = () => {
   const leftPaneRef = useRef<HTMLDivElement>(null)
   const [formHeight, setFormHeight] = useState<number | null>(null)
 
+  // Preview scaling — render at fixed width, scale to fit container
+  const PREVIEW_WIDTH = 1280
+  const previewContainerRef = useRef<HTMLDivElement>(null)
+  const previewContentRef = useRef<HTMLDivElement>(null)
+  const [previewScale, setPreviewScale] = useState(0.5)
+  useEffect(() => {
+    const container = previewContainerRef.current
+    if (!container) return
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const containerWidth = entry.contentRect.width
+        setPreviewScale(containerWidth / PREVIEW_WIDTH)
+      }
+    })
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
+
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     const startY = e.clientY
@@ -192,11 +210,15 @@ const BuilderHome = () => {
         </div>
 
         {/* Preview — right pane */}
-        <div className="flex-1 overflow-y-auto bg-muted/20">
+        <div ref={previewContainerRef} className="flex-1 overflow-y-auto bg-muted/20">
           {previewProposal.title ? (
             <div
+              ref={previewContentRef}
               className="builder-preview"
-              style={{ zoom: 0.55 }}
+              style={{
+                width: PREVIEW_WIDTH,
+                zoom: previewScale,
+              }}
               onClickCapture={handlePreviewClick}
             >
               <ProposalWrapper proposal={previewProposal} isPreview />

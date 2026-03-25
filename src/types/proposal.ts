@@ -82,11 +82,20 @@ export interface RetainerConfig {
   requiredMonths: number
 }
 
+export interface PostLaunchConfig {
+  monthlyPrice: number
+  description: string
+  features: string[]
+  includedInPackage?: string
+  includedWeeks?: number
+}
+
 export interface InvestmentConfig {
   packages: ProposalPackage[]
   addOnCategories: AddOnCategory[]
   addOns: AddOn[]
   retainer?: RetainerConfig
+  postLaunch?: PostLaunchConfig
 }
 
 export interface TimelinePhase {

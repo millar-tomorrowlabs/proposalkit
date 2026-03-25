@@ -24,6 +24,7 @@ const InvestmentSection = ({
     data.retainer ? data.retainer.minHours + 2 : 0
   )
   const [confirmed, setConfirmed] = useState(false)
+  const [postLaunchSelected, setPostLaunchSelected] = useState(false)
 
   if (data.packages.length === 0) {
     return (
@@ -343,6 +344,69 @@ const InvestmentSection = ({
             </div>
           </div>
         </div>
+
+        {/* Post-Launch Optimization */}
+        {data.postLaunch && (
+          <div className="scroll-reveal mt-8 rounded-lg border-2 border-border bg-card p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-display text-xl font-semibold text-foreground">
+                  Post-Launch Optimization
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Optional monthly service — separate from the support retainer
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {data.postLaunch.description}
+                </p>
+              </div>
+              <p className="shrink-0 font-display text-2xl font-semibold text-foreground">
+                {formatPrice(data.postLaunch.monthlyPrice)}
+                <span className="text-sm font-normal text-muted-foreground">/mo</span>
+              </p>
+            </div>
+
+            {data.postLaunch.includedInPackage === activePackageId && data.postLaunch.includedWeeks && (
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-brand-1/30 bg-brand-1-light px-4 py-2.5">
+                <span className="text-xs text-muted-foreground">
+                  {data.postLaunch.includedWeeks} weeks included with your {currentPackage.label} package —
+                </span>
+                <span className="text-xs font-medium text-brand-1">
+                  continue monthly from {formatPrice(data.postLaunch.monthlyPrice)}/mo
+                </span>
+              </div>
+            )}
+
+            <button
+              onClick={() => !confirmed && setPostLaunchSelected(!postLaunchSelected)}
+              className={`mt-4 flex w-full items-center justify-between rounded-lg border p-4 text-left transition-all duration-200 ${
+                postLaunchSelected
+                  ? "border-brand-1 bg-brand-1-light"
+                  : "border-border bg-muted/30"
+              }`}
+            >
+              <p className="text-sm font-medium text-foreground">
+                {data.postLaunch.includedInPackage === activePackageId
+                  ? "Continue post-launch optimization"
+                  : "Add post-launch optimization"}
+              </p>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-foreground">
+                  +{formatPrice(data.postLaunch.monthlyPrice)}/mo
+                </span>
+                <div
+                  className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
+                    postLaunchSelected
+                      ? "border-brand-1 bg-brand-1"
+                      : "border-border"
+                  }`}
+                >
+                  {postLaunchSelected && <Check className="h-3 w-3 text-white" />}
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* Retainer */}
         {data.retainer && (
