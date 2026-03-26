@@ -8,6 +8,7 @@ interface ProposalRow {
   slug: string
   title: string
   client_name: string
+  status: string | null
   created_at: string
 }
 
@@ -27,7 +28,7 @@ const ProposalsDashboard = () => {
     const load = async () => {
       const { data: proposalData } = await supabase
         .from("proposals")
-        .select("id, slug, title, client_name, created_at")
+        .select("id, slug, title, client_name, status, created_at")
         .order("created_at", { ascending: false })
 
       const rows = proposalData ?? []
@@ -108,6 +109,15 @@ const ProposalsDashboard = () => {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium text-foreground truncate">{p.title}</p>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                          p.status === "sent"
+                            ? "bg-emerald-500/10 text-emerald-600"
+                            : p.status === "viewed"
+                            ? "bg-blue-500/10 text-blue-600"
+                            : "bg-muted text-muted-foreground"
+                        }`}>
+                          {p.status === "sent" ? "Sent" : p.status === "viewed" ? "Viewed" : "Draft"}
+                        </span>
                         {count > 0 && (
                           <span className="shrink-0 rounded-full bg-brand-1 px-2 py-0.5 text-xs font-medium text-white">
                             {count} {count === 1 ? "submission" : "submissions"}

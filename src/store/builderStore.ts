@@ -122,7 +122,7 @@ export const useBuilderStore = create<BuilderState>((set) => ({
     set({ proposal, previewProposal: proposal, isNewProposal: false, isDirty: false, saveStatus: "idle", chatMessages: chatMessages ?? [] })
   },
 
-  setContextBlobs: (contextBlobs) => set({ contextBlobs }),
+  setContextBlobs: (contextBlobs) => set({ contextBlobs, isDirty: true }),
 
   setSuggestions: (suggestions) => set({ suggestions, dismissedSuggestions: [] }),
 

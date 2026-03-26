@@ -132,7 +132,9 @@ export interface ProposalMeta {
   currency?: string // ISO 4217 code, e.g. "USD", "GBP", "EUR"
   recommendation?: string
   studioName?: string // header text, e.g. "Tomorrow Studios x Obra"
+  status?: "draft" | "sent" | "viewed" // proposal lifecycle status
   brief?: string // AI-synthesised working understanding of the client and project
+  contextBlobs?: ContextBlob[] // persisted deal context
   sections: SectionKey[]
   createdAt: string
   updatedAt: string

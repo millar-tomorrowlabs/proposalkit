@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react"
 import { useParams, Link } from "react-router-dom"
-import { Send, X } from "lucide-react"
+import { Send, X, Monitor, Tablet, Smartphone } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useBuilderStore } from "@/store/builderStore"
 import BuilderForm from "@/components/builder/BuilderForm"
@@ -13,12 +13,15 @@ const DEBOUNCE_SAVE_MS = 2000
 
 const BuilderHome = () => {
   const { id } = useParams<{ id?: string }>()
-  const { proposal, previewProposal, saveStatus, isDirty, flushToPreview, setSaveStatus, initNew, initExisting, chatPanelOpen } = useBuilderStore()
+  const { proposal, previewProposal, saveStatus, isDirty, flushToPreview, setSaveStatus, initNew, initExisting, chatPanelOpen, contextBlobs } = useBuilderStore()
 
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const proposalRef = useRef(proposal)
   proposalRef.current = proposal
+
+  // Loading state for existing proposals
+  const [isLoading, setIsLoading] = useState(!!id)
 
   // Send proposal modal
   const [showSendModal, setShowSendModal] = useState(false)
@@ -27,6 +30,15 @@ const BuilderHome = () => {
   const [sendSubject, setSendSubject] = useState("")
   const [sendMessage, setSendMessage] = useState("")
   const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
+  const [markAsSent, setMarkAsSent] = useState(true)
+
+  // Preview viewport
+  const [previewWidth, setPreviewWidth] = useState(1280)
+  const viewports = [
+    { label: "Desktop", width: 1280, icon: Monitor },
+    { label: "Tablet", width: 768, icon: Tablet },
+    { label: "Mobile", width: 375, icon: Smartphone },
+  ] as const
 
   const handleSendProposal = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,7 +66,15 @@ const BuilderHome = () => {
           }),
         }
       )
-      setSendStatus(res.ok ? "sent" : "error")
+      if (res.ok) {
+        setSendStatus("sent")
+        // Update proposal status if "Mark as Sent" is checked
+        if (markAsSent) {
+          useBuilderStore.getState().updateField("status", "sent")
+        }
+      } else {
+        setSendStatus("error")
+      }
     } catch {
       setSendStatus("error")
     }
@@ -65,7 +85,6 @@ const BuilderHome = () => {
   const [formHeight, setFormHeight] = useState<number | null>(null)
 
   // Preview scaling — render at fixed width, scale to fit container
-  const PREVIEW_WIDTH = 1280
   const previewContainerRef = useRef<HTMLDivElement>(null)
   const previewContentRef = useRef<HTMLDivElement>(null)
   const [previewScale, setPreviewScale] = useState(0.5)
@@ -75,12 +94,12 @@ const BuilderHome = () => {
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const containerWidth = entry.contentRect.width
-        setPreviewScale(containerWidth / PREVIEW_WIDTH)
+        setPreviewScale(containerWidth / previewWidth)
       }
     })
     observer.observe(container)
     return () => observer.disconnect()
-  }, [])
+  }, [previewWidth])
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -147,16 +166,26 @@ const BuilderHome = () => {
   useEffect(() => {
     if (id) {
       // Load existing proposal
+      setIsLoading(true)
       supabase
         .from("proposals")
         .select("*")
         .eq("id", id)
         .single()
         .then(({ data }) => {
-          if (data) initExisting({ ...data, ...data.data } as ProposalData, data.chat_messages ?? [])
+          if (data) {
+            const merged = { ...data, ...data.data } as ProposalData
+            initExisting(merged, data.chat_messages ?? [])
+            // Restore persisted context blobs (without triggering auto-save)
+            if (merged.contextBlobs?.length) {
+              useBuilderStore.setState({ contextBlobs: merged.contextBlobs, isDirty: false })
+            }
+          }
+          setIsLoading(false)
         })
     } else {
       initNew()
+      setIsLoading(false)
     }
   }, [id])
 
@@ -188,15 +217,16 @@ const BuilderHome = () => {
           brand_color_2: proposal.brandColor2,
           hero_image_url: proposal.heroImageUrl,
           cta_email: proposal.ctaEmail,
+          status: proposal.status || "draft",
           sections: proposal.sections,
-          data: proposal,
+          data: { ...proposal, contextBlobs: useBuilderStore.getState().contextBlobs },
           chat_messages: useBuilderStore.getState().chatMessages,
         })
       setSaveStatus(error ? "error" : "saved")
     }, DEBOUNCE_SAVE_MS)
 
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
-  }, [proposal])
+  }, [proposal, contextBlobs])
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
@@ -206,7 +236,7 @@ const BuilderHome = () => {
           ← Proposals
         </Link>
         <p className="text-xs font-medium text-foreground truncate max-w-xs">
-          {proposal.title || "New Proposal"}
+          {isLoading ? "" : proposal.title || "New Proposal"}
         </p>
         <div className="flex items-center gap-3">
           <span className={`text-xs transition-colors ${
@@ -262,24 +292,49 @@ const BuilderHome = () => {
         </div>
 
         {/* Preview — right pane */}
-        <div ref={previewContainerRef} className="flex-1 overflow-y-auto bg-muted/20">
-          {previewProposal.title ? (
-            <div
-              ref={previewContentRef}
-              className="builder-preview"
-              style={{
-                width: PREVIEW_WIDTH,
-                zoom: previewScale,
-              }}
-              onClickCapture={handlePreviewClick}
-            >
-              <ProposalWrapper proposal={previewProposal} isPreview />
-            </div>
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-muted-foreground">Start filling in the form to see a preview</p>
-            </div>
-          )}
+        <div className="flex flex-1 flex-col overflow-hidden bg-muted/20">
+          {/* Viewport toggle */}
+          <div className="flex h-10 shrink-0 items-center justify-center gap-1 border-b border-border bg-background/50">
+            {viewports.map(({ label, width, icon: Icon }) => (
+              <button
+                key={width}
+                onClick={() => setPreviewWidth(width)}
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  previewWidth === width
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={`${label} (${width}px)`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div ref={previewContainerRef} className="flex-1 overflow-y-auto">
+            {isLoading ? (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-sm text-muted-foreground">Loading proposal...</p>
+              </div>
+            ) : previewProposal.title ? (
+              <div
+                ref={previewContentRef}
+                className="builder-preview"
+                style={{
+                  width: previewWidth,
+                  zoom: previewScale,
+                }}
+                onClickCapture={handlePreviewClick}
+              >
+                <ProposalWrapper proposal={previewProposal} isPreview />
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-sm text-muted-foreground">Start filling in the form to see a preview</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -369,6 +424,16 @@ const BuilderHome = () => {
                     className="builder-input resize-none"
                   />
                 </div>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={markAsSent}
+                    onChange={(e) => setMarkAsSent(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-border accent-brand-1"
+                  />
+                  <span className="text-xs text-muted-foreground">Mark proposal as sent</span>
+                </label>
 
                 {sendStatus === "error" && (
                   <p className="text-xs text-red-500">Something went wrong. Please try again.</p>

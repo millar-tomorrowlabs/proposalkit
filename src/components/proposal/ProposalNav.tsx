@@ -13,20 +13,22 @@ const sectionLabels: Record<SectionKey, string> = {
 interface ProposalNavProps {
   sections: SectionKey[]
   studioName: string
+  isPreview?: boolean
 }
 
-const ProposalNav = ({ sections, studioName }: ProposalNavProps) => {
-  const [scrolled, setScrolled] = useState(false)
+const ProposalNav = ({ sections, studioName, isPreview = false }: ProposalNavProps) => {
+  const [scrolled, setScrolled] = useState(isPreview)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
+    if (isPreview) return // skip scroll listener in preview — always show scrolled state
     const onScroll = () => {
       setScrolled(window.scrollY > window.innerHeight * 0.8)
     }
     window.addEventListener("scroll", onScroll, { passive: true })
     onScroll()
     return () => window.removeEventListener("scroll", onScroll)
-  }, [])
+  }, [isPreview])
 
   const navItems = sections.map((key) => ({
     label: sectionLabels[key],
@@ -35,7 +37,7 @@ const ProposalNav = ({ sections, studioName }: ProposalNavProps) => {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-40 border-b backdrop-blur-md transition-colors duration-300 ${
+      className={`${isPreview ? "relative" : "fixed top-0 left-0 right-0"} z-40 border-b backdrop-blur-md transition-colors duration-300 ${
         scrolled
           ? "border-border bg-background/90"
           : "border-white/10 bg-black/30"
