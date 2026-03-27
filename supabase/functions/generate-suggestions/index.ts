@@ -11,7 +11,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { contextBlobs, proposal } = await req.json()
+    const { contextBlobs, proposal, accountContext } = await req.json()
+    const studioName = accountContext?.studioName ?? "your studio"
+    const studioDesc = accountContext?.studioDescription ?? "a creative agency"
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
     if (!apiKey) {
@@ -33,7 +35,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const prompt = `You are helping Tomorrow Studios, a creative agency that builds Shopify themes, web apps, and brand experiences, draft a client proposal.
+    const prompt = `You are helping ${studioName}, ${studioDesc}, draft a client proposal.
 
 Based on the following deal context, generate suggestions for all proposal fields.
 
@@ -47,7 +49,7 @@ Field guide:
 - tagline: Hero headline, 3-8 words, aspirational and specific to the project
 - heroDescription: 1-2 sentences below the tagline
 - recommendation: Completes "Our recommendation is to..." — steer the client toward the most appropriate approach
-- summary.studioTagline: One-line description of Tomorrow Studios
+- summary.studioTagline: One-line description of ${studioName}
 - summary.studioDescription: 2-4 sentence paragraph about the studio's craft and approach
 - summary.studioDescription2: Optional continuation paragraph
 - summary.projectOverview: One sentence overview of this specific engagement

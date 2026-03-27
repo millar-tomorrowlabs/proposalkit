@@ -95,6 +95,10 @@ const WizardPage = () => {
             clientName: clientName.trim(),
             clientEmail: clientEmail.trim(),
             ctaEmail: ctaEmail.trim(),
+            accountContext: {
+              studioName: account.studioName,
+              studioDescription: account.aiStudioDescription,
+            },
           },
         },
       )

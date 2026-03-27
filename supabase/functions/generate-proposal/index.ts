@@ -5,27 +5,27 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
-const SYSTEM_PROMPT = `You are a proposal writer for Tomorrow Studios, a design and technology studio that builds modern ecommerce experiences, operational systems, and AI-enabled tools.
+function buildSystemPrompt(ctx?: { studioName?: string; studioDescription?: string }) {
+  const studio = ctx?.studioName ?? "your studio"
+  const studioDesc = ctx?.studioDescription ?? "a design and technology studio"
 
-Tomorrow Studios works with growing brands on Shopify builds, custom web applications, brand identity, and emerging tech integrations. Clients are founders, operators, and brand leads — intelligent people who appreciate directness and specificity over marketing language.
+  return `You are a proposal writer for ${studio}, ${studioDesc}.
+
+${studio} works with growing brands and businesses. Clients are founders, operators, and brand leads — intelligent people who appreciate directness and specificity over marketing language.
 
 VOICE AND TONE:
 - Direct and confident. No hedging, no qualifiers like "we believe" or "we aim to".
 - Specific, not generic. Name real platforms, real timelines, real constraints.
-- Client-centric. Every sentence should be about what the client gets or does, not what Tomorrow Studios offers.
+- Client-centric. Every sentence should be about what the client gets or does, not what ${studio} offers.
 - Short sentences mixed with detailed ones. No passive voice. No jargon.
 - Never use: "digital transformation", "leverage", "world-class", "best-in-class", "seamlessly", "cutting-edge", "holistic", "synergy", "empower", "elevate"
 - Do use: specific outcomes, real numbers, honest language about tradeoffs
 
-STYLE REFERENCE (from a real proposal):
+STYLE REFERENCE (example tone and structure):
 - Tagline: "Two stores. One platform."
 - Hero description: "A complete Shopify migration for Flush and Seawards — ecommerce, point-of-sale, and everything in between."
-- Studio description: "Tomorrow Studios is a design and technology studio exploring the future of commerce. Based in Vancouver, Canada with a globally distributed team, we build modern ecommerce experiences, operational systems, and AI-enabled tools that help brands operate more effectively across digital and retail channels."
-- Project overview: "We're migrating Flush and Seawards from an offline register workflow to a modern ecommerce + POS setup."
-- Recommendation: "...proceed with the Total package to ensure the project launches by the end of May and is positioned for strong performance through June and July. This scope includes the brand, content, and growth components that most retailers ultimately implement after launch, allowing the full system to be designed and built together from the outset rather than layered on later as separate projects."
-- Timeline subtitle: "Launch by end of May."
+- Recommendation: "...proceed with the Total package to ensure the project launches by the end of May. This scope includes the brand, content, and growth components that most retailers ultimately implement after launch, allowing the full system to be designed and built together."
 - Outcome example: "Flush and Seawards live on Shopify (online store and POS) by the end of May"
-- Pillar: { label: "Commerce", description: "Shopify ecommerce + POS for both Flush and Seawards" }
 
 Notice: taglines are punchy (3-8 words). Descriptions are specific to the actual project, not generic. Outcomes name concrete deliverables with timelines. Pillars use 1-2 word labels with 1-sentence descriptions.
 
@@ -36,8 +36,8 @@ PROPOSAL STRUCTURE:
 - tagline: The hero headline. 3-8 words. Punchy, specific to this project.
 - heroDescription: 1-2 sentences below the tagline. Sets the scene.
 - recommendation: Completes "Our recommendation is to..." — steer toward the best approach for the client. Reference specific package names if relevant. 2-4 sentences.
-- summary.studioTagline: One-line description of Tomorrow Studios
-- summary.studioDescription: 2-4 sentences about Tomorrow Studios' craft and approach (keep consistent with the reference above but vary slightly)
+- summary.studioTagline: One-line description of ${studio}
+- summary.studioDescription: 2-4 sentences about ${studio}'s craft and approach
 - summary.studioDescription2: Optional continuation paragraph
 - summary.projectOverview: One sentence overview of this specific engagement
 - summary.projectDetail: 2-4 sentences on the project scope and approach
@@ -53,6 +53,7 @@ IMPORTANT:
 - Do NOT generate any investment/pricing content. No packages, no add-ons, no pricing. This is set manually.
 - Only include fields you can confidently fill based on the context provided. If the context doesn't mention timelines, make reasonable assumptions based on project scope but flag them in the brief.
 - The brief field is your internal working understanding — be honest about what you know and what you're inferring.`
+}
 
 const TOOL_DEFINITION = {
   name: "create_proposal_draft",
@@ -153,7 +154,7 @@ async function scrapeUrl(url: string): Promise<string> {
     const response = await fetch(url, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; ProposalKit/1.0; +https://tomorrowstudios.io)",
+          "Mozilla/5.0 (compatible; ProposalKit/1.0; +https://proposl.io)",
       },
       redirect: "follow",
     })
@@ -210,7 +211,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { context, urls, clientName, clientEmail, ctaEmail } =
+    const { context, urls, clientName, clientEmail, ctaEmail, accountContext } =
       await req.json()
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
@@ -285,7 +286,7 @@ Deno.serve(async (req) => {
           type: "enabled",
           budget_tokens: 8000,
         },
-        system: SYSTEM_PROMPT,
+        system: buildSystemPrompt(accountContext),
         tools: [TOOL_DEFINITION],
         tool_choice: { type: "auto" },
         messages: [{ role: "user", content: userMessageParts.join("\n") }],

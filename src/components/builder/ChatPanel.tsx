@@ -2,11 +2,13 @@ import { useRef, useEffect, useState, useCallback } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { ChevronUp, ChevronDown, Send } from "lucide-react"
 import { useBuilderStore } from "@/store/builderStore"
+import { useAccount } from "@/contexts/AccountContext"
 import { supabase } from "@/lib/supabase"
 import ChatMessageBubble from "./ChatMessageBubble"
 import type { ChatMessage } from "@/types/proposal"
 
 const ChatPanel = () => {
+  const { account } = useAccount()
   const {
     chatMessages,
     chatLoading,
@@ -59,7 +61,15 @@ const ChatPanel = () => {
       }))
 
       const { data, error } = await supabase.functions.invoke("chat-edit-proposal", {
-        body: { messages: history, proposal, userMessage: trimmed },
+        body: {
+          messages: history,
+          proposal,
+          userMessage: trimmed,
+          accountContext: {
+            studioName: account.studioName,
+            studioDescription: account.aiStudioDescription,
+          },
+        },
       })
 
       if (error) throw error

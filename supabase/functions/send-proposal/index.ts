@@ -22,7 +22,8 @@ interface SendBody {
 
 function buildSendEmailHtml(body: SendBody): string {
   const accent = body.brandColor1 ?? "#111"
-  const studio = body.studioName ?? "Tomorrow Studios."
+  const studio = body.studioName ?? "ProposalKit"
+  const website = body.website ?? "proposl.io"
   const firstName = body.recipientName.split(" ")[0]
 
   const messageHtml = body.personalMessage
@@ -47,7 +48,7 @@ function buildSendEmailHtml(body: SendBody): string {
       </div>
       <p style="margin:0;font-size:13px;color:#999;line-height:1.6;text-align:center">If the button doesn't work, copy this link:<br><a href="${body.proposalUrl}" style="color:${accent};word-break:break-all">${body.proposalUrl}</a></p>
     </div>
-    <p style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">${studio} · tomorrowstudios.io</p>
+    <p style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">${studio} · ${website}</p>
   </div>
 </body>
 </html>`
@@ -91,19 +92,28 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Verify the caller owns this proposal
+    // Verify the caller belongs to the proposal's account
     if (body.proposalId) {
       const { data: proposal } = await supabase
         .from("proposals")
-        .select("user_id")
+        .select("account_id")
         .eq("id", body.proposalId)
         .single()
 
-      if (!proposal || proposal.user_id !== user.id) {
-        return new Response(
-          JSON.stringify({ error: "Not authorized to send this proposal" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        )
+      if (proposal?.account_id) {
+        const { data: membership } = await supabase
+          .from("account_members")
+          .select("id")
+          .eq("account_id", proposal.account_id)
+          .eq("user_id", user.id)
+          .maybeSingle()
+
+        if (!membership) {
+          return new Response(
+            JSON.stringify({ error: "Not authorized to send this proposal" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          )
+        }
       }
     }
 
@@ -115,7 +125,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const senderName = body.senderName ?? "Tomorrow Studios"
+    const senderName = body.senderName ?? "ProposalKit"
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -123,7 +133,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: `${senderName} <notifications@tomorrowstudios.io>`,
+        from: `${senderName} <notifications@proposl.io>`,
         to: [body.recipientEmail],
         subject: `Your proposal: ${body.proposalTitle}`,
         html: buildSendEmailHtml(body),

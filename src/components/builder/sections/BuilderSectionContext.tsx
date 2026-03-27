@@ -1,10 +1,12 @@
 import { useBuilderStore } from "@/store/builderStore"
+import { useAccount } from "@/contexts/AccountContext"
 import { supabase } from "@/lib/supabase"
 import { Plus, Trash2, Sparkles } from "lucide-react"
 import { v4 as uuidv4 } from "uuid"
 import type { ContextBlob } from "@/types/proposal"
 
 const BuilderSectionContext = () => {
+  const { account } = useAccount()
   const {
     proposal,
     contextBlobs,
@@ -35,7 +37,14 @@ const BuilderSectionContext = () => {
     setSuggestionsLoading(true)
     try {
       const { data, error } = await supabase.functions.invoke("generate-suggestions", {
-        body: { contextBlobs, proposal },
+        body: {
+          contextBlobs,
+          proposal,
+          accountContext: {
+            studioName: account.studioName,
+            studioDescription: account.aiStudioDescription,
+          },
+        },
       })
       if (error) {
         console.error("Suggestion error:", error)

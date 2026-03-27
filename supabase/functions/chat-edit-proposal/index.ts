@@ -5,7 +5,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
-const SYSTEM_PROMPT = `You are an AI assistant helping edit a proposal for Tomorrow Studios, a design and technology studio that builds modern ecommerce experiences, operational systems, and AI-enabled tools.
+function buildChatSystemPrompt(ctx?: { studioName?: string; studioDescription?: string }) {
+  const studio = ctx?.studioName ?? "your studio"
+  const studioDesc = ctx?.studioDescription ?? "a design and technology studio"
+  return `You are an AI assistant helping edit a proposal for ${studio}, ${studioDesc}.
 
 You have access to the current proposal state. When the user asks you to change something, use the propose_edits tool to suggest precise, structured edits. Also provide a brief conversational response explaining what you changed and why.
 
@@ -33,6 +36,7 @@ RULES:
 - For text edits, rewrite the entire field value (don't try to do partial string replacements).
 - Use a clear, short human-readable label for each edit (e.g. "Tagline", "Scope Outcome #1", "Package 1 Price").
 - If the user's request is vague, ask a clarifying question instead of guessing.`
+}
 
 const TOOL_DEFINITION = {
   name: "propose_edits",
@@ -74,7 +78,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { messages, proposal, userMessage } = await req.json()
+    const { messages, proposal, userMessage, accountContext } = await req.json()
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
     if (!apiKey) {
@@ -121,7 +125,7 @@ Deno.serve(async (req) => {
           type: "enabled",
           budget_tokens: 4000,
         },
-        system: SYSTEM_PROMPT,
+        system: buildChatSystemPrompt(accountContext),
         tools: [TOOL_DEFINITION],
         tool_choice: { type: "auto" },
         messages: apiMessages,

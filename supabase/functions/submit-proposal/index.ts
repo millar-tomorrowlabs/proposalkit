@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
-const NOTIFY_EMAILS = ["millar@tomorrowstudios.io"]
+const SENDER_DOMAIN = "proposl.io"
 
 interface SubmissionBody {
   proposalId: string
@@ -78,9 +78,9 @@ function buildSelectionHtml(body: SubmissionBody): string {
   return html
 }
 
-function buildEmailHtml(body: SubmissionBody): string {
+function buildEmailHtml(body: SubmissionBody, account?: Record<string, unknown>): string {
   const accent = body.brandColor1 ?? "#111"
-  const studio = body.studioName ?? "Tomorrow Studios."
+  const studio = body.studioName ?? (account?.studio_name as string) ?? "ProposalKit"
 
   return `
 <!DOCTYPE html>
@@ -116,9 +116,10 @@ function buildEmailHtml(body: SubmissionBody): string {
 </html>`
 }
 
-function buildClientEmailHtml(body: SubmissionBody): string {
+function buildClientEmailHtml(body: SubmissionBody, account?: Record<string, unknown>): string {
   const accent = body.brandColor1 ?? "#111"
-  const studio = body.studioName ?? "Tomorrow Studios."
+  const studio = body.studioName ?? (account?.studio_name as string) ?? "ProposalKit"
+  const website = (account?.website as string) ?? "proposl.io"
   const firstName = body.clientName.split(" ")[0]
   const selectionHtml = body.packageLabel ? buildSelectionHtml(body) : ""
 
@@ -141,7 +142,7 @@ function buildClientEmailHtml(body: SubmissionBody): string {
       </div>` : ""}
       <p style="margin:24px 0 0;font-size:14px;color:#333;line-height:1.6">If you have any questions in the meantime, just reply to this email.</p>
     </div>
-    <p style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">${studio} · tomorrowstudios.io</p>
+    <p style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">${studio} · ${website}</p>
   </div>
 </body>
 </html>`
@@ -169,16 +170,27 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     )
 
-    // Look up proposal owner for user_id propagation
+    // Look up proposal + account for routing and branding
     const { data: proposalRow } = await supabase
       .from("proposals")
-      .select("user_id")
+      .select("user_id, account_id")
       .eq("id", body.proposalId)
       .single()
+
+    let account: Record<string, unknown> | null = null
+    if (proposalRow?.account_id) {
+      const { data: acct } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("id", proposalRow.account_id)
+        .single()
+      account = acct
+    }
 
     const { data: row, error: dbError } = await supabase.from("submissions").insert({
       proposal_id: body.proposalId,
       proposal_slug: body.proposalSlug,
+      account_id: proposalRow?.account_id ?? null,
       user_id: proposalRow?.user_id ?? null,
       client_name: body.clientName,
       client_email: body.clientEmail,
@@ -206,7 +218,12 @@ Deno.serve(async (req) => {
     const resendKey = Deno.env.get("RESEND_API_KEY")
 
     if (resendKey) {
-      const replyTo = body.ctaEmail ?? NOTIFY_EMAILS[0]
+      const notifyEmail = (account?.notify_email as string) ?? body.ctaEmail ?? "notifications@proposl.io"
+      const ccEmail = account?.cc_email as string | undefined
+      const replyTo = body.ctaEmail ?? notifyEmail
+      const senderName = (account?.sender_name as string) ?? (account?.studio_name as string) ?? "ProposalKit"
+      const notifyRecipients = ccEmail ? [notifyEmail, ccEmail] : [notifyEmail]
+
       const sendEmail = (to: string[], subject: string, html: string, replyToAddr?: string) =>
         fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -215,7 +232,7 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Tomorrow Studios <notifications@tomorrowstudios.io>",
+            from: `${senderName} <notifications@${SENDER_DOMAIN}>`,
             to,
             subject,
             html,
@@ -227,14 +244,14 @@ Deno.serve(async (req) => {
         // Send team notification + client confirmation in parallel
         const [teamRes, clientRes] = await Promise.all([
           sendEmail(
-            NOTIFY_EMAILS,
+            notifyRecipients,
             `New submission: ${body.proposalTitle ?? body.proposalSlug}`,
-            buildEmailHtml(body)
+            buildEmailHtml(body, account ?? undefined)
           ),
           sendEmail(
             [body.clientEmail],
             `Thanks for your submission — ${body.proposalTitle ?? body.proposalSlug}`,
-            buildClientEmailHtml(body),
+            buildClientEmailHtml(body, account ?? undefined),
             replyTo
           ),
         ])
