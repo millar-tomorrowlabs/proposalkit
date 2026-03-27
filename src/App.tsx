@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
-import AuthGuard from "@/components/AuthGuard"
+import AuthProvider from "@/contexts/AuthContext"
 import ProposalViewer from "@/pages/ProposalViewer"
 import ProposalsDashboard from "@/pages/ProposalsDashboard"
 import BuilderHome from "@/pages/BuilderHome"
@@ -16,11 +16,13 @@ function App() {
         <Route path="/p/:slug" element={<ProposalViewer />} />
 
         {/* Protected */}
-        <Route path="/" element={<AuthGuard><Navigate to="/proposals" replace /></AuthGuard>} />
-        <Route path="/proposals" element={<AuthGuard><ProposalsDashboard /></AuthGuard>} />
-        <Route path="/new" element={<AuthGuard><WizardPage /></AuthGuard>} />
-        <Route path="/builder" element={<AuthGuard><BuilderHome /></AuthGuard>} />
-        <Route path="/builder/:id" element={<AuthGuard><BuilderHome /></AuthGuard>} />
+        <Route element={<AuthProvider />}>
+          <Route path="/" element={<Navigate to="/proposals" replace />} />
+          <Route path="/proposals" element={<ProposalsDashboard />} />
+          <Route path="/new" element={<WizardPage />} />
+          <Route path="/builder" element={<BuilderHome />} />
+          <Route path="/builder/:id" element={<BuilderHome />} />
+        </Route>
 
         <Route path="*" element={<NotFound />} />
       </Routes>

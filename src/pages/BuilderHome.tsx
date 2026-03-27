@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from "react"
-import { useParams, Link } from "react-router-dom"
+import { useParams, Link, useNavigate } from "react-router-dom"
 import { Send, X, Monitor, Tablet, Smartphone } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/contexts/AuthContext"
 import { useBuilderStore } from "@/store/builderStore"
 import BuilderForm from "@/components/builder/BuilderForm"
 import ChatPanel from "@/components/builder/ChatPanel"
@@ -13,6 +14,8 @@ const DEBOUNCE_SAVE_MS = 2000
 
 const BuilderHome = () => {
   const { id } = useParams<{ id?: string }>()
+  const { userId } = useAuth()
+  const navigate = useNavigate()
   const { proposal, previewProposal, saveStatus, isDirty, flushToPreview, setSaveStatus, initNew, initExisting, chatPanelOpen, contextBlobs } = useBuilderStore()
 
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -48,25 +51,21 @@ const BuilderHome = () => {
     const proposalUrl = `${window.location.origin}/p/${proposal.slug || proposal.id}`
 
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-proposal`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            recipientName: sendName.trim(),
-            recipientEmail: sendEmail.trim(),
-            proposalTitle: sendSubject.trim() || proposal.title,
-            clientName: proposal.clientName,
-            proposalUrl,
-            studioName: proposal.studioName,
-            brandColor1: proposal.brandColor1,
-            brandColor2: proposal.brandColor2,
-            personalMessage: sendMessage.trim() || undefined,
-          }),
-        }
-      )
-      if (res.ok) {
+      const { error: sendError } = await supabase.functions.invoke("send-proposal", {
+        body: {
+          proposalId: proposal.id,
+          recipientName: sendName.trim(),
+          recipientEmail: sendEmail.trim(),
+          proposalTitle: sendSubject.trim() || proposal.title,
+          clientName: proposal.clientName,
+          proposalUrl,
+          studioName: proposal.studioName,
+          brandColor1: proposal.brandColor1,
+          brandColor2: proposal.brandColor2,
+          personalMessage: sendMessage.trim() || undefined,
+        },
+      })
+      if (!sendError) {
         setSendStatus("sent")
         // Update proposal status if "Mark as Sent" is checked
         if (markAsSent) {
@@ -174,6 +173,11 @@ const BuilderHome = () => {
         .single()
         .then(({ data }) => {
           if (data) {
+            // Ownership guard — only the creator can edit
+            if (data.user_id && data.user_id !== userId) {
+              navigate("/proposals")
+              return
+            }
             const merged = { ...data, ...data.data } as ProposalData
             initExisting(merged, data.chat_messages ?? [])
             // Restore persisted context blobs (without triggering auto-save)
@@ -210,6 +214,7 @@ const BuilderHome = () => {
         .from("proposals")
         .upsert({
           id: proposal.id,
+          user_id: userId,
           slug: proposal.slug || proposal.id,
           title: proposal.title || "Untitled",
           client_name: proposal.clientName || "Unknown",

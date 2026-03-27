@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/contexts/AuthContext"
 import { Plus, Copy, Check, LogOut } from "lucide-react"
 
 interface ProposalRow {
@@ -13,6 +14,7 @@ interface ProposalRow {
 }
 
 const ProposalsDashboard = () => {
+  const { userId } = useAuth()
   const [proposals, setProposals] = useState<ProposalRow[]>([])
   const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
@@ -29,6 +31,7 @@ const ProposalsDashboard = () => {
       const { data: proposalData } = await supabase
         .from("proposals")
         .select("id, slug, title, client_name, status, created_at")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
 
       const rows = proposalData ?? []

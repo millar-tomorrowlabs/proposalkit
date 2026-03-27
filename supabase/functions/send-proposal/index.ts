@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+import { createClient } from "jsr:@supabase/supabase-js@2"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,6 +7,7 @@ const corsHeaders = {
 }
 
 interface SendBody {
+  proposalId?: string
   recipientName: string
   recipientEmail: string
   proposalTitle: string
@@ -64,6 +66,45 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Missing required fields: recipientName, recipientEmail, proposalUrl, proposalTitle" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
+    }
+
+    // JWT verification + ownership check
+    const authHeader = req.headers.get("Authorization")
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    )
+
+    const token = authHeader.replace("Bearer ", "")
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
+
+    // Verify the caller owns this proposal
+    if (body.proposalId) {
+      const { data: proposal } = await supabase
+        .from("proposals")
+        .select("user_id")
+        .eq("id", body.proposalId)
+        .single()
+
+      if (!proposal || proposal.user_id !== user.id) {
+        return new Response(
+          JSON.stringify({ error: "Not authorized to send this proposal" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        )
+      }
     }
 
     const resendKey = Deno.env.get("RESEND_API_KEY")

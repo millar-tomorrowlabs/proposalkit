@@ -2,6 +2,7 @@ import { useState, useRef } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { v4 as uuidv4 } from "uuid"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/contexts/AuthContext"
 import { ArrowRight, X, Link as LinkIcon, Loader2 } from "lucide-react"
 import type { ProposalData, SectionKey } from "@/types/proposal"
 
@@ -16,6 +17,7 @@ const LOADING_MESSAGES = [
 ]
 
 const WizardPage = () => {
+  const { userId } = useAuth()
   const navigate = useNavigate()
   const [step, setStep] = useState<Step>("context")
 
@@ -168,6 +170,7 @@ const WizardPage = () => {
       // Save to Supabase
       const { error: saveError } = await supabase.from("proposals").upsert({
         id: proposalId,
+        user_id: userId,
         slug: finalSlug,
         title: proposal.title,
         client_name: proposal.clientName,

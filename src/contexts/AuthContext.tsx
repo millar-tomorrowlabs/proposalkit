@@ -1,18 +1,29 @@
-import { useEffect, useState } from "react"
-import { Navigate } from "react-router-dom"
+import { createContext, useContext, useEffect, useState } from "react"
+import { Outlet, Navigate } from "react-router-dom"
 import type { Session } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 
-const AuthGuard = ({ children }: { children: React.ReactNode }) => {
+interface AuthContextValue {
+  userId: string
+  session: Session
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null)
+
+export const useAuth = () => {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider")
+  return ctx
+}
+
+const AuthProvider = () => {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
 
   useEffect(() => {
-    // Get current session immediately
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
     })
 
-    // Keep in sync if session changes (logout in another tab, token refresh, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
@@ -25,7 +36,11 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
   if (!session) return <Navigate to="/login" replace />
 
-  return <>{children}</>
+  return (
+    <AuthContext.Provider value={{ userId: session.user.id, session }}>
+      <Outlet />
+    </AuthContext.Provider>
+  )
 }
 
-export default AuthGuard
+export default AuthProvider

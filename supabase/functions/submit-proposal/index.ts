@@ -169,9 +169,17 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     )
 
+    // Look up proposal owner for user_id propagation
+    const { data: proposalRow } = await supabase
+      .from("proposals")
+      .select("user_id")
+      .eq("id", body.proposalId)
+      .single()
+
     const { data: row, error: dbError } = await supabase.from("submissions").insert({
       proposal_id: body.proposalId,
       proposal_slug: body.proposalSlug,
+      user_id: proposalRow?.user_id ?? null,
       client_name: body.clientName,
       client_email: body.clientEmail,
       package_id: body.packageId ?? null,
