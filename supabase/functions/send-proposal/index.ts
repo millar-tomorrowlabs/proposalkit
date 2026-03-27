@@ -23,7 +23,7 @@ interface SendBody {
 function buildSendEmailHtml(body: SendBody): string {
   const accent = body.brandColor1 ?? "#111"
   const studio = body.studioName ?? "ProposalKit"
-  const website = body.website ?? "proposl.io"
+  const website = body.website ?? "proposl.app"
   const firstName = body.recipientName.split(" ")[0]
 
   const messageHtml = body.personalMessage
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: `${senderName} <notifications@proposl.io>`,
+        from: `${senderName} <notifications@proposl.app>`,
         to: [body.recipientEmail],
         subject: `Your proposal: ${body.proposalTitle}`,
         html: buildSendEmailHtml(body),

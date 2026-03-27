@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
-const SENDER_DOMAIN = "proposl.io"
+const SENDER_DOMAIN = "proposl.app"
 
 interface SubmissionBody {
   proposalId: string
@@ -119,7 +119,7 @@ function buildEmailHtml(body: SubmissionBody, account?: Record<string, unknown>)
 function buildClientEmailHtml(body: SubmissionBody, account?: Record<string, unknown>): string {
   const accent = body.brandColor1 ?? "#111"
   const studio = body.studioName ?? (account?.studio_name as string) ?? "ProposalKit"
-  const website = (account?.website as string) ?? "proposl.io"
+  const website = (account?.website as string) ?? "proposl.app"
   const firstName = body.clientName.split(" ")[0]
   const selectionHtml = body.packageLabel ? buildSelectionHtml(body) : ""
 
@@ -218,7 +218,7 @@ Deno.serve(async (req) => {
     const resendKey = Deno.env.get("RESEND_API_KEY")
 
     if (resendKey) {
-      const notifyEmail = (account?.notify_email as string) ?? body.ctaEmail ?? "notifications@proposl.io"
+      const notifyEmail = (account?.notify_email as string) ?? body.ctaEmail ?? "notifications@proposl.app"
       const ccEmail = account?.cc_email as string | undefined
       const replyTo = body.ctaEmail ?? notifyEmail
       const senderName = (account?.sender_name as string) ?? (account?.studio_name as string) ?? "ProposalKit"
