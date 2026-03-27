@@ -1,14 +1,14 @@
 import type { ProposalData } from "@/types/proposal"
 
-type Props = { data: ProposalData["summary"] }
+type Props = { data: ProposalData["summary"]; studioName?: string }
 
-const SummarySection = ({ data }: Props) => {
+const SummarySection = ({ data, studioName }: Props) => {
 
   return (
     <section id="summary" className="px-6 py-24">
       <div className="mx-auto max-w-3xl">
         <p className="scroll-reveal mb-4 text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
-          About Tomorrow Studios
+          About {studioName || "Us"}
         </p>
 
         <h3 data-field-path="summary.studioTagline" className="scroll-reveal delay-100 font-display text-3xl font-semibold leading-snug tracking-tight text-foreground md:text-4xl">

@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom"
 import { Send, X, Monitor, Tablet, Smartphone } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
+import { useAccount } from "@/contexts/AccountContext"
 import { useBuilderStore } from "@/store/builderStore"
 import BuilderForm from "@/components/builder/BuilderForm"
 import ChatPanel from "@/components/builder/ChatPanel"
@@ -15,6 +16,7 @@ const DEBOUNCE_SAVE_MS = 2000
 const BuilderHome = () => {
   const { id } = useParams<{ id?: string }>()
   const { userId } = useAuth()
+  const { account } = useAccount()
   const navigate = useNavigate()
   const { proposal, previewProposal, saveStatus, isDirty, flushToPreview, setSaveStatus, initNew, initExisting, chatPanelOpen, contextBlobs } = useBuilderStore()
 
@@ -173,8 +175,8 @@ const BuilderHome = () => {
         .single()
         .then(({ data }) => {
           if (data) {
-            // Ownership guard — only the creator can edit
-            if (data.user_id && data.user_id !== userId) {
+            // Ownership guard — only account members can edit
+            if (data.account_id && data.account_id !== account.id) {
               navigate("/proposals")
               return
             }
@@ -214,6 +216,7 @@ const BuilderHome = () => {
         .from("proposals")
         .upsert({
           id: proposal.id,
+          account_id: account.id,
           user_id: userId,
           slug: proposal.slug || proposal.id,
           title: proposal.title || "Untitled",

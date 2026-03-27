@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
-import { useAuth } from "@/contexts/AuthContext"
-import { Plus, Copy, Check, LogOut } from "lucide-react"
+import { useAccount } from "@/contexts/AccountContext"
+import { Plus, Copy, Check, LogOut, Settings } from "lucide-react"
 
 interface ProposalRow {
   id: string
@@ -14,7 +14,7 @@ interface ProposalRow {
 }
 
 const ProposalsDashboard = () => {
-  const { userId } = useAuth()
+  const { account, isOwner } = useAccount()
   const [proposals, setProposals] = useState<ProposalRow[]>([])
   const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
@@ -31,7 +31,7 @@ const ProposalsDashboard = () => {
       const { data: proposalData } = await supabase
         .from("proposals")
         .select("id, slug, title, client_name, status, created_at")
-        .eq("user_id", userId)
+        .eq("account_id", account.id)
         .order("created_at", { ascending: false })
 
       const rows = proposalData ?? []
@@ -69,13 +69,22 @@ const ProposalsDashboard = () => {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              Tomorrow Studios
+              {account.studioName}
             </p>
             <h1 className="mt-1 font-display text-3xl font-semibold text-foreground">
               Proposals
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            {isOwner && (
+              <Link
+                to="/settings"
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                title="Account settings"
+              >
+                <Settings className="h-3.5 w-3.5" />
+              </Link>
+            )}
             <button
               onClick={handleSignOut}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"

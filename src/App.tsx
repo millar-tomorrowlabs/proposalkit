@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { lazy, Suspense } from "react"
 import AuthProvider from "@/contexts/AuthContext"
+import AccountProvider from "@/contexts/AccountContext"
 import ProposalViewer from "@/pages/ProposalViewer"
 import ProposalsDashboard from "@/pages/ProposalsDashboard"
 import BuilderHome from "@/pages/BuilderHome"
@@ -7,25 +9,43 @@ import WizardPage from "@/pages/WizardPage"
 import LoginPage from "@/pages/LoginPage"
 import NotFound from "@/pages/NotFound"
 
+// Lazy-load pages that are not needed on initial load
+const SignupPage = lazy(() => import("@/pages/SignupPage"))
+const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"))
+const InviteAcceptPage = lazy(() => import("@/pages/InviteAcceptPage"))
+const AccountSettingsPage = lazy(() => import("@/pages/AccountSettingsPage"))
+const TeamMembersPage = lazy(() => import("@/pages/TeamMembersPage"))
+
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Public */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/p/:slug" element={<ProposalViewer />} />
+      <Suspense fallback={null}>
+        <Routes>
+          {/* Public */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/invite/:token" element={<InviteAcceptPage />} />
+          <Route path="/p/:slug" element={<ProposalViewer />} />
 
-        {/* Protected */}
-        <Route element={<AuthProvider />}>
-          <Route path="/" element={<Navigate to="/proposals" replace />} />
-          <Route path="/proposals" element={<ProposalsDashboard />} />
-          <Route path="/new" element={<WizardPage />} />
-          <Route path="/builder" element={<BuilderHome />} />
-          <Route path="/builder/:id" element={<BuilderHome />} />
-        </Route>
+          {/* Authenticated but no account required */}
+          <Route element={<AuthProvider />}>
+            <Route path="/onboarding" element={<OnboardingPage />} />
 
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+            {/* Account-scoped */}
+            <Route element={<AccountProvider />}>
+              <Route path="/" element={<Navigate to="/proposals" replace />} />
+              <Route path="/proposals" element={<ProposalsDashboard />} />
+              <Route path="/new" element={<WizardPage />} />
+              <Route path="/builder" element={<BuilderHome />} />
+              <Route path="/builder/:id" element={<BuilderHome />} />
+              <Route path="/settings" element={<AccountSettingsPage />} />
+              <Route path="/settings/team" element={<TeamMembersPage />} />
+            </Route>
+          </Route>
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

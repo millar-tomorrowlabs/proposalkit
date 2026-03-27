@@ -136,7 +136,7 @@ const CTASection = ({
                 {studioName}
               </span>
               <p className="text-xs text-muted-foreground">
-                © {new Date().getFullYear()} Tomorrow Labs Inc. · This proposal is
+                © {new Date().getFullYear()} {studioName} · This proposal is
                 confidential and intended solely for the recipient.
               </p>
             </div>

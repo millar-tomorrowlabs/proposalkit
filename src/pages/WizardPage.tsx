@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom"
 import { v4 as uuidv4 } from "uuid"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
+import { useAccount } from "@/contexts/AccountContext"
 import { ArrowRight, X, Link as LinkIcon, Loader2 } from "lucide-react"
 import type { ProposalData, SectionKey } from "@/types/proposal"
 
@@ -18,6 +19,7 @@ const LOADING_MESSAGES = [
 
 const WizardPage = () => {
   const { userId } = useAuth()
+  const { account } = useAccount()
   const navigate = useNavigate()
   const [step, setStep] = useState<Step>("context")
 
@@ -170,6 +172,7 @@ const WizardPage = () => {
       // Save to Supabase
       const { error: saveError } = await supabase.from("proposals").upsert({
         id: proposalId,
+        account_id: account.id,
         user_id: userId,
         slug: finalSlug,
         title: proposal.title,
@@ -218,7 +221,7 @@ const WizardPage = () => {
         {/* Header */}
         <div className="mb-10 text-center">
           <p className="text-xs font-medium uppercase tracking-[0.25em] text-muted-foreground">
-            Tomorrow Studios
+            {account.studioName}
           </p>
           <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-foreground">
             New proposal
@@ -370,7 +373,7 @@ const WizardPage = () => {
                   type="email"
                   value={ctaEmail}
                   onChange={(e) => setCTAEmail(e.target.value)}
-                  placeholder="you@tomorrowstudios.io"
+                  placeholder={account.defaultCtaEmail || "you@example.com"}
                   className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-foreground transition-colors"
                 />
               </div>

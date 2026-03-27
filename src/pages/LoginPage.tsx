@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 
 const LoginPage = () => {
@@ -29,10 +29,7 @@ const LoginPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-10 text-center">
-          <p className="text-xs font-medium uppercase tracking-[0.25em] text-muted-foreground">
-            Tomorrow Studios
-          </p>
-          <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-foreground">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
             ProposalKit
           </h1>
         </div>
@@ -48,7 +45,7 @@ const LoginPage = () => {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@tomorrowstudios.io"
+              placeholder="you@example.com"
               className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-foreground transition-colors"
             />
           </div>
@@ -77,9 +74,16 @@ const LoginPage = () => {
             disabled={loading}
             className="w-full rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-colors hover:bg-foreground/80 disabled:opacity-50 mt-2"
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Don't have an account?{" "}
+          <Link to="/signup" className="underline hover:text-foreground">
+            Sign up
+          </Link>
+        </p>
       </div>
     </div>
   )

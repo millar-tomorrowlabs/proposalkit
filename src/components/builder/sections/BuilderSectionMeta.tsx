@@ -5,9 +5,11 @@ import SuggestionChip from "../SuggestionChip"
 import ImageUpload from "../ImageUpload"
 import { supabase } from "@/lib/supabase"
 import { CURRENCIES } from "@/lib/currency"
+import { useAccount } from "@/contexts/AccountContext"
 
 const BuilderSectionMeta = () => {
   const { proposal, updateField, suggestions } = useBuilderStore()
+  const { account } = useAccount()
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle")
   const slugTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -42,12 +44,12 @@ const BuilderSectionMeta = () => {
         <SuggestionChip suggestion={suggestions?.title} path="title" onAccept={(v) => updateField("title", v)} />
       </BuilderField>
 
-      <BuilderField label="Header text" hint="Shown in the top-left nav. Defaults to 'Tomorrow Studios.'">
+      <BuilderField label="Header text" hint={`Shown in the top-left nav. Defaults to '${account.studioName}'.`}>
         <input
           type="text"
           value={proposal.studioName ?? ""}
           onChange={(e) => updateField("studioName", e.target.value)}
-          placeholder="Tomorrow Studios."
+          placeholder={account.studioName}
           className="builder-input"
         />
       </BuilderField>

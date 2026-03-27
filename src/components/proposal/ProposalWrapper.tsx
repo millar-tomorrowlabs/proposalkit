@@ -14,7 +14,7 @@ interface ProposalWrapperProps {
   isPreview?: boolean
 }
 
-const DEFAULT_STUDIO_NAME = "Tomorrow Studios."
+const DEFAULT_STUDIO_NAME = "ProposalKit"
 
 const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) => {
   const studioName = proposal.studioName || DEFAULT_STUDIO_NAME
@@ -22,7 +22,7 @@ const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) 
   useScrollRevealAll({ disabled: isPreview })
 
   const sectionMap: Record<SectionKey, React.ReactNode> = {
-    summary: <SummarySection key="summary" data={proposal.summary} />,
+    summary: <SummarySection key="summary" data={proposal.summary} studioName={studioName} />,
     scope: <ScopeSection key="scope" data={proposal.scope} />,
     timeline: <TimelineSection key="timeline" data={proposal.timeline} />,
     investment: (
