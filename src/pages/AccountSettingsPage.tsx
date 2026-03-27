@@ -1,21 +1,30 @@
 import { useState } from "react"
-import { Link, Navigate } from "react-router-dom"
+import { Link, Navigate, useNavigate } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useAccount } from "@/contexts/AccountContext"
+import ImageUpload from "@/components/builder/ImageUpload"
 
 const AccountSettingsPage = () => {
   const { account, isOwner, refreshAccount } = useAccount()
+  const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   const [studioName, setStudioName] = useState(account.studioName)
   const [legalEntity, setLegalEntity] = useState(account.legalEntity || "")
   const [website, setWebsite] = useState(account.website || "")
+  const [logoUrl, setLogoUrl] = useState(account.logoUrl || "")
   const [notifyEmail, setNotifyEmail] = useState(account.notifyEmail)
   const [ccEmail, setCcEmail] = useState(account.ccEmail || "")
   const [defaultCtaEmail, setDefaultCtaEmail] = useState(account.defaultCtaEmail || "")
   const [aiDescription, setAiDescription] = useState(account.aiStudioDescription || "")
+
+  // Delete account state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState("")
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState("")
 
   if (!isOwner) return <Navigate to="/proposals" replace />
 
@@ -29,6 +38,7 @@ const AccountSettingsPage = () => {
         studio_name: studioName,
         legal_entity: legalEntity || null,
         website: website || null,
+        logo_url: logoUrl || null,
         notify_email: notifyEmail,
         cc_email: ccEmail || null,
         default_cta_email: defaultCtaEmail || null,
@@ -43,6 +53,26 @@ const AccountSettingsPage = () => {
       await refreshAccount()
       setTimeout(() => setSaved(false), 2000)
     }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== account.studioName) return
+    setDeleting(true)
+    setDeleteError("")
+
+    const { error } = await supabase
+      .from("accounts")
+      .delete()
+      .eq("id", account.id)
+
+    if (error) {
+      setDeleteError(error.message)
+      setDeleting(false)
+      return
+    }
+
+    await supabase.auth.signOut()
+    navigate("/login")
   }
 
   return (
@@ -69,6 +99,17 @@ const AccountSettingsPage = () => {
             value={studioName}
             onChange={(e) => setStudioName(e.target.value)}
             className="builder-input w-full"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium">Logo</label>
+          <ImageUpload
+            value={logoUrl}
+            onChange={(url) => setLogoUrl(url ?? "")}
+            storagePath={`account-assets/${account.id}/logo`}
+            label="Studio logo"
+            hint="Used in proposals and emails"
           />
         </div>
 
@@ -176,6 +217,60 @@ const AccountSettingsPage = () => {
           >
             Manage team members →
           </Link>
+        </div>
+
+        {/* Danger Zone */}
+        <hr className="border-border" />
+
+        <div className="rounded-lg border border-red-200 bg-red-50/50 p-6">
+          <h2 className="text-sm font-semibold text-red-800">Danger zone</h2>
+          <p className="mt-1 text-sm text-red-700/70">
+            Deleting your account will permanently remove all proposals,
+            submissions, team members, and account data. This cannot be undone.
+          </p>
+
+          {!showDeleteConfirm ? (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="mt-4 rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
+            >
+              Delete account
+            </button>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm text-red-800">
+                Type <strong>{account.studioName}</strong> to confirm:
+              </p>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder={account.studioName}
+                className="w-full rounded-md border border-red-300 bg-white px-3 py-2 text-sm outline-none focus:border-red-500"
+              />
+              {deleteError && (
+                <p className="text-sm text-red-600">{deleteError}</p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false)
+                    setDeleteConfirmText("")
+                  }}
+                  className="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting || deleteConfirmText !== account.studioName}
+                  className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  {deleting ? "Deleting..." : "Permanently delete account"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

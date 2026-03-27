@@ -9,13 +9,14 @@ const SignupPage = () => {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setLoading(true)
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { display_name: name } },
@@ -27,8 +28,44 @@ const SignupPage = () => {
       return
     }
 
-    // Auto sign-in after signup (Supabase does this by default when email confirm is off)
-    navigate("/onboarding")
+    // If email confirmation is enabled, show a message instead of redirecting
+    if (signUpData?.user?.identities?.length === 0) {
+      // User already exists
+      setError("An account with this email already exists.")
+      setLoading(false)
+      return
+    }
+
+    if (signUpData?.session) {
+      // Auto-confirmed — redirect to onboarding
+      navigate("/onboarding")
+    } else {
+      // Email confirmation required
+      setEmailSent(true)
+      setLoading(false)
+    }
+  }
+
+  if (emailSent) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-sm space-y-6 text-center">
+          <h1 className="font-serif text-3xl font-light tracking-tight">
+            Check your email
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            We've sent a confirmation link to <strong>{email}</strong>. Click the
+            link to verify your account and get started.
+          </p>
+          <Link
+            to="/login"
+            className="inline-block text-sm underline hover:text-foreground text-muted-foreground"
+          >
+            Back to sign in
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (

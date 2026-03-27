@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
-import { ArrowLeft, Trash2, Send } from "lucide-react"
+import { Link, useNavigate } from "react-router-dom"
+import { ArrowLeft, Trash2, Send, Shield, ShieldOff, LogOut } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useAccount } from "@/contexts/AccountContext"
 
@@ -10,7 +10,6 @@ interface Member {
   role: string
   displayName?: string
   joinedAt: string
-  email?: string
 }
 
 interface Invite {
@@ -22,7 +21,8 @@ interface Invite {
 }
 
 const TeamMembersPage = () => {
-  const { account, isOwner, membership } = useAccount()
+  const { account, isOwner, membership, refreshAccount } = useAccount()
+  const navigate = useNavigate()
 
   const [members, setMembers] = useState<Member[]>([])
   const [invites, setInvites] = useState<Invite[]>([])
@@ -104,7 +104,7 @@ const TeamMembersPage = () => {
   }
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!confirm("Remove this team member?")) return
+    if (!confirm("Remove this team member? They'll lose access to all proposals.")) return
     await supabase.from("account_members").delete().eq("id", memberId)
     loadTeam()
   }
@@ -112,6 +112,47 @@ const TeamMembersPage = () => {
   const handleRevokeInvite = async (inviteId: string) => {
     await supabase.from("account_invites").delete().eq("id", inviteId)
     loadTeam()
+  }
+
+  const handleToggleRole = async (member: Member) => {
+    const newRole = member.role === "owner" ? "member" : "owner"
+
+    // Prevent demoting if this is the only owner
+    if (member.role === "owner" && newRole === "member") {
+      const ownerCount = members.filter((m) => m.role === "owner").length
+      if (ownerCount <= 1) {
+        setError("Cannot remove the last owner. Transfer ownership first.")
+        setTimeout(() => setError(""), 3000)
+        return
+      }
+    }
+
+    const isSelf = member.userId === membership.userId
+    const action = newRole === "owner" ? "Make owner" : "Remove as owner"
+    const warning = isSelf
+      ? "You'll become a regular member and lose access to account settings."
+      : `${member.displayName || "This member"} will ${newRole === "owner" ? "gain" : "lose"} access to account settings.`
+
+    if (!confirm(`${action}? ${warning}`)) return
+
+    await supabase
+      .from("account_members")
+      .update({ role: newRole })
+      .eq("id", member.id)
+
+    await refreshAccount()
+    loadTeam()
+  }
+
+  const handleLeaveTeam = async () => {
+    if (!confirm(`Leave ${account.studioName}? You'll lose access to all proposals.`)) return
+
+    await supabase
+      .from("account_members")
+      .delete()
+      .eq("id", membership.id)
+
+    navigate("/onboarding")
   }
 
   return (
@@ -128,39 +169,74 @@ const TeamMembersPage = () => {
         Manage who has access to {account.studioName} proposals.
       </p>
 
+      {error && (
+        <p className="mt-4 text-sm text-red-600">{error}</p>
+      )}
+
       {/* Members list */}
       <div className="mt-8 space-y-3">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
           Members
         </h2>
-        {members.map((m) => (
-          <div
-            key={m.id}
-            className="flex items-center justify-between rounded-md border border-border p-4"
-          >
-            <div>
-              <p className="font-medium">
-                {m.displayName || "Unnamed"}
-                {m.userId === membership.userId && (
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    (you)
-                  </span>
+        {members.map((m) => {
+          const isSelf = m.userId === membership.userId
+          return (
+            <div
+              key={m.id}
+              className="flex items-center justify-between rounded-md border border-border p-4"
+            >
+              <div>
+                <p className="font-medium">
+                  {m.displayName || "Unnamed"}
+                  {isSelf && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      (you)
+                    </span>
+                  )}
+                </p>
+                <p className="text-sm text-muted-foreground capitalize">
+                  {m.role}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Role toggle — owners can change other members' roles */}
+                {isOwner && !isSelf && (
+                  <button
+                    onClick={() => handleToggleRole(m)}
+                    className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground hover:border-foreground"
+                    title={m.role === "owner" ? "Remove as owner" : "Make owner"}
+                  >
+                    {m.role === "owner" ? (
+                      <><ShieldOff size={12} /> Remove owner</>
+                    ) : (
+                      <><Shield size={12} /> Make owner</>
+                    )}
+                  </button>
                 )}
-              </p>
-              <p className="text-sm text-muted-foreground capitalize">
-                {m.role}
-              </p>
+                {/* Self role toggle — owner can demote self if there's another owner */}
+                {isOwner && isSelf && members.filter(mm => mm.role === "owner").length > 1 && (
+                  <button
+                    onClick={() => handleToggleRole(m)}
+                    className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground hover:border-foreground"
+                    title="Step down as owner"
+                  >
+                    <ShieldOff size={12} /> Step down
+                  </button>
+                )}
+                {/* Remove member — owners can remove others */}
+                {isOwner && !isSelf && (
+                  <button
+                    onClick={() => handleRemoveMember(m.id)}
+                    className="text-muted-foreground hover:text-red-600 transition-colors"
+                    title="Remove member"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
             </div>
-            {isOwner && m.userId !== membership.userId && (
-              <button
-                onClick={() => handleRemoveMember(m.id)}
-                className="text-muted-foreground hover:text-red-600 transition-colors"
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Pending invites */}
@@ -228,11 +304,27 @@ const TeamMembersPage = () => {
               {sending ? "Sending..." : "Invite"}
             </button>
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
           {success && (
             <p className="text-sm text-green-600">{success}</p>
           )}
         </form>
+      )}
+
+      {/* Leave team — for non-owners */}
+      {!isOwner && (
+        <div className="mt-12 rounded-lg border border-red-200 bg-red-50/50 p-6">
+          <h2 className="text-sm font-semibold text-red-800">Leave team</h2>
+          <p className="mt-1 text-sm text-red-700/70">
+            You'll lose access to all {account.studioName} proposals.
+          </p>
+          <button
+            onClick={handleLeaveTeam}
+            className="mt-4 inline-flex items-center gap-2 rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
+          >
+            <LogOut size={14} />
+            Leave {account.studioName}
+          </button>
+        </div>
       )}
     </div>
   )
