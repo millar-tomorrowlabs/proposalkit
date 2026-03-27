@@ -14,7 +14,7 @@ interface ProposalWrapperProps {
   isPreview?: boolean
 }
 
-const DEFAULT_STUDIO_NAME = "ProposalKit"
+const DEFAULT_STUDIO_NAME = "Proposl"
 
 const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) => {
   const studioName = proposal.studioName || DEFAULT_STUDIO_NAME

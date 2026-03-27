@@ -30,7 +30,7 @@ const LoginPage = () => {
       <div className="w-full max-w-sm">
         <div className="mb-10 text-center">
           <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
-            ProposalKit
+            Proposl
           </h1>
         </div>
 

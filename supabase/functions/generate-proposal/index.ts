@@ -154,7 +154,7 @@ async function scrapeUrl(url: string): Promise<string> {
     const response = await fetch(url, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; ProposalKit/1.0; +https://proposl.app)",
+          "Mozilla/5.0 (compatible; Proposl/1.0; +https://proposl.app)",
       },
       redirect: "follow",
     })

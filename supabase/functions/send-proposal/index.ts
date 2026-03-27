@@ -22,7 +22,7 @@ interface SendBody {
 
 function buildSendEmailHtml(body: SendBody): string {
   const accent = body.brandColor1 ?? "#111"
-  const studio = body.studioName ?? "ProposalKit"
+  const studio = body.studioName ?? "Proposl"
   const website = body.website ?? "proposl.app"
   const firstName = body.recipientName.split(" ")[0]
 
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const senderName = body.senderName ?? "ProposalKit"
+    const senderName = body.senderName ?? "Proposl"
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {

@@ -80,7 +80,7 @@ function buildSelectionHtml(body: SubmissionBody): string {
 
 function buildEmailHtml(body: SubmissionBody, account?: Record<string, unknown>): string {
   const accent = body.brandColor1 ?? "#111"
-  const studio = body.studioName ?? (account?.studio_name as string) ?? "ProposalKit"
+  const studio = body.studioName ?? (account?.studio_name as string) ?? "Proposl"
 
   return `
 <!DOCTYPE html>
@@ -110,7 +110,7 @@ function buildEmailHtml(body: SubmissionBody, account?: Record<string, unknown>)
       </div>
       ${body.message ? `<div style="margin-top:20px;padding:16px;background:#f9f9f9;border-radius:8px"><p style="margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#999">Message</p><p style="margin:0;color:#333">${body.message}</p></div>` : ""}
     </div>
-    <p style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">Sent by ProposalKit</p>
+    <p style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">Sent by Proposl</p>
   </div>
 </body>
 </html>`
@@ -118,7 +118,7 @@ function buildEmailHtml(body: SubmissionBody, account?: Record<string, unknown>)
 
 function buildClientEmailHtml(body: SubmissionBody, account?: Record<string, unknown>): string {
   const accent = body.brandColor1 ?? "#111"
-  const studio = body.studioName ?? (account?.studio_name as string) ?? "ProposalKit"
+  const studio = body.studioName ?? (account?.studio_name as string) ?? "Proposl"
   const website = (account?.website as string) ?? "proposl.app"
   const firstName = body.clientName.split(" ")[0]
   const selectionHtml = body.packageLabel ? buildSelectionHtml(body) : ""
@@ -221,7 +221,7 @@ Deno.serve(async (req) => {
       const notifyEmail = (account?.notify_email as string) ?? body.ctaEmail ?? "notifications@proposl.app"
       const ccEmail = account?.cc_email as string | undefined
       const replyTo = body.ctaEmail ?? notifyEmail
-      const senderName = (account?.sender_name as string) ?? (account?.studio_name as string) ?? "ProposalKit"
+      const senderName = (account?.sender_name as string) ?? (account?.studio_name as string) ?? "Proposl"
       const notifyRecipients = ccEmail ? [notifyEmail, ccEmail] : [notifyEmail]
 
       const sendEmail = (to: string[], subject: string, html: string, replyToAddr?: string) =>
