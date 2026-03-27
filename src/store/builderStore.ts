@@ -68,7 +68,7 @@ interface BuilderState {
   flushToPreview: () => void
   setSaveStatus: (status: SaveStatus) => void
   setActiveSection: (section: string) => void
-  initNew: () => void
+  initNew: (accountDefaults?: { studioName?: string; ctaEmail?: string; brandColor1?: string; brandColor2?: string }) => void
   initExisting: (proposal: ProposalData, chatMessages?: ChatMessage[]) => void
   setContextBlobs: (blobs: ContextBlob[]) => void
   setSuggestions: (s: AISuggestions | null) => void
@@ -113,8 +113,17 @@ export const useBuilderStore = create<BuilderState>((set) => ({
 
   setActiveSection: (activeSection) => set({ activeSection }),
 
-  initNew: () => {
-    const fresh = { ...DEFAULT_PROPOSAL, id: uuidv4(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  initNew: (accountDefaults?: { studioName?: string; ctaEmail?: string; brandColor1?: string; brandColor2?: string }) => {
+    const fresh = {
+      ...DEFAULT_PROPOSAL,
+      id: uuidv4(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      studioName: accountDefaults?.studioName ?? "",
+      ctaEmail: accountDefaults?.ctaEmail ?? "",
+      brandColor1: accountDefaults?.brandColor1 ?? DEFAULT_PROPOSAL.brandColor1,
+      brandColor2: accountDefaults?.brandColor2 ?? DEFAULT_PROPOSAL.brandColor2,
+    }
     set({ proposal: fresh, previewProposal: fresh, isNewProposal: true, isDirty: false, saveStatus: "idle" })
   },
 

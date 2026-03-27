@@ -192,7 +192,12 @@ const BuilderHome = () => {
           setIsLoading(false)
         })
     } else {
-      initNew()
+      initNew({
+        studioName: account.studioName,
+        ctaEmail: account.defaultCtaEmail,
+        brandColor1: account.defaultBrandColor1,
+        brandColor2: account.defaultBrandColor2,
+      })
       setIsLoading(false)
     }
   }, [id])

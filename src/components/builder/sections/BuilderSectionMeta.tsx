@@ -85,7 +85,7 @@ const BuilderSectionMeta = () => {
             type="email"
             value={proposal.ctaEmail}
             onChange={(e) => updateField("ctaEmail", e.target.value)}
-            placeholder="you@yourcompany.com"
+            placeholder={account.defaultCtaEmail || "you@example.com"}
             className="builder-input"
           />
         </BuilderField>
