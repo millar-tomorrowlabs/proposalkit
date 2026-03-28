@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link, Navigate, useNavigate } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { friendlyError } from "@/lib/errors"
 import { useAccount } from "@/contexts/AccountContext"
 import ImageUpload from "@/components/builder/ImageUpload"
 
@@ -66,7 +67,7 @@ const AccountSettingsPage = () => {
       .eq("id", account.id)
 
     if (error) {
-      setDeleteError(error.message)
+      setDeleteError(friendlyError(error.message))
       setDeleting(false)
       return
     }

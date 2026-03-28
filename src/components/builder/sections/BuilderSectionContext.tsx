@@ -1,6 +1,8 @@
 import { useBuilderStore } from "@/store/builderStore"
 import { useAccount } from "@/contexts/AccountContext"
 import { supabase } from "@/lib/supabase"
+import { friendlyError } from "@/lib/errors"
+import { toast } from "sonner"
 import { Plus, Trash2, Sparkles } from "lucide-react"
 import { v4 as uuidv4 } from "uuid"
 import type { ContextBlob } from "@/types/proposal"
@@ -47,9 +49,10 @@ const BuilderSectionContext = () => {
         },
       })
       if (error) {
-        console.error("Suggestion error:", error)
+        toast.error(friendlyError(error.message))
       } else {
         setSuggestions(data)
+        toast.success("Suggestions ready — check each section tab.")
       }
     } finally {
       setSuggestionsLoading(false)

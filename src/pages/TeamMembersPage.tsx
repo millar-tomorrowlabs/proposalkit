@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft, Trash2, Send, Shield, ShieldOff, LogOut } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { friendlyError } from "@/lib/errors"
 import { useAccount } from "@/contexts/AccountContext"
 
 interface Member {
@@ -94,7 +95,7 @@ const TeamMembersPage = () => {
 
     setSending(false)
     if (invokeError) {
-      setError(invokeError.message || "Failed to send invite")
+      setError(friendlyError(invokeError.message))
       return
     }
 

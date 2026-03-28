@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
+import { friendlyError } from "@/lib/errors"
 
 const SignupPage = () => {
   const navigate = useNavigate()
@@ -23,7 +24,7 @@ const SignupPage = () => {
     })
 
     if (signUpError) {
-      setError(signUpError.message)
+      setError(friendlyError(signUpError.message))
       setLoading(false)
       return
     }

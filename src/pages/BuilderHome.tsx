@@ -1,7 +1,9 @@
 import { useEffect, useRef, useCallback, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import { Send, X, Monitor, Tablet, Smartphone } from "lucide-react"
+import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
+import { friendlyError } from "@/lib/errors"
 import { useAuth } from "@/contexts/AuthContext"
 import { useAccount } from "@/contexts/AccountContext"
 import { useBuilderStore } from "@/store/builderStore"
@@ -271,7 +273,12 @@ const BuilderHome = () => {
           data: { ...proposal, contextBlobs: useBuilderStore.getState().contextBlobs },
           chat_messages: useBuilderStore.getState().chatMessages,
         })
-      setSaveStatus(error ? "error" : "saved")
+      if (error) {
+        setSaveStatus("error")
+        toast.error(friendlyError(error.message))
+      } else {
+        setSaveStatus("saved")
+      }
     }, DEBOUNCE_SAVE_MS)
 
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }

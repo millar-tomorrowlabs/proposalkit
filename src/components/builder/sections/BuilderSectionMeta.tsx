@@ -4,6 +4,7 @@ import { useBuilderStore } from "@/store/builderStore"
 import BuilderField from "../BuilderField"
 import SuggestionChip from "../SuggestionChip"
 import ImageUpload from "../ImageUpload"
+import SectionOrder from "../SectionOrder"
 import { supabase } from "@/lib/supabase"
 import { CURRENCIES } from "@/lib/currency"
 import { useAccount } from "@/contexts/AccountContext"
@@ -69,6 +70,12 @@ const BuilderSectionMeta = () => {
 
   return (
     <div className="space-y-5">
+      <BuilderField label="Section order" hint="Drag to reorder. Remove or add sections.">
+        <SectionOrder />
+      </BuilderField>
+
+      <div className="border-t border-border pt-4" />
+
       <h2 className="text-sm font-semibold text-foreground">Proposal details</h2>
 
       <BuilderField label="Title">

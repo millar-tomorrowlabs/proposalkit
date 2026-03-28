@@ -4,6 +4,7 @@ import { ChevronUp, ChevronDown, Send } from "lucide-react"
 import { useBuilderStore } from "@/store/builderStore"
 import { useAccount } from "@/contexts/AccountContext"
 import { supabase } from "@/lib/supabase"
+import { friendlyError } from "@/lib/errors"
 import ChatMessageBubble from "./ChatMessageBubble"
 import type { ChatMessage } from "@/types/proposal"
 
@@ -86,7 +87,7 @@ const ChatPanel = () => {
       const errorMsg: ChatMessage = {
         id: uuidv4(),
         role: "assistant",
-        content: `Something went wrong: ${err instanceof Error ? err.message : String(err)}`,
+        content: friendlyError(err instanceof Error ? err.message : String(err)),
         createdAt: new Date().toISOString(),
       }
       addChatMessage(errorMsg)

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
+import { friendlyError } from "@/lib/errors"
 
 interface InviteInfo {
   id: string
@@ -84,7 +85,7 @@ const InviteAcceptPage = () => {
       })
 
     if (memberError) {
-      setError(memberError.message)
+      setError(friendlyError(memberError.message))
       setAccepting(false)
       return
     }
@@ -122,7 +123,7 @@ const InviteAcceptPage = () => {
     })
 
     if (signUpError) {
-      setError(signUpError.message)
+      setError(friendlyError(signUpError.message))
       setAccepting(false)
       return
     }

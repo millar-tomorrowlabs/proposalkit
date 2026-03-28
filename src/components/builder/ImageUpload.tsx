@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { friendlyError } from "@/lib/errors"
 import { Upload, X } from "lucide-react"
 
 interface ImageUploadProps {
@@ -29,7 +30,7 @@ const ImageUpload = ({ value, onChange, storagePath, label, hint, aspectHint }: 
         .upload(storagePath, file, { upsert: true, contentType: file.type })
 
       if (uploadError) {
-        setError(uploadError.message)
+        setError(friendlyError(uploadError.message))
         return
       }
 

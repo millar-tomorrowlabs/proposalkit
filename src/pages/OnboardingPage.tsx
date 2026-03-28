@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
+import { friendlyError } from "@/lib/errors"
 
 const OnboardingPage = () => {
   const navigate = useNavigate()
@@ -48,7 +49,7 @@ const OnboardingPage = () => {
       })
 
     if (accountError) {
-      setError(accountError.message)
+      setError(friendlyError(accountError.message))
       setLoading(false)
       return
     }
@@ -64,7 +65,7 @@ const OnboardingPage = () => {
       })
 
     if (memberError) {
-      setError(memberError.message)
+      setError(friendlyError(memberError.message))
       setLoading(false)
       return
     }

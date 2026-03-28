@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { lazy, Suspense } from "react"
+import { Toaster } from "sonner"
 import AuthProvider from "@/contexts/AuthContext"
 import AccountProvider from "@/contexts/AccountContext"
 import ProposalViewer from "@/pages/ProposalViewer"
@@ -19,6 +20,12 @@ const TeamMembersPage = lazy(() => import("@/pages/TeamMembersPage"))
 function App() {
   return (
     <BrowserRouter>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: { fontFamily: "inherit", fontSize: "13px" },
+        }}
+      />
       <Suspense fallback={null}>
         <Routes>
           {/* Public */}

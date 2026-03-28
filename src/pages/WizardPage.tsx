@@ -2,6 +2,7 @@ import { useState, useRef } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { v4 as uuidv4 } from "uuid"
 import { supabase } from "@/lib/supabase"
+import { friendlyError } from "@/lib/errors"
 import { useAuth } from "@/contexts/AuthContext"
 import { useAccount } from "@/contexts/AccountContext"
 import { ArrowRight, X, Link as LinkIcon, Loader2 } from "lucide-react"
@@ -106,7 +107,7 @@ const WizardPage = () => {
       clearInterval(interval)
 
       if (fnError || data?.error) {
-        setError(data?.error || fnError?.message || "Generation failed")
+        setError(friendlyError(data?.error || fnError?.message))
         setStep("details")
         return
       }
@@ -189,7 +190,7 @@ const WizardPage = () => {
       })
 
       if (saveError) {
-        setError(`Save failed: ${saveError.message}`)
+        setError(friendlyError(saveError.message))
         setStep("details")
         return
       }
@@ -198,7 +199,7 @@ const WizardPage = () => {
       navigate(`/builder/${proposalId}`)
     } catch (err) {
       clearInterval(interval)
-      setError(String(err))
+      setError(friendlyError(String(err)))
       setStep("details")
     }
   }
