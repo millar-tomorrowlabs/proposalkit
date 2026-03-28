@@ -136,6 +136,55 @@
   animation: gentle-bounce 2s ease-in-out infinite;
 }
 
+/* Builder preview: container queries for responsive simulation.
+   The preview renders at a fixed width (375/768/1280) but Tailwind's md:/lg:
+   breakpoints use the browser viewport (always wide). Container queries
+   let us override responsive styles based on the actual preview width. */
+.builder-preview {
+  container-type: inline-size;
+}
+
+/* When preview container is narrower than md (768px), reset md:/lg: overrides */
+@container (max-width: 767px) {
+  /* Section headings: text-5xl md:text-7xl lg:text-8xl → text-5xl */
+  .font-display.md\:text-7xl { font-size: var(--text-5xl) !important; }
+  .font-display.lg\:text-8xl { font-size: var(--text-5xl) !important; }
+
+  /* Sub-headings: text-3xl md:text-4xl → text-3xl */
+  .font-display.md\:text-4xl { font-size: var(--text-3xl) !important; }
+
+  /* Hero tagline: text-3xl md:text-5xl lg:text-6xl → text-3xl */
+  .font-serif.md\:text-5xl { font-size: var(--text-3xl) !important; }
+  .font-serif.lg\:text-6xl { font-size: var(--text-3xl) !important; }
+
+  /* Hero client name: text-3xl md:text-5xl → text-3xl */
+  .font-merchant-display.md\:text-5xl { font-size: var(--text-3xl) !important; }
+
+  /* Body text: text-lg md:text-xl → text-lg */
+  .md\:text-xl { font-size: var(--text-lg) !important; }
+  .md\:text-3xl { font-size: var(--text-xl) !important; }
+
+  /* Pillar grid: md:grid-cols-3 → single column */
+  .md\:grid-cols-3 { grid-template-columns: 1fr !important; }
+
+  /* Hero flex direction: md:flex-row → column */
+  .md\:flex-row { flex-direction: column !important; }
+  .md\:items-baseline { align-items: center !important; }
+  .md\:gap-4 { gap: 0.5rem !important; }
+
+  /* Hero logo sizes */
+  .md\:h-24 { height: 4rem !important; }
+  .md\:h-12 { height: 2.5rem !important; }
+}
+
+/* When preview container is narrower than sm (640px), reset sm: overrides */
+@container (max-width: 639px) {
+  .sm\:flex-row { flex-direction: column !important; }
+  .sm\:justify-center { justify-content: center !important; }
+  .sm\:items-start { align-items: stretch !important; }
+  .sm\:text-right { text-align: left !important; }
+}
+
 /* Builder click-to-edit: preview hover highlights */
 .builder-preview [data-field-path] {
   cursor: pointer;
