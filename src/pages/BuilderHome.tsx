@@ -368,29 +368,24 @@ const BuilderHome = () => {
             ))}
           </div>
 
-          <div ref={previewContainerRef} className="flex-1 overflow-hidden">
+          <div ref={previewContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden flex justify-center">
             {isLoading ? (
               <div className="flex h-full items-center justify-center">
                 <p className="text-sm text-muted-foreground">Loading proposal...</p>
               </div>
             ) : previewProposal.title ? (
               <div
-                className="h-full overflow-y-auto flex justify-center"
+                ref={previewContentRef}
+                className="builder-preview"
+                style={{
+                  width: previewWidth,
+                  maxWidth: previewWidth,
+                  overflowX: "hidden",
+                  zoom: previewScale,
+                }}
+                onClickCapture={handlePreviewClick}
               >
-                <div
-                  ref={previewContentRef}
-                  className="builder-preview"
-                  style={{
-                    width: previewWidth,
-                    maxWidth: previewWidth,
-                    overflow: "hidden",
-                    transformOrigin: "top center",
-                    transform: `scale(${previewScale})`,
-                  }}
-                  onClickCapture={handlePreviewClick}
-                >
-                  <ProposalWrapper proposal={previewProposal} isPreview viewportWidth={previewWidth} />
-                </div>
+                <ProposalWrapper proposal={previewProposal} isPreview viewportWidth={previewWidth} />
               </div>
             ) : (
               <div className="flex h-full items-center justify-center">
