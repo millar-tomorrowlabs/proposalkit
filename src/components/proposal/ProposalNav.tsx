@@ -14,11 +14,16 @@ interface ProposalNavProps {
   sections: SectionKey[]
   studioName: string
   isPreview?: boolean
+  viewportWidth?: number
 }
 
-const ProposalNav = ({ sections, studioName, isPreview = false }: ProposalNavProps) => {
+const ProposalNav = ({ sections, studioName, isPreview = false, viewportWidth }: ProposalNavProps) => {
   const [scrolled, setScrolled] = useState(isPreview)
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  // When viewportWidth is provided (builder preview), use it to determine layout.
+  // 768 matches Tailwind's md breakpoint.
+  const isMobile = viewportWidth ? viewportWidth < 768 : undefined
 
   useEffect(() => {
     if (isPreview) return // skip scroll listener in preview — always show scrolled state
@@ -34,6 +39,32 @@ const ProposalNav = ({ sections, studioName, isPreview = false }: ProposalNavPro
     label: sectionLabels[key],
     href: `#${key}`,
   }))
+
+  // When isMobile is defined (builder preview), use explicit show/hide.
+  // Otherwise fall back to Tailwind responsive classes (real viewport).
+  const desktopNavClass = isMobile === undefined
+    ? "hidden items-center gap-6 md:flex"
+    : isMobile
+      ? "hidden"
+      : "flex items-center gap-6"
+
+  const mobileButtonClass = isMobile === undefined
+    ? "flex items-center gap-3 md:hidden"
+    : isMobile
+      ? "flex items-center gap-3"
+      : "hidden"
+
+  const confidentialClass = isMobile === undefined
+    ? "hidden items-center gap-1.5 text-xs md:flex"
+    : isMobile
+      ? "hidden"
+      : "flex items-center gap-1.5 text-xs"
+
+  const mobileMenuClass = isMobile === undefined
+    ? "border-t px-6 py-4 md:hidden"
+    : isMobile
+      ? "border-t px-6 py-4"
+      : "hidden"
 
   return (
     <nav
@@ -53,7 +84,7 @@ const ProposalNav = ({ sections, studioName, isPreview = false }: ProposalNavPro
           {studioName}
         </a>
 
-        <div className="hidden items-center gap-6 md:flex">
+        <div className={desktopNavClass}>
           {navItems.map((item) => (
             <a
               key={item.href}
@@ -69,7 +100,7 @@ const ProposalNav = ({ sections, studioName, isPreview = false }: ProposalNavPro
           ))}
         </div>
 
-        <div className="flex items-center gap-3 md:hidden">
+        <div className={mobileButtonClass}>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className={`p-1 transition-colors ${
@@ -81,7 +112,7 @@ const ProposalNav = ({ sections, studioName, isPreview = false }: ProposalNavPro
         </div>
 
         <div
-          className={`hidden items-center gap-1.5 text-xs md:flex ${
+          className={`${confidentialClass} ${
             scrolled ? "text-muted-foreground" : "text-white/40"
           }`}
         >
@@ -92,7 +123,7 @@ const ProposalNav = ({ sections, studioName, isPreview = false }: ProposalNavPro
 
       {mobileOpen && (
         <div
-          className={`border-t px-6 py-4 md:hidden ${
+          className={`${mobileMenuClass} ${
             scrolled
               ? "border-border bg-background/95"
               : "border-white/10 bg-black/80"

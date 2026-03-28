@@ -35,7 +35,9 @@ const BuilderHome = () => {
   const [sendSubject, setSendSubject] = useState("")
   const [sendMessage, setSendMessage] = useState("")
   const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
-  const [markAsSent, setMarkAsSent] = useState(true)
+  const [sendType, setSendType] = useState<"initial" | "reminder">("initial")
+  const [sendHistory, setSendHistory] = useState<Array<{ id: string; recipient_name: string; recipient_email: string; subject: string; send_type: string; sent_at: string }>>([])
+  const [, setSendHistoryLoading] = useState(false)
 
   // Preview viewport
   const [previewWidth, setPreviewWidth] = useState(1280)
@@ -44,6 +46,34 @@ const BuilderHome = () => {
     { label: "Tablet", width: 768, icon: Tablet },
     { label: "Mobile", width: 375, icon: Smartphone },
   ] as const
+
+  const loadSendHistory = useCallback(async () => {
+    if (!proposal.id) return
+    setSendHistoryLoading(true)
+    const { data } = await supabase
+      .from("proposal_sends")
+      .select("id, recipient_name, recipient_email, subject, send_type, sent_at")
+      .eq("proposal_id", proposal.id)
+      .order("sent_at", { ascending: false })
+    setSendHistory(data ?? [])
+    setSendHistoryLoading(false)
+  }, [proposal.id])
+
+  const handleOpenSendModal = useCallback(() => {
+    setSendStatus("idle")
+    setSendType("initial")
+    setShowSendModal(true)
+    loadSendHistory()
+  }, [loadSendHistory])
+
+  const handleSendReminder = useCallback((send: typeof sendHistory[0]) => {
+    setSendName(send.recipient_name)
+    setSendEmail(send.recipient_email)
+    setSendSubject("")
+    setSendMessage("")
+    setSendType("reminder")
+    setSendStatus("idle")
+  }, [])
 
   const handleSendProposal = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,14 +97,17 @@ const BuilderHome = () => {
           brandColor1: proposal.brandColor1,
           brandColor2: proposal.brandColor2,
           personalMessage: sendMessage.trim() || undefined,
+          sendType,
+          subject: sendSubject.trim() || undefined,
         },
       })
       if (!sendError) {
         setSendStatus("sent")
-        // Update proposal status if "Mark as Sent" is checked
-        if (markAsSent) {
+        // Server auto-sets status to "sent" — reflect locally
+        if (!proposal.status || proposal.status === "draft") {
           useBuilderStore.getState().updateField("status", "sent")
         }
+        loadSendHistory()
       } else {
         setSendStatus("error")
       }
@@ -87,17 +120,18 @@ const BuilderHome = () => {
   const leftPaneRef = useRef<HTMLDivElement>(null)
   const [formHeight, setFormHeight] = useState<number | null>(null)
 
-  // Preview scaling — render at fixed width, scale to fit container
+  // Preview scaling — render at fixed width, scale down to fit container (never zoom in)
   const previewContainerRef = useRef<HTMLDivElement>(null)
   const previewContentRef = useRef<HTMLDivElement>(null)
-  const [previewScale, setPreviewScale] = useState(0.5)
+  const [previewScale, setPreviewScale] = useState(1)
   useEffect(() => {
     const container = previewContainerRef.current
     if (!container) return
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const containerWidth = entry.contentRect.width
-        setPreviewScale(containerWidth / previewWidth)
+        // Scale down if preview is wider than container, otherwise show at 1:1
+        setPreviewScale(Math.min(1, containerWidth / previewWidth))
       }
     })
     observer.observe(container)
@@ -264,7 +298,7 @@ const BuilderHome = () => {
           </span>
           {proposal.slug && (
             <button
-              onClick={() => { setShowSendModal(true); setSendStatus("idle"); setSendSubject(proposal.title) }}
+              onClick={() => { setSendSubject(proposal.title); handleOpenSendModal() }}
               className="flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-colors hover:bg-foreground/80"
             >
               <Send className="h-3 w-3" />
@@ -327,22 +361,29 @@ const BuilderHome = () => {
             ))}
           </div>
 
-          <div ref={previewContainerRef} className="flex-1 overflow-y-auto">
+          <div ref={previewContainerRef} className="flex-1 overflow-hidden">
             {isLoading ? (
               <div className="flex h-full items-center justify-center">
                 <p className="text-sm text-muted-foreground">Loading proposal...</p>
               </div>
             ) : previewProposal.title ? (
               <div
-                ref={previewContentRef}
-                className="builder-preview"
-                style={{
-                  width: previewWidth,
-                  zoom: previewScale,
-                }}
-                onClickCapture={handlePreviewClick}
+                className="h-full overflow-y-auto flex justify-center"
               >
-                <ProposalWrapper proposal={previewProposal} isPreview />
+                <div
+                  ref={previewContentRef}
+                  className="builder-preview"
+                  style={{
+                    width: previewWidth,
+                    maxWidth: previewWidth,
+                    overflow: "hidden",
+                    transformOrigin: "top center",
+                    transform: `scale(${previewScale})`,
+                  }}
+                  onClickCapture={handlePreviewClick}
+                >
+                  <ProposalWrapper proposal={previewProposal} isPreview viewportWidth={previewWidth} />
+                </div>
               </div>
             ) : (
               <div className="flex h-full items-center justify-center">
@@ -440,16 +481,6 @@ const BuilderHome = () => {
                   />
                 </div>
 
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={markAsSent}
-                    onChange={(e) => setMarkAsSent(e.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-border accent-brand-1"
-                  />
-                  <span className="text-xs text-muted-foreground">Mark proposal as sent</span>
-                </label>
-
                 {sendStatus === "error" && (
                   <p className="text-xs text-red-500">Something went wrong. Please try again.</p>
                 )}
@@ -459,9 +490,47 @@ const BuilderHome = () => {
                   disabled={sendStatus === "sending"}
                   className="w-full rounded-full bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-colors hover:bg-foreground/80 disabled:opacity-50"
                 >
-                  {sendStatus === "sending" ? "Sending..." : "Send proposal"}
+                  {sendStatus === "sending" ? "Sending..." : sendType === "reminder" ? "Send reminder" : "Send proposal"}
                 </button>
+
+                {sendType === "reminder" && (
+                  <button
+                    type="button"
+                    onClick={() => { setSendType("initial"); setSendName(""); setSendEmail(""); setSendMessage("") }}
+                    className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Cancel reminder — send as new
+                  </button>
+                )}
               </form>
+            )}
+
+            {/* Send history */}
+            {sendHistory.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-xs font-medium text-muted-foreground mb-2">Send history</h4>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {sendHistory.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between text-xs">
+                      <div className="min-w-0">
+                        <span className="font-medium text-foreground">{s.recipient_name}</span>
+                        <span className="text-muted-foreground"> · {new Date(s.sent_at).toLocaleDateString()}</span>
+                        {s.send_type === "reminder" && (
+                          <span className="ml-1.5 inline-block rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">Reminder</span>
+                        )}
+                      </div>
+                      {sendStatus !== "sent" && (
+                        <button
+                          onClick={() => handleSendReminder(s)}
+                          className="shrink-0 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Follow up
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>

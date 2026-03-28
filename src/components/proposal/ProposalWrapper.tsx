@@ -12,11 +12,12 @@ import CTASection from "./CTASection"
 interface ProposalWrapperProps {
   proposal: ProposalData
   isPreview?: boolean
+  viewportWidth?: number
 }
 
 const DEFAULT_STUDIO_NAME = "Proposl"
 
-const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) => {
+const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: ProposalWrapperProps) => {
   const studioName = proposal.studioName || DEFAULT_STUDIO_NAME
   const [confirmedSelection, setConfirmedSelection] = useState<ConfirmedSelection | null>(null)
   useScrollRevealAll({ disabled: isPreview })
@@ -60,7 +61,7 @@ const ProposalWrapper = ({ proposal, isPreview = false }: ProposalWrapperProps) 
         } as React.CSSProperties
       }
     >
-      <ProposalNav sections={proposal.sections} studioName={studioName} isPreview={isPreview} />
+      <ProposalNav sections={proposal.sections} studioName={studioName} isPreview={isPreview} viewportWidth={viewportWidth} />
       <HeroSection
         clientName={proposal.clientName}
         heroImageUrl={proposal.heroImageUrl}

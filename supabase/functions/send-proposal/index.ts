@@ -16,8 +16,11 @@ interface SendBody {
   studioName?: string
   brandColor1?: string
   brandColor2?: string
+  website?: string
   senderName?: string
   personalMessage?: string
+  sendType?: "initial" | "reminder"
+  subject?: string
 }
 
 function buildSendEmailHtml(body: SendBody): string {
@@ -42,6 +45,40 @@ function buildSendEmailHtml(body: SendBody): string {
     <div style="background:#fff;padding:32px 24px;border-radius:0 0 12px 12px;border:1px solid #e5e5e5;border-top:none">
       <p style="margin:0 0 16px;font-size:16px;color:#111">Hi ${firstName},</p>
       <p style="margin:0 0 24px;font-size:14px;color:#333;line-height:1.6">Your proposal for <strong>${body.clientName ?? body.proposalTitle}</strong> is ready to review.</p>
+      ${messageHtml}
+      <div style="text-align:center;margin:32px 0">
+        <a href="${body.proposalUrl}" style="display:inline-block;background:${accent};color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:50px">View Proposal</a>
+      </div>
+      <p style="margin:0;font-size:13px;color:#999;line-height:1.6;text-align:center">If the button doesn't work, copy this link:<br><a href="${body.proposalUrl}" style="color:${accent};word-break:break-all">${body.proposalUrl}</a></p>
+    </div>
+    <p style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">${studio} · ${website}</p>
+  </div>
+</body>
+</html>`
+}
+
+function buildReminderEmailHtml(body: SendBody): string {
+  const accent = body.brandColor1 ?? "#111"
+  const studio = body.studioName ?? "Proposl"
+  const website = body.website ?? "proposl.app"
+  const firstName = body.recipientName.split(" ")[0]
+
+  const messageHtml = body.personalMessage
+    ? `<p style="margin:0 0 24px;font-size:14px;color:#333;line-height:1.6;white-space:pre-line">${body.personalMessage}</p>`
+    : ""
+
+  return `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <div style="max-width:560px;margin:0 auto;padding:32px 20px">
+    <div style="background:#111;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+      <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:500;letter-spacing:-0.01em;color:#fff">${studio}</h1>
+    </div>
+    <div style="height:3px;background:linear-gradient(90deg,${accent},${body.brandColor2 ?? accent})"></div>
+    <div style="background:#fff;padding:32px 24px;border-radius:0 0 12px 12px;border:1px solid #e5e5e5;border-top:none">
+      <p style="margin:0 0 16px;font-size:16px;color:#111">Hi ${firstName},</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#333;line-height:1.6">Just following up on the proposal for <strong>${body.clientName ?? body.proposalTitle}</strong>. Wanted to make sure you had a chance to take a look.</p>
       ${messageHtml}
       <div style="text-align:center;margin:32px 0">
         <a href="${body.proposalUrl}" style="display:inline-block;background:${accent};color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:50px">View Proposal</a>
@@ -93,6 +130,7 @@ Deno.serve(async (req) => {
     }
 
     // Verify the caller belongs to the proposal's account
+    let accountId: string | null = null
     if (body.proposalId) {
       const { data: proposal } = await supabase
         .from("proposals")
@@ -101,6 +139,7 @@ Deno.serve(async (req) => {
         .single()
 
       if (proposal?.account_id) {
+        accountId = proposal.account_id
         const { data: membership } = await supabase
           .from("account_members")
           .select("id")
@@ -125,7 +164,11 @@ Deno.serve(async (req) => {
       )
     }
 
+    const isReminder = body.sendType === "reminder"
+    const emailSubject = body.subject
+      || (isReminder ? `Following up: ${body.proposalTitle}` : `Your proposal: ${body.proposalTitle}`)
     const senderName = body.senderName ?? "Proposl"
+
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -135,8 +178,8 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: `${senderName} <notifications@proposl.app>`,
         to: [body.recipientEmail],
-        subject: `Your proposal: ${body.proposalTitle}`,
-        html: buildSendEmailHtml(body),
+        subject: emailSubject,
+        html: isReminder ? buildReminderEmailHtml(body) : buildSendEmailHtml(body),
       }),
     })
 
@@ -149,8 +192,36 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Record send in proposal_sends
+    let sendId: string | null = null
+    if (body.proposalId && accountId) {
+      const { data: sendRecord } = await supabase
+        .from("proposal_sends")
+        .insert({
+          proposal_id: body.proposalId,
+          account_id: accountId,
+          recipient_email: body.recipientEmail,
+          recipient_name: body.recipientName,
+          subject: emailSubject,
+          personal_message: body.personalMessage || null,
+          send_type: body.sendType || "initial",
+          sent_by: user.id,
+        })
+        .select("id")
+        .single()
+
+      sendId = sendRecord?.id ?? null
+
+      // Auto-update status to "sent" (only upgrades drafts, won't overwrite "viewed")
+      await supabase
+        .from("proposals")
+        .update({ status: "sent" })
+        .eq("id", body.proposalId)
+        .or("status.is.null,status.eq.draft")
+    }
+
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, sendId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
   } catch (e) {

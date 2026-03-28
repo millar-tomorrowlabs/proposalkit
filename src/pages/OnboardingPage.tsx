@@ -28,10 +28,16 @@ const OnboardingPage = () => {
     setError("")
     setLoading(true)
 
+    // Generate account ID client-side so we can insert into both tables
+    // without needing .select() (which fails because the SELECT policy
+    // requires account_members membership that doesn't exist yet)
+    const accountId = crypto.randomUUID()
+
     // Create account
-    const { data: account, error: accountError } = await supabase
+    const { error: accountError } = await supabase
       .from("accounts")
       .insert({
+        id: accountId,
         studio_name: studioName,
         legal_entity: legalEntity || null,
         website: website || null,
@@ -40,11 +46,9 @@ const OnboardingPage = () => {
         sender_name: studioName,
         default_cta_email: ctaEmail || null,
       })
-      .select("id")
-      .single()
 
-    if (accountError || !account) {
-      setError(accountError?.message || "Failed to create account")
+    if (accountError) {
+      setError(accountError.message)
       setLoading(false)
       return
     }
@@ -53,7 +57,7 @@ const OnboardingPage = () => {
     const { error: memberError } = await supabase
       .from("account_members")
       .insert({
-        account_id: account.id,
+        account_id: accountId,
         user_id: userId,
         role: "owner",
         display_name: displayName,

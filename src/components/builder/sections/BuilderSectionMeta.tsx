@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { Lock, LockOpen } from "lucide-react"
 import { useBuilderStore } from "@/store/builderStore"
 import BuilderField from "../BuilderField"
 import SuggestionChip from "../SuggestionChip"
@@ -12,6 +13,43 @@ const BuilderSectionMeta = () => {
   const { account } = useAccount()
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle")
   const slugTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Password protection
+  const [passwordEnabled, setPasswordEnabled] = useState(false)
+  const [passwordInput, setPasswordInput] = useState("")
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordSaved, setPasswordSaved] = useState(false)
+
+  // Init password state from proposal
+  useEffect(() => {
+    // password_hash comes from the raw DB row merged into proposal
+    setPasswordEnabled(!!(proposal as unknown as Record<string, unknown>).password_hash)
+  }, [proposal.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSavePassword = async () => {
+    if (!proposal.id) return
+    setPasswordSaving(true)
+    await supabase.functions.invoke("set-proposal-password", {
+      body: { proposalId: proposal.id, password: passwordInput || null },
+    })
+    setPasswordSaving(false)
+    setPasswordSaved(true)
+    setPasswordEnabled(!!passwordInput)
+    setTimeout(() => setPasswordSaved(false), 2000)
+  }
+
+  const handleRemovePassword = async () => {
+    if (!proposal.id) return
+    setPasswordSaving(true)
+    await supabase.functions.invoke("set-proposal-password", {
+      body: { proposalId: proposal.id, password: null },
+    })
+    setPasswordSaving(false)
+    setPasswordEnabled(false)
+    setPasswordInput("")
+    setPasswordSaved(true)
+    setTimeout(() => setPasswordSaved(false), 2000)
+  }
 
   useEffect(() => {
     if (slugTimer.current) clearTimeout(slugTimer.current)
@@ -207,6 +245,50 @@ const BuilderSectionMeta = () => {
         />
         <SuggestionChip suggestion={suggestions?.recommendation} path="recommendation" onAccept={(v) => updateField("recommendation", v)} />
       </BuilderField>
+
+      {/* Password protection */}
+      <div className="border-t border-border pt-4 mt-2">
+        <div className="flex items-center gap-2 mb-2">
+          {passwordEnabled ? (
+            <Lock className="h-3.5 w-3.5 text-foreground" />
+          ) : (
+            <LockOpen className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+          <span className="text-sm font-medium">Password protection</span>
+          {passwordEnabled && (
+            <span className="text-[10px] font-medium text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">Active</span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          {passwordEnabled
+            ? "Viewers must enter a password to access this proposal."
+            : "Optionally require a password to view this proposal."}
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={passwordInput}
+            onChange={(e) => setPasswordInput(e.target.value)}
+            placeholder={passwordEnabled ? "Enter new password" : "Set a password"}
+            className="builder-input flex-1"
+          />
+          <button
+            onClick={handleSavePassword}
+            disabled={passwordSaving || !passwordInput.trim()}
+            className="shrink-0 rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {passwordSaving ? "Saving..." : passwordSaved ? "Saved!" : passwordEnabled ? "Update" : "Set"}
+          </button>
+        </div>
+        {passwordEnabled && (
+          <button
+            onClick={handleRemovePassword}
+            className="mt-2 text-xs text-red-600 hover:text-red-700 transition-colors"
+          >
+            Remove password
+          </button>
+        )}
+      </div>
     </div>
   )
 }
