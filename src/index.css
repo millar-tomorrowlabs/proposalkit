@@ -144,6 +144,14 @@
   container-type: inline-size;
 }
 
+/* When preview container is narrower than lg (1024px), reset lg: overrides to md values */
+@container (max-width: 1023px) {
+  /* Section headings: lg:text-8xl → md:text-7xl */
+  .font-display.lg\:text-8xl { font-size: var(--text-7xl) !important; }
+  /* Hero tagline: lg:text-6xl → md:text-5xl */
+  .font-serif.lg\:text-6xl { font-size: var(--text-5xl) !important; }
+}
+
 /* When preview container is narrower than md (768px), reset md:/lg: overrides */
 @container (max-width: 767px) {
   /* Section headings: text-5xl md:text-7xl lg:text-8xl → text-5xl */
