@@ -9,6 +9,8 @@ import { useAccount } from "@/contexts/AccountContext"
 import { useBuilderStore } from "@/store/builderStore"
 import BuilderForm from "@/components/builder/BuilderForm"
 import ChatPanel from "@/components/builder/ChatPanel"
+import SettingsPanel from "@/components/builder/SettingsPanel"
+import { MessageSquare, Settings, PenTool } from "lucide-react"
 import ProposalWrapper from "@/components/proposal/ProposalWrapper"
 import type { ProposalData } from "@/types/proposal"
 
@@ -20,7 +22,7 @@ const BuilderHome = () => {
   const { userId } = useAuth()
   const { account } = useAccount()
   const navigate = useNavigate()
-  const { proposal, previewProposal, saveStatus, isDirty, flushToPreview, setSaveStatus, initNew, initExisting, chatPanelOpen, contextBlobs } = useBuilderStore()
+  const { proposal, previewProposal, saveStatus, isDirty, flushToPreview, setSaveStatus, initNew, initExisting, contextBlobs } = useBuilderStore()
 
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -29,6 +31,9 @@ const BuilderHome = () => {
 
   // Loading state for existing proposals
   const [isLoading, setIsLoading] = useState(!!id)
+
+  // Left pane tabs: Chat (default) | Settings | Form
+  const [leftTab, setLeftTab] = useState<"chat" | "settings" | "form">("chat")
 
   // Send proposal modal
   const [showSendModal, setShowSendModal] = useState(false)
@@ -118,9 +123,7 @@ const BuilderHome = () => {
     }
   }
 
-  // Resizable divider for form / chat split
   const leftPaneRef = useRef<HTMLDivElement>(null)
-  const [formHeight, setFormHeight] = useState<number | null>(null)
 
   // Preview scaling — render at fixed width, scale down to fit container (never zoom in)
   const previewContainerRef = useRef<HTMLDivElement>(null)
@@ -140,27 +143,6 @@ const BuilderHome = () => {
     return () => observer.disconnect()
   }, [previewWidth])
 
-  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    const startY = e.clientY
-    const startHeight = formHeight ?? (leftPaneRef.current?.offsetHeight ?? 600) * 0.6
-
-    const onMouseMove = (ev: MouseEvent) => {
-      const paneHeight = leftPaneRef.current?.offsetHeight ?? 600
-      const delta = ev.clientY - startY
-      const newHeight = Math.max(200, Math.min(paneHeight - 200, startHeight + delta))
-      setFormHeight(newHeight)
-    }
-
-    const onMouseUp = () => {
-      document.removeEventListener("mousemove", onMouseMove)
-      document.removeEventListener("mouseup", onMouseUp)
-    }
-
-    document.addEventListener("mousemove", onMouseMove)
-    document.addEventListener("mouseup", onMouseUp)
-  }, [formHeight])
-
   // Map a field path from the preview to the correct builder tab
   const fieldPathToSection = (path: string): string => {
     if (path.startsWith("summary.")) return "summary"
@@ -176,6 +158,12 @@ const BuilderHome = () => {
     // Walk up from the click target to find the nearest [data-field-path]
     let el = e.target as HTMLElement | null
     while (el) {
+      // If the element is inline editable, let the browser handle the click
+      // (for cursor placement in contentEditable)
+      if (el.getAttribute("data-inline-editable") === "true") {
+        return // don't intercept — let contentEditable handle it
+      }
+
       const fieldPath = el.getAttribute("data-field-path")
       if (fieldPath) {
         e.preventDefault()
@@ -317,33 +305,47 @@ const BuilderHome = () => {
 
       {/* Split pane */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left pane — form + chat */}
-        <div ref={leftPaneRef} className="w-[480px] shrink-0 flex flex-col border-r border-border">
-          {/* Form area */}
-          <div
-            className="overflow-y-auto"
-            style={
-              chatPanelOpen
-                ? formHeight
-                  ? { height: formHeight, flexShrink: 0 }
-                  : { flex: 3 }
-                : { flex: 1 }
-            }
-          >
-            <BuilderForm />
+        {/* Left pane — Chat | Settings | Form tabs */}
+        <div ref={leftPaneRef} className="w-[400px] shrink-0 flex flex-col border-r border-border">
+          {/* Tab bar */}
+          <div className="flex shrink-0 border-b border-border">
+            {([
+              { id: "chat" as const, label: "Chat", icon: MessageSquare },
+              { id: "settings" as const, label: "Settings", icon: Settings },
+              { id: "form" as const, label: "Form", icon: PenTool },
+            ]).map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setLeftTab(id)}
+                className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
+                  leftTab === id
+                    ? "bg-background text-foreground border-b-2 border-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
           </div>
 
-          {/* Resizable divider */}
-          {chatPanelOpen && (
-            <div
-              className="h-1 shrink-0 cursor-row-resize bg-border hover:bg-brand-1 transition-colors"
-              onMouseDown={handleDividerMouseDown}
-            />
-          )}
-
-          {/* Chat panel — flex:2 gives ~40% when open without explicit height */}
-          <div className={chatPanelOpen ? "flex-[2] overflow-hidden" : ""}>
-            <ChatPanel />
+          {/* Tab content */}
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {leftTab === "chat" && (
+              <div className="flex-1 overflow-hidden">
+                <ChatPanel alwaysOpen />
+              </div>
+            )}
+            {leftTab === "settings" && (
+              <div className="flex-1 overflow-y-auto">
+                <SettingsPanel />
+              </div>
+            )}
+            {leftTab === "form" && (
+              <div className="flex-1 overflow-y-auto">
+                <BuilderForm />
+              </div>
+            )}
           </div>
         </div>
 

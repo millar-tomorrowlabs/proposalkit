@@ -1,5 +1,7 @@
-import { useState, Fragment } from "react"
+import { useState, Fragment, useMemo } from "react"
 import { useScrollRevealAll } from "@/hooks/useScrollReveal"
+import BuilderPreviewContext from "@/contexts/BuilderPreviewContext"
+import { useBuilderStore } from "@/store/builderStore"
 import type { ProposalData, SectionKey, ConfirmedSelection } from "@/types/proposal"
 import ProposalNav from "./ProposalNav"
 import HeroSection from "./HeroSection"
@@ -21,6 +23,12 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
   const studioName = proposal.studioName || DEFAULT_STUDIO_NAME
   const [confirmedSelection, setConfirmedSelection] = useState<ConfirmedSelection | null>(null)
   useScrollRevealAll({ disabled: isPreview })
+
+  const contextValue = useMemo(() => ({
+    isEditable: isPreview,
+    updateField: useBuilderStore.getState().updateField,
+    updateAtPath: useBuilderStore.getState().updateAtPath,
+  }), [isPreview])
 
   const sectionMap: Record<SectionKey, React.ReactNode> = {
     summary: <SummarySection key="summary" data={proposal.summary} studioName={studioName} />,
@@ -53,27 +61,29 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
   }
 
   return (
-    <div
-      style={
-        {
-          "--brand-1": proposal.brandColor1,
-          "--brand-2": proposal.brandColor2,
-        } as React.CSSProperties
-      }
-    >
-      <ProposalNav sections={proposal.sections} studioName={studioName} isPreview={isPreview} viewportWidth={viewportWidth} />
-      <HeroSection
-        clientName={proposal.clientName}
-        heroImageUrl={proposal.heroImageUrl}
-        clientLogoUrl={proposal.clientLogoUrl}
-        heroLogoLarge={proposal.heroLogoLarge}
-        tagline={proposal.tagline}
-        description={proposal.heroDescription}
-      />
-      {proposal.sections.map((key) => (
-        <Fragment key={key}>{sectionMap[key]}</Fragment>
-      ))}
-    </div>
+    <BuilderPreviewContext.Provider value={contextValue}>
+      <div
+        style={
+          {
+            "--brand-1": proposal.brandColor1,
+            "--brand-2": proposal.brandColor2,
+          } as React.CSSProperties
+        }
+      >
+        <ProposalNav sections={proposal.sections} studioName={studioName} isPreview={isPreview} viewportWidth={viewportWidth} />
+        <HeroSection
+          clientName={proposal.clientName}
+          heroImageUrl={proposal.heroImageUrl}
+          clientLogoUrl={proposal.clientLogoUrl}
+          heroLogoLarge={proposal.heroLogoLarge}
+          tagline={proposal.tagline}
+          description={proposal.heroDescription}
+        />
+        {proposal.sections.map((key) => (
+          <Fragment key={key}>{sectionMap[key]}</Fragment>
+        ))}
+      </div>
+    </BuilderPreviewContext.Provider>
   )
 }
 

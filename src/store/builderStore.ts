@@ -65,6 +65,7 @@ interface BuilderState {
   // Actions
   setProposal: (proposal: ProposalData) => void
   updateField: <K extends keyof ProposalData>(key: K, value: ProposalData[K]) => void
+  updateAtPath: (path: string, value: unknown) => void
   flushToPreview: () => void
   setSaveStatus: (status: SaveStatus) => void
   setActiveSection: (section: string) => void
@@ -101,6 +102,13 @@ export const useBuilderStore = create<BuilderState>((set) => ({
   updateField: (key, value) => {
     set((state) => ({
       proposal: { ...state.proposal, [key]: value, updatedAt: new Date().toISOString() },
+      isDirty: true,
+    }))
+  },
+
+  updateAtPath: (path, value) => {
+    set((state) => ({
+      proposal: { ...setAtPath(state.proposal, path, value), updatedAt: new Date().toISOString() },
       isDirty: true,
     }))
   },

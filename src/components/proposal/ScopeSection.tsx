@@ -1,5 +1,6 @@
 import { Check } from "lucide-react"
 import type { ProposalData } from "@/types/proposal"
+import InlineEditable from "./InlineEditable"
 
 type Props = { data: ProposalData["scope"] }
 
@@ -20,9 +21,14 @@ const ScopeSection = ({ data }: Props) => {
 
         <ul className="scroll-reveal delay-200 mt-8 space-y-4">
           {data.outcomes.map((item, i) => (
-            <li key={item} data-field-path={`scope.outcomes.${i}`} className="flex items-start gap-3 text-foreground">
+            <li key={i} className="flex items-start gap-3 text-foreground">
               <Check className="mt-1 h-4 w-4 shrink-0 text-brand-1" />
-              <span className="text-base leading-relaxed">{item}</span>
+              <InlineEditable
+                fieldPath={`scope.outcomes.${i}`}
+                value={item}
+                tag="span"
+                className="text-base leading-relaxed"
+              />
             </li>
           ))}
         </ul>
@@ -39,9 +45,14 @@ const ScopeSection = ({ data }: Props) => {
 
         <ul className="scroll-reveal delay-200 mt-8 space-y-4">
           {data.responsibilities.map((item, i) => (
-            <li key={item} data-field-path={`scope.responsibilities.${i}`} className="flex items-start gap-3 text-foreground">
+            <li key={i} className="flex items-start gap-3 text-foreground">
               <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-2" />
-              <span className="text-base leading-relaxed">{item}</span>
+              <InlineEditable
+                fieldPath={`scope.responsibilities.${i}`}
+                value={item}
+                tag="span"
+                className="text-base leading-relaxed"
+              />
             </li>
           ))}
         </ul>

@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Check, Star } from "lucide-react"
 import type { InvestmentConfig, ConfirmedSelection } from "@/types/proposal"
 import { formatPrice as formatCurrency } from "@/lib/currency"
+import InlineEditable from "./InlineEditable"
 
 interface InvestmentSectionProps {
   data: InvestmentConfig
@@ -141,10 +142,16 @@ const InvestmentSection = ({
 
         {recommendation && (
           <div className="scroll-reveal delay-200 mt-10 rounded-lg border border-brand-1/30 bg-brand-1-light p-6">
-            <p className="text-sm leading-relaxed text-muted-foreground">
+            <div className="text-sm leading-relaxed text-muted-foreground">
               <strong className="text-foreground">Our recommendation</strong>{" "}
-              {recommendation}
-            </p>
+              <InlineEditable
+                fieldPath="recommendation"
+                value={recommendation}
+                multiline
+                tag="span"
+                className="text-sm leading-relaxed text-muted-foreground"
+              />
+            </div>
           </div>
         )}
 

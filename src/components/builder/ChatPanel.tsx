@@ -8,7 +8,11 @@ import { friendlyError } from "@/lib/errors"
 import ChatMessageBubble from "./ChatMessageBubble"
 import type { ChatMessage } from "@/types/proposal"
 
-const ChatPanel = () => {
+interface ChatPanelProps {
+  alwaysOpen?: boolean
+}
+
+const ChatPanel = ({ alwaysOpen = false }: ChatPanelProps) => {
   const { account } = useAccount()
   const {
     chatMessages,
@@ -103,22 +107,26 @@ const ChatPanel = () => {
     }
   }
 
-  return (
-    <div className="flex h-full flex-col border-t border-border bg-background">
-      {/* Header */}
-      <button
-        onClick={() => setChatPanelOpen(!chatPanelOpen)}
-        className="flex h-9 shrink-0 items-center justify-between px-4 text-xs font-semibold text-foreground hover:bg-muted/50 transition-colors"
-      >
-        <span>Chat</span>
-        {chatPanelOpen ? (
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-        ) : (
-          <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-        )}
-      </button>
+  const isOpen = alwaysOpen || chatPanelOpen
 
-      {chatPanelOpen && (
+  return (
+    <div className={`flex h-full flex-col ${alwaysOpen ? "" : "border-t border-border"} bg-background`}>
+      {/* Header — hidden when alwaysOpen (tab provides the header) */}
+      {!alwaysOpen && (
+        <button
+          onClick={() => setChatPanelOpen(!chatPanelOpen)}
+          className="flex h-9 shrink-0 items-center justify-between px-4 text-xs font-semibold text-foreground hover:bg-muted/50 transition-colors"
+        >
+          <span>Chat</span>
+          {chatPanelOpen ? (
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          ) : (
+            <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+        </button>
+      )}
+
+      {isOpen && (
         <>
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">

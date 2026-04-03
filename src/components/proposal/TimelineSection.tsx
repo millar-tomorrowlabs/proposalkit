@@ -1,5 +1,6 @@
 import { useState } from "react"
 import type { ProposalData } from "@/types/proposal"
+import InlineEditable from "./InlineEditable"
 
 type Props = { data: ProposalData["timeline"] }
 
@@ -17,7 +18,12 @@ const TimelineSection = ({ data }: Props) => {
             Timeline
           </h2>
           {data.subtitle && (
-            <p className="scroll-reveal delay-100 mt-6 text-lg text-muted-foreground">{data.subtitle}</p>
+            <InlineEditable
+              fieldPath="timeline.subtitle"
+              value={data.subtitle}
+              tag="p"
+              className="scroll-reveal delay-100 mt-6 text-lg text-muted-foreground"
+            />
           )}
           <p className="mt-6 text-sm text-muted-foreground">No phases configured yet.</p>
         </div>
@@ -32,9 +38,12 @@ const TimelineSection = ({ data }: Props) => {
           Timeline
         </h2>
 
-        <p data-field-path="timeline.subtitle" className="scroll-reveal delay-100 mt-6 text-lg text-muted-foreground">
-          {data.subtitle}
-        </p>
+        <InlineEditable
+          fieldPath="timeline.subtitle"
+          value={data.subtitle}
+          tag="p"
+          className="scroll-reveal delay-100 mt-6 text-lg text-muted-foreground"
+        />
 
         <div className="scroll-reveal delay-200 mt-12 flex flex-wrap gap-2">
           {phases.map((phase, i) => (
@@ -54,16 +63,26 @@ const TimelineSection = ({ data }: Props) => {
 
         <div className="scroll-reveal delay-300 mt-8 rounded-lg border border-border bg-card p-8">
           <div className="flex items-baseline justify-between">
-            <h3 className="font-display text-2xl font-semibold text-foreground">
-              {phases[active].name}
-            </h3>
-            <span className="text-sm font-medium text-muted-foreground">
-              {phases[active].duration}
-            </span>
+            <InlineEditable
+              fieldPath={`timeline.phases.${active}.name`}
+              value={phases[active].name}
+              tag="h3"
+              className="font-display text-2xl font-semibold text-foreground"
+            />
+            <InlineEditable
+              fieldPath={`timeline.phases.${active}.duration`}
+              value={phases[active].duration}
+              tag="span"
+              className="text-sm font-medium text-muted-foreground"
+            />
           </div>
-          <p className="mt-4 leading-relaxed text-muted-foreground">
-            {phases[active].description}
-          </p>
+          <InlineEditable
+            fieldPath={`timeline.phases.${active}.description`}
+            value={phases[active].description}
+            multiline
+            tag="p"
+            className="mt-4 leading-relaxed text-muted-foreground"
+          />
         </div>
 
         <div className="scroll-reveal delay-400 mt-6 flex gap-1">

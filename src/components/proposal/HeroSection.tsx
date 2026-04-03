@@ -1,6 +1,7 @@
 import React from "react"
 import { useScrollReveal } from "@/hooks/useScrollReveal"
 import { ChevronDown } from "lucide-react"
+import InlineEditable from "./InlineEditable"
 
 interface HeroSectionProps {
   clientName: string
@@ -88,13 +89,20 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, t
           </div>
         )}
 
-        <h1 data-field-path="tagline" className="font-serif text-3xl font-semibold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl">
-          {tagline}
-        </h1>
+        <InlineEditable
+          fieldPath="tagline"
+          value={tagline}
+          tag="h1"
+          className="font-serif text-3xl font-semibold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl"
+        />
 
-        <p data-field-path="heroDescription" className="mt-6 max-w-lg text-base leading-relaxed text-white/70 md:text-lg">
-          {description}
-        </p>
+        <InlineEditable
+          fieldPath="heroDescription"
+          value={description}
+          multiline
+          tag="p"
+          className="mt-6 max-w-lg text-base leading-relaxed text-white/70 md:text-lg"
+        />
 
         <div className="mt-10 flex items-center gap-3">
           <div className="h-1 w-12 rounded-full bg-brand-1" />
