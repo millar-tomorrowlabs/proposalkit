@@ -1,12 +1,12 @@
-import { useRef, useEffect, useState, useCallback } from "react"
-import { v4 as uuidv4 } from "uuid"
-import { ChevronUp, ChevronDown, Send } from "lucide-react"
+import { useRef, useEffect, useState, useCallback, useMemo } from "react"
+import { ChevronUp, ChevronDown, Send, Square } from "lucide-react"
+import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
 import { useBuilderStore } from "@/store/builderStore"
 import { useAccount } from "@/contexts/AccountContext"
+import { useAuth } from "@/contexts/AuthContext"
 import { supabase } from "@/lib/supabase"
-import { friendlyError } from "@/lib/errors"
 import ChatMessageBubble from "./ChatMessageBubble"
-import type { ChatMessage } from "@/types/proposal"
 
 interface ChatPanelProps {
   alwaysOpen?: boolean
@@ -14,37 +14,63 @@ interface ChatPanelProps {
 
 const ChatPanel = ({ alwaysOpen = false }: ChatPanelProps) => {
   const { account } = useAccount()
+  const { session } = useAuth()
   const {
-    chatMessages,
-    chatLoading,
     chatPanelOpen,
     setChatPanelOpen,
-    addChatMessage,
-    setChatLoading,
     proposal,
     pendingChatPrompt,
     setPendingChatPrompt,
   } = useBuilderStore()
 
-  const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [input, setInput] = useState("")
 
-  // Auto-scroll to bottom when new messages arrive
+  // Build transport with auth headers and proposal context
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        headers: async () => {
+          const { data } = await supabase.auth.getSession()
+          const token = data.session?.access_token ?? session.access_token
+          return { Authorization: `Bearer ${token}` }
+        },
+        body: {
+          proposal,
+          accountContext: {
+            studioName: account.studioName,
+            studioDescription: account.aiStudioDescription,
+            studioTagline: account.aiStudioTagline,
+            brief: proposal.brief,
+          },
+        },
+      }),
+    // Intentionally depend on proposal so body stays current
+    [proposal, account, session],
+  )
+
+  const {
+    messages,
+    sendMessage,
+    status,
+    stop,
+    error,
+  } = useChat({
+    id: `chat-${proposal.id}`,
+    transport,
+    onError: (err) => {
+      console.error("Chat error:", err)
+    },
+  })
+
+  const isStreaming = status === "streaming" || status === "submitted"
+
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [chatMessages.length, chatLoading])
-
-  // Auto-send pending chat prompt (triggered by AskAIGhost buttons)
-  const sendMessageRef = useRef<(() => void) | null>(null)
-  useEffect(() => {
-    if (pendingChatPrompt && !chatLoading) {
-      setInput(pendingChatPrompt)
-      setPendingChatPrompt(null)
-      // Send on next tick so input state is updated
-      setTimeout(() => sendMessageRef.current?.(), 0)
-    }
-  }, [pendingChatPrompt, chatLoading, setPendingChatPrompt])
+  }, [messages.length, status])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -55,73 +81,34 @@ const ChatPanel = ({ alwaysOpen = false }: ChatPanelProps) => {
     }
   }, [input])
 
-  const sendMessage = useCallback(async () => {
+  // Handle sending a message
+  const handleSend = useCallback(() => {
     const trimmed = input.trim()
-    if (!trimmed || chatLoading) return
-
+    if (!trimmed || isStreaming) return
     setInput("")
+    sendMessage({ text: trimmed })
+  }, [input, isStreaming, sendMessage])
 
-    // Add user message
-    const userMsg: ChatMessage = {
-      id: uuidv4(),
-      role: "user",
-      content: trimmed,
-      createdAt: new Date().toISOString(),
+  // Auto-send pending chat prompt (triggered by AskAIGhost buttons)
+  useEffect(() => {
+    if (pendingChatPrompt && !isStreaming) {
+      const prompt = pendingChatPrompt
+      setPendingChatPrompt(null)
+      setTimeout(() => sendMessage({ text: prompt }), 0)
     }
-    addChatMessage(userMsg)
-    setChatLoading(true)
+  }, [pendingChatPrompt, isStreaming, setPendingChatPrompt, sendMessage])
 
-    try {
-      // Build conversation history (stripped to role + content)
-      const history = chatMessages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      }))
-
-      const { data, error } = await supabase.functions.invoke("chat-edit-proposal", {
-        body: {
-          messages: history,
-          proposal,
-          userMessage: trimmed,
-          accountContext: {
-            studioName: account.studioName,
-            studioDescription: account.aiStudioDescription,
-            studioTagline: account.aiStudioTagline,
-            brief: proposal.brief,
-          },
-        },
-      })
-
-      if (error) throw error
-
-      const assistantMsg: ChatMessage = {
-        id: uuidv4(),
-        role: "assistant",
-        content: data.content || "I couldn't generate a response.",
-        edits: data.edits?.length ? data.edits : undefined,
-        createdAt: new Date().toISOString(),
-      }
-      addChatMessage(assistantMsg)
-    } catch (err) {
-      const errorMsg: ChatMessage = {
-        id: uuidv4(),
-        role: "assistant",
-        content: friendlyError(err instanceof Error ? err.message : String(err)),
-        createdAt: new Date().toISOString(),
-      }
-      addChatMessage(errorMsg)
-    } finally {
-      setChatLoading(false)
+  // Sync messages to Zustand store for DB persistence
+  useEffect(() => {
+    if (messages.length > 0 && status === "ready") {
+      useBuilderStore.getState().syncChatFromUIMessages(messages)
     }
-  }, [input, chatLoading, chatMessages, proposal, addChatMessage, setChatLoading])
-
-  // Keep ref updated for auto-send
-  sendMessageRef.current = sendMessage
+  }, [messages, status])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
-      sendMessage()
+      handleSend()
     }
   }
 
@@ -148,20 +135,25 @@ const ChatPanel = ({ alwaysOpen = false }: ChatPanelProps) => {
         <>
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-            {chatMessages.length === 0 && (
+            {messages.length === 0 && (
               <p className="text-center text-xs text-muted-foreground py-8">
                 Ask the AI to edit your proposal. Try "make the tagline punchier" or "add a QA phase to the timeline".
               </p>
             )}
-            {chatMessages.map((msg) => (
+            {messages.map((msg) => (
               <ChatMessageBubble key={msg.id} message={msg} />
             ))}
-            {chatLoading && (
+            {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="chat-typing-indicator">
                 <span />
                 <span />
                 <span />
               </div>
+            )}
+            {error && (
+              <p className="text-xs text-red-500 px-1">
+                Something went wrong. Please try again.
+              </p>
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -178,13 +170,23 @@ const ChatPanel = ({ alwaysOpen = false }: ChatPanelProps) => {
                 rows={1}
                 className="builder-input flex-1 resize-none !py-2"
               />
-              <button
-                onClick={sendMessage}
-                disabled={!input.trim() || chatLoading}
-                className="shrink-0 rounded-md bg-foreground p-2 text-background transition-colors hover:bg-foreground/80 disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <Send className="h-3.5 w-3.5" />
-              </button>
+              {isStreaming ? (
+                <button
+                  onClick={stop}
+                  className="shrink-0 rounded-md bg-foreground p-2 text-background transition-colors hover:bg-foreground/80"
+                  title="Stop generating"
+                >
+                  <Square className="h-3.5 w-3.5" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim()}
+                  className="shrink-0 rounded-md bg-foreground p-2 text-background transition-colors hover:bg-foreground/80 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
         </>

@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { v4 as uuidv4 } from "uuid"
-import type { ProposalData, AISuggestions, ContextBlob, ChatMessage } from "@/types/proposal"
+import type { UIMessage } from "ai"
+import type { ProposalData, AISuggestions, ContextBlob, ChatMessage, ProposedEdit } from "@/types/proposal"
 import { setAtPath } from "@/lib/fieldPath"
 
 const DEFAULT_PROPOSAL: ProposalData = {
@@ -63,6 +64,11 @@ interface BuilderState {
   undoStack: ProposalData[]
   redoStack: ProposalData[]
 
+  // Applied edits tracking (message IDs whose edits have been applied)
+  appliedEditIds: Set<string>
+  // Edits extracted from UIMessage tool parts (indexed by message ID)
+  _uiChatEdits: Record<string, ProposedEdit[]>
+
   // Chat
   chatMessages: ChatMessage[]
   chatLoading: boolean
@@ -92,6 +98,7 @@ interface BuilderState {
   setChatLoading: (loading: boolean) => void
   setChatPanelOpen: (open: boolean) => void
   setPendingChatPrompt: (prompt: string | null) => void
+  syncChatFromUIMessages: (uiMessages: UIMessage[]) => void
 }
 
 export const useBuilderStore = create<BuilderState>((set, get) => ({
@@ -107,6 +114,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   suggestionsLoading: false,
   undoStack: [],
   redoStack: [],
+  appliedEditIds: new Set(),
+  _uiChatEdits: {},
   chatMessages: [],
   chatLoading: false,
   chatPanelOpen: false,
@@ -206,22 +215,36 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   applyChatEdits: (messageId) =>
     set((state) => {
-      const msgIndex = state.chatMessages.findIndex((m) => m.id === messageId)
-      if (msgIndex === -1) return state
-      const msg = state.chatMessages[msgIndex]
-      if (!msg.edits || msg.editsApplied) return state
+      if (state.appliedEditIds.has(messageId)) return state
+
+      // Try old format first (legacy chatMessages)
+      const msg = state.chatMessages.find((m) => m.id === messageId)
+      const edits: ProposedEdit[] = msg?.edits ?? []
+
+      // If no edits found in legacy format, check uiChatEdits
+      const finalEdits = edits.length > 0 ? edits : state._uiChatEdits[messageId] ?? []
+      if (finalEdits.length === 0) return state
 
       let updated = state.proposal
-      for (const edit of msg.edits) {
+      for (const edit of finalEdits) {
         updated = setAtPath(updated, edit.fieldPath, edit.newValue)
       }
 
-      const newMessages = [...state.chatMessages]
-      newMessages[msgIndex] = { ...msg, editsApplied: true }
+      const newApplied = new Set(state.appliedEditIds)
+      newApplied.add(messageId)
+
+      // Also update legacy format if applicable
+      const newMessages = state.chatMessages.map((m) =>
+        m.id === messageId ? { ...m, editsApplied: true } : m,
+      )
 
       return {
+        undoStack: [...state.undoStack, state.proposal].slice(-MAX_UNDO_STACK),
+        redoStack: [],
         proposal: { ...updated, updatedAt: new Date().toISOString() },
+        previewProposal: { ...updated, updatedAt: new Date().toISOString() },
         isDirty: true,
+        appliedEditIds: newApplied,
         chatMessages: newMessages,
       }
     }),
@@ -231,4 +254,49 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   setChatPanelOpen: (chatPanelOpen) => set({ chatPanelOpen }),
 
   setPendingChatPrompt: (pendingChatPrompt) => set({ pendingChatPrompt }),
+
+  // Sync UIMessage[] from useChat hook to legacy chatMessages for DB persistence
+  syncChatFromUIMessages: (uiMessages) => {
+    const legacy: ChatMessage[] = uiMessages.map((msg) => {
+      const textParts = msg.parts.filter((p) => p.type === "text") as Array<{ type: "text"; text: string }>
+      const content = textParts.map((p) => p.text).join("")
+
+      const edits: ProposedEdit[] = []
+      for (const part of msg.parts) {
+        // AI SDK v6: untyped tools come as "dynamic-tool"
+        if (part.type === "dynamic-tool") {
+          const dynPart = part as unknown as { toolName: string; args?: Record<string, unknown> }
+          if (dynPart.toolName === "propose_edits" && dynPart.args?.edits) {
+            edits.push(...(dynPart.args.edits as ProposedEdit[]))
+          }
+        }
+        // Typed tool parts: "tool-propose_edits"
+        if (typeof part.type === "string" && part.type === "tool-propose_edits") {
+          const toolPart = part as unknown as { args?: Record<string, unknown> }
+          if (toolPart.args?.edits) {
+            edits.push(...(toolPart.args.edits as ProposedEdit[]))
+          }
+        }
+      }
+
+      return {
+        id: msg.id,
+        role: msg.role as "user" | "assistant",
+        content,
+        edits: edits.length > 0 ? edits : undefined,
+        editsApplied: get().appliedEditIds.has(msg.id),
+        createdAt: new Date().toISOString(),
+      }
+    })
+
+    // Also build edits map for applyChatEdits to find
+    const editsMap: Record<string, ProposedEdit[]> = {}
+    for (const msg of legacy) {
+      if (msg.edits && msg.edits.length > 0) {
+        editsMap[msg.id] = msg.edits
+      }
+    }
+
+    set({ chatMessages: legacy, _uiChatEdits: editsMap, isDirty: true })
+  },
 }))
