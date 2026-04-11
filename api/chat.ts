@@ -132,8 +132,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 fieldPath: z.string().describe(
                   "Dot-notation path to the field, e.g. 'summary.studioTagline' or 'investment.packages.0.basePrice'",
                 ),
-                oldValue: z.any().describe("The current value at this path (for diff display)"),
-                newValue: z.any().describe("The proposed new value"),
+                oldValue: z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(z.unknown()), z.record(z.unknown())]).describe("The current value at this path (for diff display)"),
+                newValue: z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(z.unknown()), z.record(z.unknown())]).describe("The proposed new value"),
                 label: z.string().describe(
                   "Human-readable label, e.g. 'Studio tagline' or 'Package 1 price'",
                 ),
