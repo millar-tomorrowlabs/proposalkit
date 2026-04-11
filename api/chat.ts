@@ -1,11 +1,13 @@
 import { streamText, type UIMessage, convertToModelMessages, type CoreMessage } from "ai"
 import { anthropic } from "@ai-sdk/anthropic"
 import { createClient } from "@supabase/supabase-js"
-import type { VercelRequest, VercelResponse } from "@vercel/node"
 
-// --- System prompt (ported from supabase/functions/chat-edit-proposal) ---
+// Edge runtime — supports streaming and has 30s timeout (vs 10s for Node.js serverless)
+export const config = { runtime: "edge" }
 
-function buildChatSystemPrompt(ctx?: {
+// --- System prompt ---
+
+function buildSystemPrompt(ctx?: {
   studioName?: string
   studioDescription?: string
   studioTagline?: string
@@ -13,17 +15,15 @@ function buildChatSystemPrompt(ctx?: {
 }) {
   const studio = ctx?.studioName ?? "your studio"
   const studioDesc = ctx?.studioDescription ?? "a design and technology studio"
-  const tagline = ctx?.studioTagline
-    ? `\nStudio tagline: "${ctx.studioTagline}"`
-    : ""
+  const tagline = ctx?.studioTagline ? `\nStudio tagline: "${ctx.studioTagline}"` : ""
   const briefCtx = ctx?.brief
     ? `\n\nPROJECT BRIEF (the studio's working understanding of this client and project):\n${ctx.brief}`
     : ""
   return `You are an AI assistant helping edit a proposal for ${studio}, ${studioDesc}.${tagline}${briefCtx}
 
-You have access to the current proposal state. When the user asks you to change something, use the propose_edits tool to suggest precise, structured edits. Also provide a brief conversational response explaining what you changed and why.
+You have access to the current proposal state. When the user asks you to change something, suggest precise edits in your response. Describe each change clearly with the field path, old value, and new value.
 
-When the user asks a question without requesting changes, respond conversationally without using the tool.
+When the user asks a question without requesting changes, respond conversationally.
 
 VOICE AND TONE:
 - Direct and confident. No hedging.
@@ -32,28 +32,17 @@ VOICE AND TONE:
 - Short sentences mixed with detailed ones. No passive voice. No jargon.
 - Never use: "digital transformation", "leverage", "world-class", "best-in-class", "seamlessly", "cutting-edge", "holistic", "synergy", "empower", "elevate"
 
-FIELD PATH FORMAT:
-Use dot notation for nested fields. Array indices are zero-based numbers.
-Examples:
-- Top-level: "tagline", "title", "clientName", "heroDescription", "recommendation"
-- Summary: "summary.studioTagline", "summary.projectDetail", "summary.pillars.0.label"
-- Scope: "scope.outcomes.0", "scope.responsibilities.1"
-- Timeline: "timeline.subtitle", "timeline.phases.0.name", "timeline.phases.0.description"
-- Investment: "investment.packages.0.basePrice", "investment.packages.0.label", "investment.addOns.0.label", "investment.retainer.hourlyRate"
-
 RULES:
-- Always include the current (old) value in each edit so the user can see what changed.
 - Keep edits minimal — only change what the user asked for.
-- For text edits, rewrite the entire field value (don't try to do partial string replacements).
-- Use a clear, short human-readable label for each edit (e.g. "Tagline", "Scope Outcome #1", "Package 1 Price").
+- For text edits, provide the full new value.
 - If the user's request is vague, ask a clarifying question instead of guessing.`
 }
 
-// --- Auth helper ---
+// --- Auth ---
 
-async function verifyAuth(req: VercelRequest) {
-  const authHeader = req.headers.authorization
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+async function verifyAuth(req: Request): Promise<void> {
+  const authHeader = req.headers.get("authorization")
+  if (!authHeader?.startsWith("Bearer ")) {
     throw new Error("UNAUTHORIZED")
   }
 
@@ -62,37 +51,43 @@ async function verifyAuth(req: VercelRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 
-  const token = authHeader.replace("Bearer ", "")
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser(token)
-
+  const token = authHeader.slice(7)
+  const { data: { user }, error } = await supabase.auth.getUser(token)
   if (error || !user) {
     throw new Error("UNAUTHORIZED")
   }
-
-  return user
 }
 
-// --- Main handler ---
+// --- Handler ---
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: Request) {
   if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Origin", "*")
-    res.setHeader("Access-Control-Allow-Headers", "authorization, content-type")
-    return res.status(200).end()
+    return new Response("ok", {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "authorization, content-type",
+      },
+    })
   }
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" })
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    })
   }
 
   try {
-    // Verify auth
     await verifyAuth(req)
+  } catch {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
 
-    const { messages, proposal, accountContext } = req.body as {
+  try {
+    const { messages, proposal, accountContext } = (await req.json()) as {
       messages: UIMessage[]
       proposal: Record<string, unknown>
       accountContext?: {
@@ -103,7 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Prepend proposal state as context in the conversation
+    // Prepend proposal state as context
     const proposalContext: CoreMessage = {
       role: "user",
       content: `Here is the current proposal state:\n\n${JSON.stringify(proposal, null, 2)}\n\nPlease help me edit this proposal. I'll describe what I'd like to change.`,
@@ -113,24 +108,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       content: "I have the full proposal loaded. What would you like to change?",
     }
 
-    // Convert UI messages to model messages
     const modelMessages = await convertToModelMessages(messages)
 
     const result = streamText({
       model: anthropic("claude-sonnet-4-6"),
-      system: buildChatSystemPrompt(accountContext),
+      system: buildSystemPrompt(accountContext),
       messages: [proposalContext, assistantAck, ...modelMessages],
       maxTokens: 8000,
-      // TODO: Re-enable propose_edits tool once @ai-sdk/anthropic schema compatibility is resolved
-      // For now, streaming text responses work — tool calls will be added back
     })
 
     return result.toUIMessageStreamResponse()
   } catch (err) {
-    if (err instanceof Error && err.message === "UNAUTHORIZED") {
-      return res.status(401).json({ error: "Unauthorized" })
-    }
     console.error("chat API error:", err)
-    return res.status(500).json({ error: "Internal server error" })
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    })
   }
 }
