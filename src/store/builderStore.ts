@@ -45,6 +45,8 @@ const DEFAULT_PROPOSAL: ProposalData = {
 
 type SaveStatus = "idle" | "saving" | "saved" | "error"
 
+const MAX_UNDO_STACK = 50
+
 interface BuilderState {
   proposal: ProposalData
   previewProposal: ProposalData
@@ -57,6 +59,10 @@ interface BuilderState {
   dismissedSuggestions: string[]
   suggestionsLoading: boolean
 
+  // Undo / redo
+  undoStack: ProposalData[]
+  redoStack: ProposalData[]
+
   // Chat
   chatMessages: ChatMessage[]
   chatLoading: boolean
@@ -67,6 +73,10 @@ interface BuilderState {
   updateField: <K extends keyof ProposalData>(key: K, value: ProposalData[K]) => void
   updateAtPath: (path: string, value: unknown) => void
   flushToPreview: () => void
+  undo: () => void
+  redo: () => void
+  canUndo: () => boolean
+  canRedo: () => boolean
   setSaveStatus: (status: SaveStatus) => void
   setActiveSection: (section: string) => void
   initNew: (accountDefaults?: { studioName?: string; ctaEmail?: string; brandColor1?: string; brandColor2?: string }) => void
@@ -82,7 +92,7 @@ interface BuilderState {
   setChatPanelOpen: (open: boolean) => void
 }
 
-export const useBuilderStore = create<BuilderState>((set) => ({
+export const useBuilderStore = create<BuilderState>((set, get) => ({
   proposal: DEFAULT_PROPOSAL,
   previewProposal: DEFAULT_PROPOSAL,
   saveStatus: "idle",
@@ -93,6 +103,8 @@ export const useBuilderStore = create<BuilderState>((set) => ({
   suggestions: null,
   dismissedSuggestions: [],
   suggestionsLoading: false,
+  undoStack: [],
+  redoStack: [],
   chatMessages: [],
   chatLoading: false,
   chatPanelOpen: false,
@@ -101,6 +113,8 @@ export const useBuilderStore = create<BuilderState>((set) => ({
 
   updateField: (key, value) => {
     set((state) => ({
+      undoStack: [...state.undoStack, state.proposal].slice(-MAX_UNDO_STACK),
+      redoStack: [],
       proposal: { ...state.proposal, [key]: value, updatedAt: new Date().toISOString() },
       isDirty: true,
     }))
@@ -108,10 +122,41 @@ export const useBuilderStore = create<BuilderState>((set) => ({
 
   updateAtPath: (path, value) => {
     set((state) => ({
+      undoStack: [...state.undoStack, state.proposal].slice(-MAX_UNDO_STACK),
+      redoStack: [],
       proposal: { ...setAtPath(state.proposal, path, value), updatedAt: new Date().toISOString() },
       isDirty: true,
     }))
   },
+
+  undo: () => {
+    const { undoStack, proposal } = get()
+    if (undoStack.length === 0) return
+    const previous = undoStack[undoStack.length - 1]
+    set((state) => ({
+      undoStack: state.undoStack.slice(0, -1),
+      redoStack: [...state.redoStack, proposal].slice(-MAX_UNDO_STACK),
+      proposal: previous,
+      previewProposal: previous,
+      isDirty: true,
+    }))
+  },
+
+  redo: () => {
+    const { redoStack, proposal } = get()
+    if (redoStack.length === 0) return
+    const next = redoStack[redoStack.length - 1]
+    set((state) => ({
+      redoStack: state.redoStack.slice(0, -1),
+      undoStack: [...state.undoStack, proposal].slice(-MAX_UNDO_STACK),
+      proposal: next,
+      previewProposal: next,
+      isDirty: true,
+    }))
+  },
+
+  canUndo: () => get().undoStack.length > 0,
+  canRedo: () => get().redoStack.length > 0,
 
   flushToPreview: () => {
     set((state) => ({ previewProposal: state.proposal }))
@@ -132,11 +177,11 @@ export const useBuilderStore = create<BuilderState>((set) => ({
       brandColor1: accountDefaults?.brandColor1 ?? DEFAULT_PROPOSAL.brandColor1,
       brandColor2: accountDefaults?.brandColor2 ?? DEFAULT_PROPOSAL.brandColor2,
     }
-    set({ proposal: fresh, previewProposal: fresh, isNewProposal: true, isDirty: false, saveStatus: "idle" })
+    set({ proposal: fresh, previewProposal: fresh, isNewProposal: true, isDirty: false, saveStatus: "idle", undoStack: [], redoStack: [] })
   },
 
   initExisting: (proposal, chatMessages) => {
-    set({ proposal, previewProposal: proposal, isNewProposal: false, isDirty: false, saveStatus: "idle", chatMessages: chatMessages ?? [] })
+    set({ proposal, previewProposal: proposal, isNewProposal: false, isDirty: false, saveStatus: "idle", chatMessages: chatMessages ?? [], undoStack: [], redoStack: [] })
   },
 
   setContextBlobs: (contextBlobs) => set({ contextBlobs, isDirty: true }),

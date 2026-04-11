@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
-import { Send, X, Monitor, Tablet, Smartphone } from "lucide-react"
+import { Send, X, Monitor, Tablet, Smartphone, Undo2, Redo2 } from "lucide-react"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { friendlyError } from "@/lib/errors"
@@ -22,7 +22,7 @@ const BuilderHome = () => {
   const { userId } = useAuth()
   const { account } = useAccount()
   const navigate = useNavigate()
-  const { proposal, previewProposal, saveStatus, isDirty, flushToPreview, setSaveStatus, initNew, initExisting, contextBlobs } = useBuilderStore()
+  const { proposal, previewProposal, saveStatus, isDirty, flushToPreview, setSaveStatus, initNew, initExisting, contextBlobs, undo, redo, undoStack, redoStack } = useBuilderStore()
 
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -164,6 +164,11 @@ const BuilderHome = () => {
         return // don't intercept — let contentEditable handle it
       }
 
+      // If the click is on a section toolbar, let the toolbar handle it
+      if (el.classList.contains("section-toolbar") || el.classList.contains("section-toolbar-btn")) {
+        return // don't intercept — let toolbar buttons handle it
+      }
+
       const fieldPath = el.getAttribute("data-field-path")
       if (fieldPath) {
         e.preventDefault()
@@ -235,6 +240,32 @@ const BuilderHome = () => {
     return () => { if (previewTimer.current) clearTimeout(previewTimer.current) }
   }, [proposal])
 
+  // Undo / redo keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey
+      if (!isMod || e.key.toLowerCase() !== "z") return
+
+      e.preventDefault()
+      const store = useBuilderStore.getState()
+      if (e.shiftKey) {
+        // Ctrl/Cmd+Shift+Z = redo
+        if (store.canRedo()) {
+          store.redo()
+          toast.info("Redo")
+        }
+      } else {
+        // Ctrl/Cmd+Z = undo
+        if (store.canUndo()) {
+          store.undo()
+          toast.info("Undo")
+        }
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [])
+
   // Debounce auto-save
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current)
@@ -283,6 +314,24 @@ const BuilderHome = () => {
           {isLoading ? "" : proposal.title || "New Proposal"}
         </p>
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={undo}
+              disabled={undoStack.length === 0}
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30 disabled:cursor-default disabled:hover:text-muted-foreground"
+              title="Undo (⌘Z)"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={redo}
+              disabled={redoStack.length === 0}
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30 disabled:cursor-default disabled:hover:text-muted-foreground"
+              title="Redo (⌘⇧Z)"
+            >
+              <Redo2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
           <span className={`text-xs transition-colors ${
             saveStatus === "saving" ? "text-muted-foreground" :
             saveStatus === "saved" ? "text-brand-1" :

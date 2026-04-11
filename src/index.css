@@ -124,6 +124,15 @@
 .delay-100 { transition-delay: 0.1s; }
 .delay-200 { transition-delay: 0.2s; }
 .delay-300 { transition-delay: 0.3s; }
+
+/* Builder preview: force all scroll-reveal elements visible (skip animation).
+   Needed because useScrollRevealAll runs once on mount — dynamically
+   added/removed sections would otherwise stay at opacity: 0. */
+.builder-preview .scroll-reveal {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  transition: none !important;
+}
 .delay-400 { transition-delay: 0.4s; }
 .delay-500 { transition-delay: 0.5s; }
 .delay-600 { transition-delay: 0.6s; }
@@ -204,6 +213,80 @@
 .builder-preview [data-field-path]:hover {
   outline: 2px solid var(--brand-1);
   outline-offset: 4px;
+}
+
+/* Section wrapper: hover outline and floating toolbar */
+.section-wrapper {
+  position: relative;
+  transition: outline 0.2s ease, outline-offset 0.2s ease;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+}
+.section-wrapper--active {
+  outline: 2px solid color-mix(in oklch, var(--brand-1) 40%, transparent);
+  outline-offset: -2px;
+}
+
+/* Floating section toolbar */
+.section-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 40;
+  pointer-events: auto;
+  animation: toolbar-fade-in 0.15s ease-out;
+}
+.section-toolbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 4px;
+  border-radius: 8px;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.section-toolbar-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  padding: 0 6px;
+  white-space: nowrap;
+  user-select: none;
+}
+.section-toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: hsl(var(--border));
+  margin: 0 2px;
+}
+.section-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  transition: background 0.1s ease, color 0.1s ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.section-toolbar-btn:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+.section-toolbar-btn-text {
+  font-size: 11px;
+}
+.section-toolbar-btn-danger:hover {
+  background: hsl(0 60% 95%);
+  color: hsl(0 70% 50%);
+}
+@keyframes toolbar-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Builder click-to-edit: form field glow when focused via preview click */
