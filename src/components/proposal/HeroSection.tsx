@@ -2,6 +2,7 @@ import React from "react"
 import { useScrollReveal } from "@/hooks/useScrollReveal"
 import { ChevronDown } from "lucide-react"
 import InlineEditable from "./InlineEditable"
+import AskAIGhost from "./AskAIGhost"
 
 interface HeroSectionProps {
   clientName: string
@@ -95,6 +96,7 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, t
           tag="h1"
           className="font-serif text-3xl font-semibold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl"
         />
+        <AskAIGhost value={tagline} prompt="Write a compelling tagline for this proposal — short, confident, and client-focused." />
 
         <InlineEditable
           fieldPath="heroDescription"
@@ -103,6 +105,7 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, t
           tag="p"
           className="mt-6 max-w-lg text-base leading-relaxed text-white/70 md:text-lg"
         />
+        <AskAIGhost value={description} prompt="Write a 1-2 sentence hero description for this proposal — summarize what the project delivers for the client." />
 
         <div className="mt-10 flex items-center gap-3">
           <div className="h-1 w-12 rounded-full bg-brand-1" />

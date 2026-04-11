@@ -16,6 +16,7 @@ const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"))
 const InviteAcceptPage = lazy(() => import("@/pages/InviteAcceptPage"))
 const AccountSettingsPage = lazy(() => import("@/pages/AccountSettingsPage"))
 const TeamMembersPage = lazy(() => import("@/pages/TeamMembersPage"))
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"))
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/invite/:token" element={<InviteAcceptPage />} />
           <Route path="/p/:slug" element={<ProposalViewer />} />
 

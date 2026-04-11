@@ -67,6 +67,7 @@ interface BuilderState {
   chatMessages: ChatMessage[]
   chatLoading: boolean
   chatPanelOpen: boolean
+  pendingChatPrompt: string | null
 
   // Actions
   setProposal: (proposal: ProposalData) => void
@@ -90,6 +91,7 @@ interface BuilderState {
   applyChatEdits: (messageId: string) => void
   setChatLoading: (loading: boolean) => void
   setChatPanelOpen: (open: boolean) => void
+  setPendingChatPrompt: (prompt: string | null) => void
 }
 
 export const useBuilderStore = create<BuilderState>((set, get) => ({
@@ -108,6 +110,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   chatMessages: [],
   chatLoading: false,
   chatPanelOpen: false,
+  pendingChatPrompt: null,
 
   setProposal: (proposal) => set({ proposal, previewProposal: proposal }),
 
@@ -226,4 +229,6 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   setChatLoading: (chatLoading) => set({ chatLoading }),
 
   setChatPanelOpen: (chatPanelOpen) => set({ chatPanelOpen }),
+
+  setPendingChatPrompt: (pendingChatPrompt) => set({ pendingChatPrompt }),
 }))

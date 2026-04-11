@@ -34,6 +34,12 @@ const BuilderHome = () => {
 
   // Left pane tabs: Chat (default) | Settings | Form
   const [leftTab, setLeftTab] = useState<"chat" | "settings" | "form">("chat")
+  const pendingChatPrompt = useBuilderStore((s) => s.pendingChatPrompt)
+
+  // Switch to Chat tab when an AI ghost button triggers a prompt
+  useEffect(() => {
+    if (pendingChatPrompt) setLeftTab("chat")
+  }, [pendingChatPrompt])
 
   // Send proposal modal
   const [showSendModal, setShowSendModal] = useState(false)
@@ -310,9 +316,13 @@ const BuilderHome = () => {
         <Link to="/proposals" className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
           ← Proposals
         </Link>
-        <p className="text-xs font-medium text-foreground truncate max-w-xs">
-          {isLoading ? "" : proposal.title || "New Proposal"}
-        </p>
+        {isLoading ? (
+          <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+        ) : (
+          <p className="text-xs font-medium text-foreground truncate max-w-xs">
+            {proposal.title || "New Proposal"}
+          </p>
+        )}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-0.5">
             <button

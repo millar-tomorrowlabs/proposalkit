@@ -3,6 +3,7 @@ import { Check, Star } from "lucide-react"
 import type { InvestmentConfig, ConfirmedSelection } from "@/types/proposal"
 import { formatPrice as formatCurrency } from "@/lib/currency"
 import InlineEditable from "./InlineEditable"
+import AskAIGhost from "./AskAIGhost"
 
 interface InvestmentSectionProps {
   data: InvestmentConfig
@@ -140,7 +141,7 @@ const InvestmentSection = ({
           selection, hit Confirm — we'll include the details when you get in touch.
         </p>
 
-        {recommendation && (
+        {recommendation ? (
           <div className="scroll-reveal delay-200 mt-10 rounded-lg border border-brand-1/30 bg-brand-1-light p-6">
             <div className="text-sm leading-relaxed text-muted-foreground">
               <strong className="text-foreground">Our recommendation</strong>{" "}
@@ -153,6 +154,8 @@ const InvestmentSection = ({
               />
             </div>
           </div>
+        ) : (
+          <AskAIGhost value={recommendation} prompt="Write a recommendation paragraph explaining which package you suggest and why — be specific to this client's needs." className="mt-6" />
         )}
 
         {/* Package toggle — only shown when > 1 package */}

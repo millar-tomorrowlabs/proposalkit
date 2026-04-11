@@ -5,10 +5,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
-function buildChatSystemPrompt(ctx?: { studioName?: string; studioDescription?: string }) {
+function buildChatSystemPrompt(ctx?: { studioName?: string; studioDescription?: string; studioTagline?: string; brief?: string }) {
   const studio = ctx?.studioName ?? "your studio"
   const studioDesc = ctx?.studioDescription ?? "a design and technology studio"
-  return `You are an AI assistant helping edit a proposal for ${studio}, ${studioDesc}.
+  const tagline = ctx?.studioTagline ? `\nStudio tagline: "${ctx.studioTagline}"` : ""
+  const briefCtx = ctx?.brief ? `\n\nPROJECT BRIEF (the studio's working understanding of this client and project):\n${ctx.brief}` : ""
+  return `You are an AI assistant helping edit a proposal for ${studio}, ${studioDesc}.${tagline}${briefCtx}
 
 You have access to the current proposal state. When the user asks you to change something, use the propose_edits tool to suggest precise, structured edits. Also provide a brief conversational response explaining what you changed and why.
 

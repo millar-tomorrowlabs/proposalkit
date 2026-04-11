@@ -53,6 +53,7 @@ function buildSendEmailHtml(body: SendBody): string {
     </div>
     <p style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">${studio} · ${website}</p>
   </div>
+  ${body.proposalId ? `<img src="${Deno.env.get("SUPABASE_URL")}/functions/v1/track-email-open?pid=${body.proposalId}" width="1" height="1" style="display:block" alt="" />` : ""}
 </body>
 </html>`
 }
@@ -87,6 +88,7 @@ function buildReminderEmailHtml(body: SendBody): string {
     </div>
     <p style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">${studio} · ${website}</p>
   </div>
+  ${body.proposalId ? `<img src="${Deno.env.get("SUPABASE_URL")}/functions/v1/track-email-open?pid=${body.proposalId}" width="1" height="1" style="display:block" alt="" />` : ""}
 </body>
 </html>`
 }

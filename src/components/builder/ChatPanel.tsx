@@ -22,6 +22,8 @@ const ChatPanel = ({ alwaysOpen = false }: ChatPanelProps) => {
     addChatMessage,
     setChatLoading,
     proposal,
+    pendingChatPrompt,
+    setPendingChatPrompt,
   } = useBuilderStore()
 
   const [input, setInput] = useState("")
@@ -32,6 +34,17 @@ const ChatPanel = ({ alwaysOpen = false }: ChatPanelProps) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatMessages.length, chatLoading])
+
+  // Auto-send pending chat prompt (triggered by AskAIGhost buttons)
+  const sendMessageRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    if (pendingChatPrompt && !chatLoading) {
+      setInput(pendingChatPrompt)
+      setPendingChatPrompt(null)
+      // Send on next tick so input state is updated
+      setTimeout(() => sendMessageRef.current?.(), 0)
+    }
+  }, [pendingChatPrompt, chatLoading, setPendingChatPrompt])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -73,6 +86,8 @@ const ChatPanel = ({ alwaysOpen = false }: ChatPanelProps) => {
           accountContext: {
             studioName: account.studioName,
             studioDescription: account.aiStudioDescription,
+            studioTagline: account.aiStudioTagline,
+            brief: proposal.brief,
           },
         },
       })
@@ -99,6 +114,9 @@ const ChatPanel = ({ alwaysOpen = false }: ChatPanelProps) => {
       setChatLoading(false)
     }
   }, [input, chatLoading, chatMessages, proposal, addChatMessage, setChatLoading])
+
+  // Keep ref updated for auto-send
+  sendMessageRef.current = sendMessage
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {

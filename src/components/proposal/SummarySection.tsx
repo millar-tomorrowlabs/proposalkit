@@ -1,5 +1,6 @@
 import type { ProposalData } from "@/types/proposal"
 import InlineEditable from "./InlineEditable"
+import AskAIGhost from "./AskAIGhost"
 
 type Props = { data: ProposalData["summary"]; studioName?: string }
 
@@ -50,6 +51,7 @@ const SummarySection = ({ data, studioName }: Props) => {
           tag="p"
           className="scroll-reveal delay-100 mt-10 text-lg leading-relaxed text-muted-foreground md:text-xl"
         />
+        <AskAIGhost value={data.projectOverview} prompt="Write a project overview paragraph — describe the client's situation, the opportunity, and what this project will achieve." />
 
         <InlineEditable
           fieldPath="summary.projectDetail"
