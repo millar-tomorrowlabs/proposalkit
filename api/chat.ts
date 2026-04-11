@@ -1,7 +1,6 @@
 import { streamText, type UIMessage, convertToModelMessages, type CoreMessage } from "ai"
 import { anthropic } from "@ai-sdk/anthropic"
 import { createClient } from "@supabase/supabase-js"
-import { z } from "zod"
 import type { VercelRequest, VercelResponse } from "@vercel/node"
 
 // --- System prompt (ported from supabase/functions/chat-edit-proposal) ---
@@ -122,27 +121,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       system: buildChatSystemPrompt(accountContext),
       messages: [proposalContext, assistantAck, ...modelMessages],
       maxTokens: 8000,
-      tools: {
-        propose_edits: {
-          description:
-            "Propose structured edits to the proposal. Each edit specifies a field path, the current value, the new value, and a human-readable label.",
-          parameters: z.object({
-            edits: z.array(
-              z.object({
-                fieldPath: z.string().describe(
-                  "Dot-notation path to the field, e.g. 'summary.studioTagline' or 'investment.packages.0.basePrice'",
-                ),
-                oldValue: z.string().describe("The current value at this path, serialized as a string"),
-                newValue: z.string().describe("The proposed new value, serialized as a string"),
-                label: z.string().describe(
-                  "Human-readable label, e.g. 'Studio tagline' or 'Package 1 price'",
-                ),
-              }),
-            ),
-          }),
-        },
-      },
-      toolChoice: "auto",
+      // TODO: Re-enable propose_edits tool once @ai-sdk/anthropic schema compatibility is resolved
+      // For now, streaming text responses work — tool calls will be added back
     })
 
     return result.toUIMessageStreamResponse()
