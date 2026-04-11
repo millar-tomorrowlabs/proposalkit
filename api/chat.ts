@@ -138,10 +138,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                       description: "Dot-notation path to the field, e.g. 'summary.studioTagline' or 'investment.packages.0.basePrice'",
                     },
                     oldValue: {
-                      description: "The current value at this path (for diff display)",
+                      type: "string",
+                      description: "The current value at this path, serialized as a string (for diff display)",
                     },
                     newValue: {
-                      description: "The proposed new value",
+                      type: "string",
+                      description: "The proposed new value, serialized as a string",
                     },
                     label: {
                       type: "string",
