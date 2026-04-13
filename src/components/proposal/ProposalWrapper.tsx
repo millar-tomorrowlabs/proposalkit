@@ -46,6 +46,7 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
     // If only one option, insert it directly
     if (available.length === 1) {
       const idx = sections.indexOf(relativeTo)
+      if (idx === -1) return
       const insertAt = position === "below" ? idx + 1 : idx
       const next = [...sections]
       next.splice(insertAt, 0, available[0])
@@ -64,6 +65,7 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
     const store = useBuilderStore.getState()
     const sections = store.proposal.sections
     const idx = sections.indexOf(addMenuTarget.relativeTo)
+    if (idx === -1) { setAddMenuTarget(null); return }
     const insertAt = addMenuTarget.position === "below" ? idx + 1 : idx
     const next = [...sections]
     next.splice(insertAt, 0, key)

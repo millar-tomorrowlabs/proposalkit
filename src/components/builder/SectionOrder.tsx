@@ -80,6 +80,7 @@ const SectionOrder = () => {
       if (!over || active.id === over.id) return
       const oldIndex = sections.indexOf(active.id as SectionKey)
       const newIndex = sections.indexOf(over.id as SectionKey)
+      if (oldIndex === -1 || newIndex === -1) return
       updateField("sections", arrayMove(sections, oldIndex, newIndex))
     },
     [sections, updateField]

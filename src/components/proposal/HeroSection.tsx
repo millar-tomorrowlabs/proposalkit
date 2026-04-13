@@ -66,7 +66,7 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, t
           />
         )}
 
-        {showClientName && (
+        {showClientName && clientName && (
           <div data-field-path="clientName" className="mb-12 flex flex-col items-center gap-2 md:flex-row md:items-baseline md:gap-4">
             {clientName.split("+").map((name, i, arr) => (
               <React.Fragment key={name}>

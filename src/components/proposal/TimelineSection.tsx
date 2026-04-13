@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { ProposalData } from "@/types/proposal"
 import InlineEditable from "./InlineEditable"
 
@@ -7,12 +7,14 @@ type Props = { data: ProposalData["timeline"] }
 const TimelineSection = ({ data }: Props) => {
   const [active, setActive] = useState(0)
 
-  const phases = data.phases
+  const phases = data.phases ?? []
   const colors = ["bg-brand-1", "bg-brand-1", "bg-brand-2", "bg-brand-2", "bg-foreground", "bg-foreground"]
 
   // Clamp active index to valid range when phases are removed
-  const safeActive = Math.min(active, phases.length - 1)
-  if (safeActive !== active && phases.length > 0) setActive(safeActive)
+  const safeActive = phases.length > 0 ? Math.min(active, phases.length - 1) : 0
+  useEffect(() => {
+    if (safeActive !== active) setActive(safeActive)
+  }, [safeActive, active])
 
   if (phases.length === 0) {
     return (

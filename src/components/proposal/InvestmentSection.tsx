@@ -28,6 +28,17 @@ const InvestmentSection = ({
   const [confirmed, setConfirmed] = useState(false)
   const [postLaunchSelected, setPostLaunchSelected] = useState(false)
 
+  // Reconcile stale state: if the active package was removed, fall back to the first package
+  const resolvedPackageId = data.packages.some((p) => p.id === activePackageId)
+    ? activePackageId
+    : data.packages[0]?.id ?? ""
+  if (resolvedPackageId !== activePackageId) setActivePackageId(resolvedPackageId)
+
+  // Clean up stale add-on selections (remove IDs that no longer exist in data)
+  const validAddOnIds = new Set(data.addOns.map((a) => a.id))
+  const cleanedSelectedIds = new Set(Array.from(selectedAddOnIds).filter((id) => validAddOnIds.has(id)))
+  if (cleanedSelectedIds.size !== selectedAddOnIds.size) setSelectedAddOnIds(cleanedSelectedIds)
+
   if (data.packages.length === 0) {
     return (
       <section id="investment" className="px-6 pt-24 pb-16">
@@ -41,7 +52,7 @@ const InvestmentSection = ({
     )
   }
 
-  const currentPackage = data.packages.find((p) => p.id === activePackageId)!
+  const currentPackage = data.packages.find((p) => p.id === resolvedPackageId) ?? data.packages[0]
 
   // Assemble highlights: generic perks from package + add-ons flagged for this package
   const assembledHighlights = [
@@ -74,8 +85,10 @@ const InvestmentSection = ({
 
   // Per add-on: max price across all packages (= list price on non-discounted package)
   const getMaxPrice = (addOnId: string) => {
-    const addOn = data.addOns.find((a) => a.id === addOnId)!
-    return Math.max(...Object.values(addOn.packages).map((p) => p.price ?? 0))
+    const addOn = data.addOns.find((a) => a.id === addOnId)
+    if (!addOn) return 0
+    const prices = Object.values(addOn.packages).map((p) => p.price ?? 0)
+    return prices.length > 0 ? Math.max(...prices) : 0
   }
 
   const addOnsTotal = Array.from(selectedAddOnIds).reduce((sum, id) => {
@@ -118,10 +131,13 @@ const InvestmentSection = ({
     return otherPackage ? otherPackage.label : null
   })()
 
-  const selectedAddOns = Array.from(selectedAddOnIds).map((id) => {
-    const addOn = data.addOns.find((a) => a.id === id)!
-    return { id: addOn.id, label: addOn.label, price: addOn.packages[activePackageId]?.price ?? 0 }
-  })
+  const selectedAddOns = Array.from(selectedAddOnIds)
+    .map((id) => {
+      const addOn = data.addOns.find((a) => a.id === id)
+      if (!addOn) return null
+      return { id: addOn.id, label: addOn.label, price: addOn.packages[resolvedPackageId]?.price ?? 0 }
+    })
+    .filter((a): a is NonNullable<typeof a> => a !== null)
 
   return (
     <section id="investment" className="px-6 pt-24 pb-16">

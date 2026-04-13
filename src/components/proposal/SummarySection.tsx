@@ -85,7 +85,7 @@ const SummarySection = ({ data, studioName }: Props) => {
         />
 
         <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {data.pillars.map((item, i) => (
+          {(data.pillars ?? []).map((item, i) => (
             <div
               key={item.label}
               className={`scroll-reveal delay-${(i + 2) * 100} rounded-lg border border-border bg-card p-6`}
