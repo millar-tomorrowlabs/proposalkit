@@ -95,6 +95,7 @@ interface BuilderState {
   setChatMessages: (messages: ChatMessage[]) => void
   addChatMessage: (message: ChatMessage) => void
   applyChatEdits: (messageId: string) => void
+  registerChatEdits: (messageId: string, edits: ProposedEdit[]) => void
   setChatLoading: (loading: boolean) => void
   setChatPanelOpen: (open: boolean) => void
   setPendingChatPrompt: (prompt: string | null) => void
@@ -211,6 +212,11 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     set((state) => ({
       chatMessages: [...state.chatMessages, message],
       isDirty: true,
+    })),
+
+  registerChatEdits: (messageId, edits) =>
+    set((state) => ({
+      _uiChatEdits: { ...state._uiChatEdits, [messageId]: edits },
     })),
 
   applyChatEdits: (messageId) =>
