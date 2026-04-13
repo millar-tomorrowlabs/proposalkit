@@ -59,12 +59,12 @@ const InvestmentSection = ({
 
   const currentPackage = data.packages.find((p) => p.id === resolvedPackageId) ?? data.packages[0]!
 
-  // Assemble highlights: generic perks from package + add-ons flagged for this package
+  // Assemble highlights: custom highlights + descriptions of included add-ons
   const assembledHighlights = [
-    ...currentPackage.highlights,
+    ...(currentPackage.highlights ?? []),
     ...data.addOns
-      .filter((a) => a.highlightInPackage?.includes(resolvedPackageId))
-      .map((a) => a.label),
+      .filter((a) => a.packages[resolvedPackageId]?.included === true)
+      .map((a) => a.description || a.label),
   ]
 
   const switchPackage = (packageId: string) => {
