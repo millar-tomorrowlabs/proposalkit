@@ -6,6 +6,7 @@ import type { ProposedEdit } from "@/types/proposal"
 
 interface ChatMessageBubbleProps {
   message: UIMessage
+  isStreaming?: boolean
 }
 
 /**
@@ -49,7 +50,7 @@ function parseEditsFromText(text: string): { cleanText: string; edits: ProposedE
   return { cleanText: cleaned.trim(), edits }
 }
 
-const ChatMessageBubble = ({ message }: ChatMessageBubbleProps) => {
+const ChatMessageBubble = ({ message, isStreaming = false }: ChatMessageBubbleProps) => {
   const { applyChatEdits } = useBuilderStore()
   const appliedEditIds = useBuilderStore((s) => s.appliedEditIds)
 
@@ -89,14 +90,32 @@ const ChatMessageBubble = ({ message }: ChatMessageBubbleProps) => {
   const edits = [...textEdits, ...toolEdits]
   const editsApplied = appliedEditIds.has(message.id)
 
-  // Register parsed edits with the store so applyChatEdits can find them
+  // Register edits with the store and auto-apply when streaming completes
   const registeredRef = useRef<string | null>(null)
+  const autoAppliedRef = useRef<string | null>(null)
   useEffect(() => {
     if (edits.length > 0 && registeredRef.current !== message.id) {
       useBuilderStore.getState().registerChatEdits(message.id, edits)
       registeredRef.current = message.id
     }
   }, [edits.length, message.id])
+
+  // Auto-apply edits once streaming is done
+  useEffect(() => {
+    if (
+      !isStreaming &&
+      edits.length > 0 &&
+      !editsApplied &&
+      autoAppliedRef.current !== message.id
+    ) {
+      // Small delay to ensure registration happened first
+      const t = setTimeout(() => {
+        useBuilderStore.getState().applyChatEdits(message.id)
+        autoAppliedRef.current = message.id
+      }, 100)
+      return () => clearTimeout(t)
+    }
+  }, [isStreaming, edits.length, editsApplied, message.id])
 
   return (
     <div className="flex justify-start">

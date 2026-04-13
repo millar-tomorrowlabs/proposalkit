@@ -140,8 +140,12 @@ const ChatPanel = ({ alwaysOpen = false }: ChatPanelProps) => {
                 Ask the AI to edit your proposal. Try "make the tagline punchier" or "add a QA phase to the timeline".
               </p>
             )}
-            {messages.map((msg) => (
-              <ChatMessageBubble key={msg.id} message={msg} />
+            {messages.map((msg, i) => (
+              <ChatMessageBubble
+                key={msg.id}
+                message={msg}
+                isStreaming={isStreaming && i === messages.length - 1}
+              />
             ))}
             {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="chat-typing-indicator">

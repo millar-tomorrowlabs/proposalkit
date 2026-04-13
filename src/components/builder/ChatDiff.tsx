@@ -6,7 +6,7 @@ import { formatPrice } from "@/lib/currency"
 interface ChatDiffProps {
   edits: ProposedEdit[]
   applied: boolean
-  onApply: () => void
+  onApply?: () => void
 }
 
 const formatValue = (value: unknown, fieldPath: string, currency: string): string => {
@@ -23,7 +23,7 @@ const formatValue = (value: unknown, fieldPath: string, currency: string): strin
   return JSON.stringify(value).slice(0, 80)
 }
 
-const ChatDiff = ({ edits, applied, onApply }: ChatDiffProps) => {
+const ChatDiff = ({ edits, applied }: ChatDiffProps) => {
   const currency = useBuilderStore((s) => s.proposal.currency ?? "USD")
 
   return (
@@ -44,19 +44,10 @@ const ChatDiff = ({ edits, applied, onApply }: ChatDiffProps) => {
         </div>
       ))}
 
-      {applied ? (
-        <div className="flex items-center gap-1.5 pt-1 text-xs font-medium text-brand-1">
-          <Check className="h-3 w-3" />
-          Applied
-        </div>
-      ) : (
-        <button
-          onClick={onApply}
-          className="mt-1 rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-colors hover:bg-foreground/80"
-        >
-          Apply all
-        </button>
-      )}
+      <div className="flex items-center gap-1.5 pt-1 text-xs font-medium text-brand-1">
+        <Check className="h-3 w-3" />
+        {applied ? "Applied" : "Applying..."}
+      </div>
     </div>
   )
 }
