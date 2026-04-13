@@ -10,40 +10,41 @@ interface ChatMessageBubbleProps {
 
 /**
  * Parse proposal-edits JSON blocks from assistant text and strip them
- * from the visible output. Also hides partial/incomplete blocks during
- * streaming so the user never sees raw JSON.
+ * completely from the visible output. Uses aggressive stripping to ensure
+ * no code blocks, JSON, or technical artifacts are ever visible to the user
+ * — even mid-stream.
  */
 function parseEditsFromText(text: string): { cleanText: string; edits: ProposedEdit[] } {
   const edits: ProposedEdit[] = []
 
-  // Strip complete ```proposal-edits ... ``` blocks
-  let cleaned = text.replace(
-    /```proposal-edits\s*\n([\s\S]*?)```/g,
-    (_match, json: string) => {
-      try {
-        const parsed = JSON.parse(json.trim())
-        if (Array.isArray(parsed)) {
-          edits.push(...(parsed as ProposedEdit[]))
+  // Step 1: Extract edits from complete ```proposal-edits ... ``` blocks
+  const withoutComplete = text.replace(
+    /```proposal-edits[\s\S]*?```/g,
+    (match) => {
+      // Extract JSON from inside the block
+      const jsonMatch = match.match(/```proposal-edits\s*\n?([\s\S]*?)```/)
+      if (jsonMatch?.[1]) {
+        try {
+          const parsed = JSON.parse(jsonMatch[1].trim())
+          if (Array.isArray(parsed)) {
+            edits.push(...(parsed as ProposedEdit[]))
+          }
+        } catch {
+          // Malformed JSON — still strip the block
         }
-      } catch {
-        // Incomplete JSON — still strip it (it's mid-stream)
       }
       return ""
     },
   )
 
-  // Also hide partial/incomplete blocks during streaming
-  // (e.g., "```proposal-edits\n[{..." without closing ```)
-  const partialStart = cleaned.indexOf("```proposal-edits")
-  if (partialStart !== -1) {
-    cleaned = cleaned.slice(0, partialStart)
-  }
-
-  // Also catch any stray ``` that might appear at the boundary
-  const strayBackticks = cleaned.indexOf("```")
-  if (strayBackticks !== -1 && strayBackticks > cleaned.length - 20) {
-    cleaned = cleaned.slice(0, strayBackticks)
-  }
+  // Step 2: Aggressively strip anything after the first ``` in the remaining text.
+  // Code blocks should NEVER be visible in the chat. If we see triple backticks,
+  // everything from that point is either a partial code block (streaming) or
+  // something that shouldn't be shown.
+  const firstBackticks = withoutComplete.indexOf("```")
+  const cleaned = firstBackticks !== -1
+    ? withoutComplete.slice(0, firstBackticks)
+    : withoutComplete
 
   return { cleanText: cleaned.trim(), edits }
 }
