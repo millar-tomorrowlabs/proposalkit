@@ -90,30 +90,20 @@ const ChatMessageBubble = ({ message, isStreaming = false }: ChatMessageBubblePr
   const edits = [...textEdits, ...toolEdits]
   const editsApplied = appliedEditIds.has(message.id)
 
-  // Register edits with the store and auto-apply when streaming completes
-  const registeredRef = useRef<string | null>(null)
-  const autoAppliedRef = useRef<string | null>(null)
-  useEffect(() => {
-    if (edits.length > 0 && registeredRef.current !== message.id) {
-      useBuilderStore.getState().registerChatEdits(message.id, edits)
-      registeredRef.current = message.id
-    }
-  }, [edits.length, message.id])
-
-  // Auto-apply edits once streaming is done
+  // Register edits and auto-apply when streaming completes
+  const appliedRef = useRef<string | null>(null)
   useEffect(() => {
     if (
       !isStreaming &&
       edits.length > 0 &&
       !editsApplied &&
-      autoAppliedRef.current !== message.id
+      appliedRef.current !== message.id
     ) {
-      // Small delay to ensure registration happened first
-      const t = setTimeout(() => {
-        useBuilderStore.getState().applyChatEdits(message.id)
-        autoAppliedRef.current = message.id
-      }, 100)
-      return () => clearTimeout(t)
+      appliedRef.current = message.id
+      const store = useBuilderStore.getState()
+      store.registerChatEdits(message.id, edits)
+      // Apply immediately after registration (Zustand set is synchronous)
+      store.applyChatEdits(message.id)
     }
   }, [isStreaming, edits.length, editsApplied, message.id])
 
