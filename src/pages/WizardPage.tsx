@@ -13,8 +13,17 @@ type Step = "context" | "details" | "generating"
 const LOADING_MESSAGES = [
   "Reading your context…",
   "Understanding the client…",
+  "Researching the industry…",
+  "Identifying key deliverables…",
+  "Mapping the project scope…",
+  "Defining the timeline…",
+  "Structuring the investment…",
   "Drafting the proposal…",
+  "Writing section copy…",
   "Building sections…",
+  "Refining the narrative…",
+  "Polishing the details…",
+  "Assembling the final draft…",
   "Almost there…",
 ]
 
