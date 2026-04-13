@@ -9,16 +9,15 @@ interface ChatMessageBubbleProps {
 }
 
 /**
- * Parse proposal-edits JSON blocks from assistant text.
- * The AI outputs edits as:
- * ```proposal-edits
- * [{ "fieldPath": "...", "oldValue": "...", "newValue": "...", "label": "..." }]
- * ```
+ * Parse proposal-edits JSON blocks from assistant text and strip them
+ * from the visible output. Also hides partial/incomplete blocks during
+ * streaming so the user never sees raw JSON.
  */
 function parseEditsFromText(text: string): { cleanText: string; edits: ProposedEdit[] } {
   const edits: ProposedEdit[] = []
-  // Match ```proposal-edits ... ``` blocks
-  const cleanText = text.replace(
+
+  // Strip complete ```proposal-edits ... ``` blocks
+  let cleaned = text.replace(
     /```proposal-edits\s*\n([\s\S]*?)```/g,
     (_match, json: string) => {
       try {
@@ -27,14 +26,26 @@ function parseEditsFromText(text: string): { cleanText: string; edits: ProposedE
           edits.push(...(parsed as ProposedEdit[]))
         }
       } catch {
-        // If JSON parsing fails, leave the block as text
-        return _match
+        // Incomplete JSON — still strip it (it's mid-stream)
       }
-      return "" // Remove the code block from displayed text
+      return ""
     },
-  ).trim()
+  )
 
-  return { cleanText, edits }
+  // Also hide partial/incomplete blocks during streaming
+  // (e.g., "```proposal-edits\n[{..." without closing ```)
+  const partialStart = cleaned.indexOf("```proposal-edits")
+  if (partialStart !== -1) {
+    cleaned = cleaned.slice(0, partialStart)
+  }
+
+  // Also catch any stray ``` that might appear at the boundary
+  const strayBackticks = cleaned.indexOf("```")
+  if (strayBackticks !== -1 && strayBackticks > cleaned.length - 20) {
+    cleaned = cleaned.slice(0, strayBackticks)
+  }
+
+  return { cleanText: cleaned.trim(), edits }
 }
 
 const ChatMessageBubble = ({ message }: ChatMessageBubbleProps) => {
