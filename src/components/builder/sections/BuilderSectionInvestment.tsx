@@ -176,6 +176,7 @@ const BuilderSectionInvestment = () => {
                     type="number"
                     value={pkg.basePrice}
                     onChange={(e) => updatePackage(i, "basePrice", Number(e.target.value))}
+                    onFocus={(e) => e.target.select()}
                     className="builder-input"
                   />
                 </div>
@@ -419,19 +420,19 @@ const BuilderSectionInvestment = () => {
           <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-4">
             <div>
               <p className="mb-1 text-xs text-muted-foreground">Hourly rate ({sym})</p>
-              <input type="number" value={inv.retainer.hourlyRate} onChange={(e) => updateRetainer("hourlyRate", Number(e.target.value))} className="builder-input" />
+              <input type="number" value={inv.retainer.hourlyRate} onChange={(e) => updateRetainer("hourlyRate", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
             </div>
             <div>
               <p className="mb-1 text-xs text-muted-foreground">Required months</p>
-              <input type="number" value={inv.retainer.requiredMonths} onChange={(e) => updateRetainer("requiredMonths", Number(e.target.value))} className="builder-input" />
+              <input type="number" value={inv.retainer.requiredMonths} onChange={(e) => updateRetainer("requiredMonths", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
             </div>
             <div>
               <p className="mb-1 text-xs text-muted-foreground">Min hours/mo</p>
-              <input type="number" value={inv.retainer.minHours} onChange={(e) => updateRetainer("minHours", Number(e.target.value))} className="builder-input" />
+              <input type="number" value={inv.retainer.minHours} onChange={(e) => updateRetainer("minHours", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
             </div>
             <div>
               <p className="mb-1 text-xs text-muted-foreground">Max hours/mo</p>
-              <input type="number" value={inv.retainer.maxHours} onChange={(e) => updateRetainer("maxHours", Number(e.target.value))} className="builder-input" />
+              <input type="number" value={inv.retainer.maxHours} onChange={(e) => updateRetainer("maxHours", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
             </div>
           </div>
         )}
@@ -452,7 +453,7 @@ const BuilderSectionInvestment = () => {
               <p className="mb-1 text-xs text-muted-foreground">Monthly price ({sym})</p>
               <div className="flex items-center gap-1">
                 <span className="text-xs text-muted-foreground">{sym}</span>
-                <input type="number" value={inv.postLaunch.monthlyPrice} onChange={(e) => updatePostLaunch("monthlyPrice", Number(e.target.value))} className="builder-input" />
+                <input type="number" value={inv.postLaunch.monthlyPrice} onChange={(e) => updatePostLaunch("monthlyPrice", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
               </div>
             </div>
             <div>
@@ -492,7 +493,7 @@ const BuilderSectionInvestment = () => {
               {inv.postLaunch.includedInPackage && (
                 <div>
                   <p className="mb-1 text-xs text-muted-foreground">Included weeks</p>
-                  <input type="number" value={inv.postLaunch.includedWeeks ?? 0} onChange={(e) => updatePostLaunch("includedWeeks", Number(e.target.value))} className="builder-input" />
+                  <input type="number" value={inv.postLaunch.includedWeeks ?? 0} onChange={(e) => updatePostLaunch("includedWeeks", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
                 </div>
               )}
             </div>
