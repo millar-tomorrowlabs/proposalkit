@@ -14,7 +14,7 @@ const TimelineSection = ({ data }: Props) => {
   const safeActive = phases.length > 0 ? Math.min(active, phases.length - 1) : 0
   useEffect(() => {
     if (safeActive !== active) setActive(safeActive)
-  }, [safeActive, active])
+  }, [safeActive, active, setActive])
 
   if (phases.length === 0) {
     return (

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Check, Star } from "lucide-react"
 import type { InvestmentConfig, ConfirmedSelection } from "@/types/proposal"
 import { formatPrice as formatCurrency } from "@/lib/currency"
@@ -28,16 +28,21 @@ const InvestmentSection = ({
   const [confirmed, setConfirmed] = useState(false)
   const [postLaunchSelected, setPostLaunchSelected] = useState(false)
 
-  // Reconcile stale state: if the active package was removed, fall back to the first package
+  // Reconcile stale state when packages/add-ons are removed
   const resolvedPackageId = data.packages.some((p) => p.id === activePackageId)
     ? activePackageId
     : data.packages[0]?.id ?? ""
-  if (resolvedPackageId !== activePackageId) setActivePackageId(resolvedPackageId)
 
-  // Clean up stale add-on selections (remove IDs that no longer exist in data)
-  const validAddOnIds = new Set(data.addOns.map((a) => a.id))
-  const cleanedSelectedIds = new Set(Array.from(selectedAddOnIds).filter((id) => validAddOnIds.has(id)))
-  if (cleanedSelectedIds.size !== selectedAddOnIds.size) setSelectedAddOnIds(cleanedSelectedIds)
+  useEffect(() => {
+    if (resolvedPackageId !== activePackageId) setActivePackageId(resolvedPackageId)
+  }, [resolvedPackageId, activePackageId])
+
+  useEffect(() => {
+    const validIds = new Set(data.addOns.map((a) => a.id))
+    if (Array.from(selectedAddOnIds).some((id) => !validIds.has(id))) {
+      setSelectedAddOnIds(new Set(Array.from(selectedAddOnIds).filter((id) => validIds.has(id))))
+    }
+  }, [data.addOns, selectedAddOnIds])
 
   if (data.packages.length === 0) {
     return (
@@ -52,7 +57,7 @@ const InvestmentSection = ({
     )
   }
 
-  const currentPackage = data.packages.find((p) => p.id === resolvedPackageId) ?? data.packages[0]
+  const currentPackage = data.packages.find((p) => p.id === resolvedPackageId) ?? data.packages[0]!
 
   // Assemble highlights: generic perks from package + add-ons flagged for this package
   const assembledHighlights = [

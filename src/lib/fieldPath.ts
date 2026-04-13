@@ -40,7 +40,7 @@ export function setAtPath<T>(obj: T, path: string, value: unknown): T {
       // Base case: set the value
       if (isArrayIndex) {
         const arr = [...(current as unknown[])]
-        if (index < 0 || index > arr.length) return arr // bounds check
+        if (index < 0 || index > arr.length) return arr
         arr[index] = value
         return arr
       }
@@ -50,7 +50,7 @@ export function setAtPath<T>(obj: T, path: string, value: unknown): T {
     // Recursive case: clone this level and recurse into the next
     if (isArrayIndex) {
       const arr = [...(current as unknown[])]
-      if (index < 0 || index >= arr.length) return arr // bounds check
+      if (index < 0 || index >= arr.length) return arr
       arr[index] = recurse(arr[index], depth + 1)
       return arr
     }
