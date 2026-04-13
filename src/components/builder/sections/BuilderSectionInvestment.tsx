@@ -191,6 +191,16 @@ const BuilderSectionInvestment = () => {
               />
               Mark as recommended
             </label>
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">Included highlights <span className="text-muted-foreground/50">(one per line)</span></p>
+              <textarea
+                value={(pkg.highlights ?? []).join("\n")}
+                onChange={(e) => updatePackage(i, "highlights", e.target.value.split("\n").filter((l) => l.trim()))}
+                placeholder={"Full strategy & architecture\nSite management training\nDiscounted add-on pricing"}
+                rows={3}
+                className="builder-input w-full resize-none text-xs"
+              />
+            </div>
           </div>
         ))}
         {inv.packages.length === 0 && (
@@ -321,6 +331,30 @@ const BuilderSectionInvestment = () => {
                   <option key={c.id} value={c.id}>{c.label}</option>
                 ))}
               </select>
+              {inv.packages.length > 0 && (
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">Highlight in package</p>
+                  <div className="flex flex-wrap gap-2">
+                    {inv.packages.map((pkg) => (
+                      <label key={pkg.id} className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={(addOn.highlightInPackage ?? []).includes(pkg.id)}
+                          onChange={(e) => {
+                            const current = addOn.highlightInPackage ?? []
+                            const next = e.target.checked
+                              ? [...current, pkg.id]
+                              : current.filter((id) => id !== pkg.id)
+                            updateAddOn(ai, "highlightInPackage", next)
+                          }}
+                          className="accent-[var(--brand-1)]"
+                        />
+                        {pkg.label || "Untitled"}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
