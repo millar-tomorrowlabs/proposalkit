@@ -63,7 +63,7 @@ const InvestmentSection = ({
   const assembledHighlights = [
     ...currentPackage.highlights,
     ...data.addOns
-      .filter((a) => a.highlightInPackage?.includes(activePackageId))
+      .filter((a) => a.highlightInPackage?.includes(resolvedPackageId))
       .map((a) => a.label),
   ]
 
@@ -98,7 +98,7 @@ const InvestmentSection = ({
 
   const addOnsTotal = Array.from(selectedAddOnIds).reduce((sum, id) => {
     const addOn = data.addOns.find((a) => a.id === id)
-    return sum + (addOn?.packages[activePackageId]?.price ?? 0)
+    return sum + (addOn?.packages[resolvedPackageId]?.price ?? 0)
   }, 0)
 
   const grandTotal = currentPackage.basePrice + addOnsTotal
@@ -106,25 +106,25 @@ const InvestmentSection = ({
   const addOnSavings = Array.from(selectedAddOnIds).reduce((sum, id) => {
     const addOn = data.addOns.find((a) => a.id === id)
     if (!addOn) return sum
-    const currentPrice = addOn.packages[activePackageId]?.price ?? 0
+    const currentPrice = addOn.packages[resolvedPackageId]?.price ?? 0
     const maxPrice = getMaxPrice(id)
     return sum + (maxPrice - currentPrice)
   }, 0)
 
   // Auto-calculated: sum of max prices for add-ons included in this package
   const includedAddOnValue = data.addOns
-    .filter((a) => a.packages[activePackageId]?.included === true)
+    .filter((a) => a.packages[resolvedPackageId]?.included === true)
     .reduce((sum, a) => sum + getMaxPrice(a.id), 0)
 
   // Post-launch value included with this package (e.g. 2 weeks at €2,500/mo = €1,250)
   const postLaunchValue = (() => {
-    if (!data.postLaunch?.includedInPackage || data.postLaunch.includedInPackage !== activePackageId) return 0
+    if (!data.postLaunch?.includedInPackage || data.postLaunch.includedInPackage !== resolvedPackageId) return 0
     if (!data.postLaunch.includedWeeks || !data.postLaunch.monthlyPrice) return 0
     return data.postLaunch.monthlyPrice * (data.postLaunch.includedWeeks / 4)
   })()
 
   // Base price premium: how much more this package costs vs. the cheapest alternative
-  const otherPackage = data.packages.find((p) => p.id !== activePackageId)
+  const otherPackage = data.packages.find((p) => p.id !== resolvedPackageId)
   const basePricePremium = Math.max(0, currentPackage.basePrice - (otherPackage?.basePrice ?? currentPackage.basePrice))
 
   // Net savings: total add-on + post-launch value minus the base price premium
@@ -187,7 +187,7 @@ const InvestmentSection = ({
                 key={pkg.id}
                 onClick={() => switchPackage(pkg.id)}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium transition-all duration-200 ${
-                  activePackageId === pkg.id
+                  resolvedPackageId === pkg.id
                     ? "bg-foreground text-background"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -275,7 +275,7 @@ const InvestmentSection = ({
               (a) => a.category === category.id
             )
             const visibleAddOns = categoryAddOns.filter((a) => {
-              const config = a.packages[activePackageId]
+              const config = a.packages[resolvedPackageId]
               return config && (config.price !== undefined || config.included)
             })
             if (visibleAddOns.length === 0) return null
@@ -284,7 +284,8 @@ const InvestmentSection = ({
               <div key={category.id} className="space-y-3">
                 <p className="text-xs font-medium text-foreground">{category.label}</p>
                 {visibleAddOns.map((addOn) => {
-                  const config = addOn.packages[activePackageId]!
+                  const config = addOn.packages[resolvedPackageId]
+                  if (!config) return null
                   const isSelected = selectedAddOnIds.has(addOn.id)
                   const maxPrice = getMaxPrice(addOn.id)
                   const hasDiscount =
@@ -415,7 +416,7 @@ const InvestmentSection = ({
               </p>
             </div>
 
-            {data.postLaunch.includedInPackage === activePackageId && data.postLaunch.includedWeeks && (
+            {data.postLaunch.includedInPackage === resolvedPackageId && data.postLaunch.includedWeeks && (
               <div className="mt-4 flex items-center gap-2 rounded-lg border border-brand-1/30 bg-brand-1-light px-4 py-2.5">
                 <span className="text-xs text-muted-foreground">
                   {data.postLaunch.includedWeeks} weeks included with your {currentPackage.label} package —
@@ -435,7 +436,7 @@ const InvestmentSection = ({
               }`}
             >
               <p className="text-sm font-medium text-foreground">
-                {data.postLaunch.includedInPackage === activePackageId
+                {data.postLaunch.includedInPackage === resolvedPackageId
                   ? "Continue post-launch optimization"
                   : "Add post-launch optimization"}
               </p>
@@ -544,7 +545,7 @@ const InvestmentSection = ({
               onClick={() => {
                 setConfirmed(true)
                 onConfirm({
-                  packageId: activePackageId,
+                  packageId: resolvedPackageId,
                   packageLabel: currentPackage.label,
                   packagePrice: currentPackage.basePrice,
                   addOns: selectedAddOns,
