@@ -35,6 +35,9 @@ function toAccount(row: Record<string, unknown>): Account {
     defaultCtaEmail: row.default_cta_email as string | undefined,
     defaultBrandColor1: row.default_brand_color_1 as string || "#000000",
     defaultBrandColor2: row.default_brand_color_2 as string || "#6b7280",
+    defaultStudioTagline: row.default_studio_tagline as string | undefined,
+    defaultStudioDescription: row.default_studio_description as string | undefined,
+    defaultStudioDescription2: row.default_studio_description_2 as string | undefined,
   }
 }
 

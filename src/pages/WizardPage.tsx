@@ -23,6 +23,7 @@ const LOADING_MESSAGES = [
   "Building sections…",
   "Refining the narrative…",
   "Polishing the details…",
+  "Finding the perfect hero image…",
   "Assembling the final draft…",
   "Almost there…",
 ]
@@ -88,6 +89,9 @@ const WizardPage = () => {
     setStep("generating")
     setError(null)
 
+    // Generate proposal ID upfront so the edge function can upload the hero image
+    const proposalId = uuidv4()
+
     // Cycle loading messages
     let messageIndex = 0
     const interval = setInterval(() => {
@@ -105,6 +109,7 @@ const WizardPage = () => {
             clientName: clientName.trim(),
             clientEmail: clientEmail.trim(),
             ctaEmail: ctaEmail.trim(),
+            proposalId,
             accountContext: {
               studioName: account.studioName,
               studioDescription: account.aiStudioDescription,
@@ -122,7 +127,6 @@ const WizardPage = () => {
       }
 
       // Build the proposal from the AI draft
-      const proposalId = uuidv4()
       const slug = (data.clientName || clientName || "proposal")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
@@ -158,10 +162,11 @@ const WizardPage = () => {
         sections,
         createdAt: now,
         updatedAt: now,
+        heroImageUrl: data.heroImageUrl || undefined,
         summary: {
-          studioTagline: data.summary?.studioTagline || "",
-          studioDescription: data.summary?.studioDescription || "",
-          studioDescription2: data.summary?.studioDescription2 || "",
+          studioTagline: data.summary?.studioTagline || account.defaultStudioTagline || "",
+          studioDescription: data.summary?.studioDescription || account.defaultStudioDescription || "",
+          studioDescription2: data.summary?.studioDescription2 || account.defaultStudioDescription2 || "",
           projectOverview: data.summary?.projectOverview || "",
           projectDetail: data.summary?.projectDetail || "",
           projectDetail2: data.summary?.projectDetail2 || "",

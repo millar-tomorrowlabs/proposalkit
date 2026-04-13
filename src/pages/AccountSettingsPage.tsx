@@ -20,6 +20,9 @@ const AccountSettingsPage = () => {
   const [ccEmail, setCcEmail] = useState(account.ccEmail || "")
   const [defaultCtaEmail, setDefaultCtaEmail] = useState(account.defaultCtaEmail || "")
   const [aiDescription, setAiDescription] = useState(account.aiStudioDescription || "")
+  const [studioTagline, setStudioTagline] = useState(account.defaultStudioTagline || "")
+  const [studioDescription, setStudioDescription] = useState(account.defaultStudioDescription || "")
+  const [studioDescription2, setStudioDescription2] = useState(account.defaultStudioDescription2 || "")
 
   // Delete account state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -44,6 +47,9 @@ const AccountSettingsPage = () => {
         cc_email: ccEmail || null,
         default_cta_email: defaultCtaEmail || null,
         ai_studio_description: aiDescription || null,
+        default_studio_tagline: studioTagline || null,
+        default_studio_description: studioDescription || null,
+        default_studio_description_2: studioDescription2 || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", account.id)
@@ -196,6 +202,46 @@ const AccountSettingsPage = () => {
             Used by AI when generating proposal content. Describe your studio's
             focus, services, and voice.
           </p>
+        </div>
+
+        <hr className="border-border" />
+
+        <h2 className="text-sm font-semibold text-foreground">Proposal defaults</h2>
+        <p className="text-xs text-muted-foreground -mt-4">
+          These populate the "About" section on every new proposal. You can still edit them per-proposal.
+        </p>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">Studio tagline</label>
+          <input
+            type="text"
+            value={studioTagline}
+            onChange={(e) => setStudioTagline(e.target.value)}
+            placeholder="e.g. A design and technology studio exploring the future of commerce"
+            className="builder-input w-full"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">Studio description</label>
+          <textarea
+            value={studioDescription}
+            onChange={(e) => setStudioDescription(e.target.value)}
+            rows={3}
+            placeholder="First paragraph of your studio's About section..."
+            className="builder-input w-full resize-none"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">Studio description (continued)</label>
+          <textarea
+            value={studioDescription2}
+            onChange={(e) => setStudioDescription2(e.target.value)}
+            rows={3}
+            placeholder="Optional second paragraph..."
+            className="builder-input w-full resize-none"
+          />
         </div>
 
         <div className="flex items-center gap-3">

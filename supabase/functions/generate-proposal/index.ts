@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+import { createClient } from "jsr:@supabase/supabase-js@2"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -205,13 +206,131 @@ async function scrapeUrl(url: string): Promise<string> {
   }
 }
 
+// --- Hero image generation ---
+
+async function generateHeroWithGemini(
+  context: { tagline?: string; clientName?: string; brief?: string },
+  proposalId: string,
+): Promise<string | undefined> {
+  const googleKey = Deno.env.get("GOOGLE_AI_API_KEY")
+  if (!googleKey) return undefined
+
+  // Build a prompt from proposal context
+  const parts = []
+  if (context.brief) parts.push(context.brief)
+  if (context.tagline) parts.push(`Tagline: ${context.tagline}`)
+  if (context.clientName) parts.push(`Client: ${context.clientName}`)
+
+  if (parts.length === 0) return undefined
+
+  const prompt = `Generate a professional hero image for a business proposal website. ${parts.join(". ")}. Style: modern, clean, editorial photography feel with rich colors and depth. Abstract or atmospheric — no text, no logos, no people's faces. Landscape orientation, 16:9 aspect ratio.`
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": googleKey,
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseModalities: ["IMAGE", "TEXT"],
+          },
+        }),
+      },
+    )
+
+    if (!response.ok) {
+      console.error("Gemini error:", response.status, await response.text())
+      return undefined
+    }
+
+    const result = await response.json()
+
+    // Find the image part in the response
+    for (const candidate of result.candidates ?? []) {
+      for (const part of candidate.content?.parts ?? []) {
+        if (part.inlineData?.data) {
+          // Upload base64 image to Supabase Storage
+          const imageBytes = Uint8Array.from(atob(part.inlineData.data), (c) => c.charCodeAt(0))
+          const supabase = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+          )
+
+          const { error: uploadError } = await supabase.storage
+            .from("proposal-assets")
+            .upload(`${proposalId}/hero.png`, imageBytes, {
+              contentType: "image/png",
+              upsert: true,
+            })
+
+          if (uploadError) {
+            console.error("Storage upload error:", uploadError)
+            return undefined
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from("proposal-assets")
+            .getPublicUrl(`${proposalId}/hero.png`)
+
+          return `${publicUrl}?t=${Date.now()}`
+        }
+      }
+    }
+
+    return undefined
+  } catch (err) {
+    console.error("Gemini image generation error:", err)
+    return undefined
+  }
+}
+
+async function searchUnsplashImage(query: string): Promise<string | undefined> {
+  const unsplashKey = Deno.env.get("UNSPLASH_ACCESS_KEY")
+  if (!unsplashKey) return undefined
+
+  try {
+    // Extract 2-3 keywords from context
+    const keywords = query
+      .replace(/[^a-zA-Z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 3)
+      .slice(0, 3)
+      .join(" ")
+
+    if (!keywords.trim()) return undefined
+
+    const response = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(keywords)}&orientation=landscape&per_page=1`,
+      {
+        headers: { Authorization: `Client-ID ${unsplashKey}` },
+      },
+    )
+
+    if (!response.ok) {
+      console.error("Unsplash error:", response.status)
+      return undefined
+    }
+
+    const data = await response.json()
+    return data.results?.[0]?.urls?.regular ?? undefined
+  } catch (err) {
+    console.error("Unsplash search error:", err)
+    return undefined
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
   }
 
   try {
-    const { context, urls, clientName, clientEmail, ctaEmail, accountContext } =
+    const { context, urls, clientName, clientEmail, ctaEmail, accountContext, proposalId } =
       await req.json()
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
@@ -321,7 +440,39 @@ Deno.serve(async (req) => {
       )
     }
 
-    return new Response(JSON.stringify(toolUse.input), {
+    const proposalDraft = toolUse.input
+
+    // Generate hero image — try Gemini first, fall back to Unsplash
+    if (proposalId) {
+      let heroImageUrl: string | undefined
+
+      // Try AI generation if we have enough context
+      if (proposalDraft.brief || proposalDraft.tagline) {
+        heroImageUrl = await generateHeroWithGemini(
+          {
+            tagline: proposalDraft.tagline,
+            clientName: proposalDraft.clientName || clientName,
+            brief: proposalDraft.brief,
+          },
+          proposalId,
+        )
+      }
+
+      // Fall back to Unsplash
+      if (!heroImageUrl) {
+        const searchQuery = [
+          proposalDraft.clientName || clientName,
+          proposalDraft.tagline,
+        ].filter(Boolean).join(" ")
+        heroImageUrl = await searchUnsplashImage(searchQuery)
+      }
+
+      if (heroImageUrl) {
+        proposalDraft.heroImageUrl = heroImageUrl
+      }
+    }
+
+    return new Response(JSON.stringify(proposalDraft), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   } catch (err) {

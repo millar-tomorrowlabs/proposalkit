@@ -14,6 +14,9 @@ export interface Account {
   defaultCtaEmail?: string
   defaultBrandColor1: string
   defaultBrandColor2: string
+  defaultStudioTagline?: string
+  defaultStudioDescription?: string
+  defaultStudioDescription2?: string
 }
 
 export interface AccountMember {
