@@ -10,6 +10,10 @@ const TimelineSection = ({ data }: Props) => {
   const phases = data.phases
   const colors = ["bg-brand-1", "bg-brand-1", "bg-brand-2", "bg-brand-2", "bg-foreground", "bg-foreground"]
 
+  // Clamp active index to valid range when phases are removed
+  const safeActive = Math.min(active, phases.length - 1)
+  if (safeActive !== active && phases.length > 0) setActive(safeActive)
+
   if (phases.length === 0) {
     return (
       <section id="timeline" className="px-6 py-24">
@@ -51,7 +55,7 @@ const TimelineSection = ({ data }: Props) => {
               key={phase.name}
               onClick={() => setActive(i)}
               className={`rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                active === i
+                safeActive === i
                   ? "border-foreground bg-foreground text-background"
                   : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
               }`}
@@ -64,21 +68,21 @@ const TimelineSection = ({ data }: Props) => {
         <div className="scroll-reveal delay-300 mt-8 rounded-lg border border-border bg-card p-8">
           <div className="flex items-baseline justify-between">
             <InlineEditable
-              fieldPath={`timeline.phases.${active}.name`}
-              value={phases[active].name}
+              fieldPath={`timeline.phases.${safeActive}.name`}
+              value={phases[safeActive].name}
               tag="h3"
               className="font-display text-2xl font-semibold text-foreground"
             />
             <InlineEditable
-              fieldPath={`timeline.phases.${active}.duration`}
-              value={phases[active].duration}
+              fieldPath={`timeline.phases.${safeActive}.duration`}
+              value={phases[safeActive].duration}
               tag="span"
               className="text-sm font-medium text-muted-foreground"
             />
           </div>
           <InlineEditable
-            fieldPath={`timeline.phases.${active}.description`}
-            value={phases[active].description}
+            fieldPath={`timeline.phases.${safeActive}.description`}
+            value={phases[safeActive].description}
             multiline
             tag="p"
             className="mt-4 leading-relaxed text-muted-foreground"
@@ -90,7 +94,7 @@ const TimelineSection = ({ data }: Props) => {
             <div
               key={i}
               className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
-                i <= active ? (colors[i] ?? "bg-foreground") : "bg-border"
+                i <= safeActive ? (colors[i] ?? "bg-foreground") : "bg-border"
               }`}
             />
           ))}
