@@ -95,7 +95,20 @@ const TeamMembersPage = () => {
 
     setSending(false)
     if (invokeError) {
-      setError(friendlyError(invokeError.message))
+      // supabase.functions.invoke wraps non-2xx responses in FunctionsHttpError.
+      // The actual error body is on invokeError.context (a Response object).
+      // Parse it so users see a useful message instead of "non-2xx status code".
+      let message = invokeError.message
+      const ctx = (invokeError as { context?: Response }).context
+      if (ctx && typeof ctx.json === "function") {
+        try {
+          const body = await ctx.json()
+          if (body?.error) message = body.error
+        } catch {
+          // ignore: fall back to generic message
+        }
+      }
+      setError(friendlyError(message))
       return
     }
 
