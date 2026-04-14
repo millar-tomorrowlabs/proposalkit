@@ -80,6 +80,12 @@ export interface RetainerConfig {
   minHours: number
   maxHours: number
   requiredMonths: number
+  // Optional copy overrides. When any of these is blank, a sensible default is
+  // generated based on the number of packages in the proposal.
+  title?: string
+  description?: string
+  rateNote?: string
+  features?: string[]
 }
 
 export interface PostLaunchConfig {

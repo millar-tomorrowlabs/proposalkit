@@ -458,19 +458,38 @@ const InvestmentSection = ({
           </div>
         )}
 
-        {/* Retainer */}
-        {data.retainer && (
+        {/* Retainer — hide if no packages (contextually broken) */}
+        {data.retainer && data.packages.length > 0 && (() => {
+          // Dynamic default description based on package count
+          const packageCount = data.packages.length
+          const packagePhrase =
+            packageCount === 1 ? "with this package"
+            : packageCount === 2 ? "with both packages"
+            : "with all packages"
+          const defaultDescription = `First ${data.retainer.requiredMonths} months retainer is required ${packagePhrase}`
+          const defaultRateNote = `Billed at our standard rate of ${formatPrice(data.retainer.hourlyRate)}/hour`
+
+          return (
           <div className="scroll-reveal delay-600 mt-20 rounded-lg border-2 border-border bg-card p-8">
             <div>
-              <h3 className="font-display text-xl font-semibold text-foreground">
-                Support Retainer
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                First {data.retainer.requiredMonths} months retainer is required with both packages
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Billed at our standard rate of {formatPrice(data.retainer.hourlyRate)}/hour
-              </p>
+              <InlineEditable
+                fieldPath="investment.retainer.title"
+                value={data.retainer.title || "Support Retainer"}
+                tag="h3"
+                className="font-display text-xl font-semibold text-foreground"
+              />
+              <InlineEditable
+                fieldPath="investment.retainer.description"
+                value={data.retainer.description || defaultDescription}
+                tag="p"
+                className="mt-1 text-sm text-muted-foreground"
+              />
+              <InlineEditable
+                fieldPath="investment.retainer.rateNote"
+                value={data.retainer.rateNote || defaultRateNote}
+                tag="p"
+                className="mt-2 text-xs text-muted-foreground"
+              />
             </div>
 
             <div
@@ -508,14 +527,23 @@ const InvestmentSection = ({
             </div>
 
             <ul className="mt-5 space-y-2.5">
-              <li className="flex items-start gap-3 text-sm text-foreground">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                Month-to-month after initial {data.retainer.requiredMonths} months — hours can flex as needed
-              </li>
-              <li className="flex items-start gap-3 text-sm text-foreground">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                Covers support, stabilization &amp; troubleshooting
-              </li>
+              {(data.retainer.features && data.retainer.features.length > 0
+                ? data.retainer.features
+                : [
+                    `Month-to-month after initial ${data.retainer.requiredMonths} months. Hours can flex as needed.`,
+                    "Covers support, stabilization, and troubleshooting",
+                  ]
+              ).map((feature, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm text-foreground">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <InlineEditable
+                    fieldPath={`investment.retainer.features.${i}`}
+                    value={feature}
+                    tag="span"
+                    className="flex-1"
+                  />
+                </li>
+              ))}
             </ul>
 
             <div className="mt-6 space-y-2 border-t border-border pt-4">
@@ -536,7 +564,8 @@ const InvestmentSection = ({
               </div>
             </div>
           </div>
-        )}
+          )
+        })()}
 
         {/* Confirm */}
         <div className="scroll-reveal mt-6">

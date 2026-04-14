@@ -106,7 +106,7 @@ const BuilderSectionInvestment = () => {
 
   // ── Retainer ──────────────────────────────────────────────────────────────
 
-  const updateRetainer = (key: keyof RetainerConfig, value: number) => {
+  const updateRetainer = (key: keyof RetainerConfig, value: number | string | string[]) => {
     updateField("investment", { ...inv, retainer: { ...(inv.retainer ?? { hourlyRate: 150, minHours: 3, maxHours: 10, requiredMonths: 6 }), [key]: value } })
   }
 
@@ -449,22 +449,37 @@ const BuilderSectionInvestment = () => {
           </label>
         </div>
         {inv.retainer && (
-          <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-4">
-            <div>
-              <p className="mb-1 text-xs text-muted-foreground">Hourly rate ({sym})</p>
-              <input type="number" value={inv.retainer.hourlyRate} onChange={(e) => updateRetainer("hourlyRate", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">Hourly rate ({sym})</p>
+                <input type="number" value={inv.retainer.hourlyRate} onChange={(e) => updateRetainer("hourlyRate", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
+              </div>
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">Required months</p>
+                <input type="number" value={inv.retainer.requiredMonths} onChange={(e) => updateRetainer("requiredMonths", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
+              </div>
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">Min hours/mo</p>
+                <input type="number" value={inv.retainer.minHours} onChange={(e) => updateRetainer("minHours", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
+              </div>
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">Max hours/mo</p>
+                <input type="number" value={inv.retainer.maxHours} onChange={(e) => updateRetainer("maxHours", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
+              </div>
             </div>
             <div>
-              <p className="mb-1 text-xs text-muted-foreground">Required months</p>
-              <input type="number" value={inv.retainer.requiredMonths} onChange={(e) => updateRetainer("requiredMonths", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
+              <p className="mb-1 text-xs text-muted-foreground">Title override</p>
+              <input type="text" value={inv.retainer.title ?? ""} onChange={(e) => updateRetainer("title", e.target.value)} placeholder="Support Retainer" className="builder-input" />
             </div>
             <div>
-              <p className="mb-1 text-xs text-muted-foreground">Min hours/mo</p>
-              <input type="number" value={inv.retainer.minHours} onChange={(e) => updateRetainer("minHours", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
+              <p className="mb-1 text-xs text-muted-foreground">Description override</p>
+              <input type="text" value={inv.retainer.description ?? ""} onChange={(e) => updateRetainer("description", e.target.value)} placeholder="Auto-generated from package count" className="builder-input" />
+              <p className="mt-1 text-xs text-muted-foreground">Leave blank to auto-generate based on the number of packages.</p>
             </div>
             <div>
-              <p className="mb-1 text-xs text-muted-foreground">Max hours/mo</p>
-              <input type="number" value={inv.retainer.maxHours} onChange={(e) => updateRetainer("maxHours", Number(e.target.value))} onFocus={(e) => e.target.select()} className="builder-input" />
+              <p className="mb-1 text-xs text-muted-foreground">Rate note override</p>
+              <input type="text" value={inv.retainer.rateNote ?? ""} onChange={(e) => updateRetainer("rateNote", e.target.value)} placeholder={`Billed at our standard rate of ${sym}${inv.retainer.hourlyRate}/hour`} className="builder-input" />
             </div>
           </div>
         )}
