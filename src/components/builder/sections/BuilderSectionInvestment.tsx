@@ -45,8 +45,8 @@ const BuilderSectionInvestment = () => {
   const addAddOn = () => {
     const id = uuidv4().slice(0, 8)
     const packages: AddOn["packages"] = {}
-    inv.packages.forEach((p) => { packages[p.id] = {} }) // default: unavailable
-    const addOn: AddOn = { id, label: "", description: "", category: inv.addOnCategories[0]?.id ?? "", packages }
+    inv.packages.forEach((p) => { packages[p.id] = { price: 0 } }) // default: available at $0, visible in preview
+    const addOn: AddOn = { id, label: "New add-on", description: "", category: inv.addOnCategories[0]?.id ?? "", packages }
     updateInv("addOns", [...inv.addOns, addOn])
   }
 
