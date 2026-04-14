@@ -13,11 +13,12 @@ const sectionLabels: Record<SectionKey, string> = {
 interface ProposalNavProps {
   sections: SectionKey[]
   studioName: string
+  studioLogoUrl?: string
   isPreview?: boolean
   viewportWidth?: number
 }
 
-const ProposalNav = ({ sections, studioName, isPreview = false, viewportWidth }: ProposalNavProps) => {
+const ProposalNav = ({ sections, studioName, studioLogoUrl, isPreview = false, viewportWidth }: ProposalNavProps) => {
   const [scrolled, setScrolled] = useState(isPreview)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -77,11 +78,26 @@ const ProposalNav = ({ sections, studioName, isPreview = false, viewportWidth }:
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
         <a
           href="#"
-          className={`font-serif text-base font-medium tracking-tight transition-opacity hover:opacity-60 ${
-            scrolled ? "text-foreground" : "text-white"
-          }`}
+          aria-label={studioName || "Home"}
+          className="flex items-center gap-2 transition-opacity hover:opacity-60"
         >
-          {studioName}
+          {studioLogoUrl ? (
+            <img
+              src={studioLogoUrl}
+              alt={studioName}
+              className={`h-6 w-auto max-w-[140px] object-contain ${
+                scrolled ? "" : "brightness-0 invert"
+              }`}
+            />
+          ) : (
+            <span
+              className={`font-serif text-base font-medium tracking-tight ${
+                scrolled ? "text-foreground" : "text-white"
+              }`}
+            >
+              {studioName}
+            </span>
+          )}
         </a>
 
         <div className={desktopNavClass}>

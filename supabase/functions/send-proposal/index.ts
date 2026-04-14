@@ -25,7 +25,7 @@ interface SendBody {
 
 function buildSendEmailHtml(body: SendBody): string {
   const accent = body.brandColor1 ?? "#111"
-  const studio = body.studioName ?? "Proposl"
+  const studio = body.studioName ?? ""
   const website = body.website ?? "proposl.app"
   const firstName = body.recipientName.split(" ")[0]
 
@@ -60,7 +60,7 @@ function buildSendEmailHtml(body: SendBody): string {
 
 function buildReminderEmailHtml(body: SendBody): string {
   const accent = body.brandColor1 ?? "#111"
-  const studio = body.studioName ?? "Proposl"
+  const studio = body.studioName ?? ""
   const website = body.website ?? "proposl.app"
   const firstName = body.recipientName.split(" ")[0]
 
@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
     const isReminder = body.sendType === "reminder"
     const emailSubject = body.subject
       || (isReminder ? `Following up: ${body.proposalTitle}` : `Your proposal: ${body.proposalTitle}`)
-    const senderName = body.senderName ?? "Proposl"
+    const senderName = body.senderName ?? body.studioName ?? "Proposals"
 
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -188,8 +188,15 @@ Deno.serve(async (req) => {
     if (!emailRes.ok) {
       const errText = await emailRes.text()
       console.error("Resend error:", emailRes.status, errText)
+      // Surface common Resend errors as user-friendly messages
+      let userMessage = "Failed to send email"
+      if (errText.includes("not verified")) {
+        userMessage = "Email domain not verified in Resend. Check the Resend dashboard."
+      } else if (errText.includes("API key")) {
+        userMessage = "Resend API key issue. Check Supabase secrets."
+      }
       return new Response(
-        JSON.stringify({ error: "Failed to send email" }),
+        JSON.stringify({ error: userMessage }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }

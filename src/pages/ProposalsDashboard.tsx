@@ -103,7 +103,7 @@ const ProposalsDashboard = () => {
           </div>
         </div>
 
-        <div className="mt-10">
+        <div className="mt-10 min-h-[40vh]">
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : proposals.length === 0 ? (
@@ -170,6 +170,20 @@ const ProposalsDashboard = () => {
             </div>
           )}
         </div>
+
+        <footer className="mt-20 border-t border-border pt-6 text-center">
+          <p className="text-xs text-muted-foreground">
+            Proposl is a product by{" "}
+            <a
+              href="https://tomorrowstudios.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
+            >
+              Tomorrow Studios
+            </a>
+          </p>
+        </footer>
       </div>
     </div>
   )

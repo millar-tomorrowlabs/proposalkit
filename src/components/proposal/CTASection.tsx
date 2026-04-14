@@ -132,12 +132,15 @@ const CTASection = ({
 
           <div className="mt-32 border-t border-border pt-8">
             <div className="flex flex-col items-center gap-4">
-              <span className="font-serif text-sm font-medium tracking-tight text-muted-foreground">
-                {studioName}
-              </span>
+              {studioName && (
+                <span className="font-serif text-sm font-medium tracking-tight text-muted-foreground">
+                  {studioName}
+                </span>
+              )}
               <p className="text-xs text-muted-foreground">
-                © {new Date().getFullYear()} {studioName} · This proposal is
-                confidential and intended solely for the recipient.
+                © {new Date().getFullYear()}
+                {studioName ? ` ${studioName} · ` : " "}
+                This proposal is confidential and intended solely for the recipient.
               </p>
             </div>
           </div>

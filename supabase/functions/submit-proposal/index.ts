@@ -80,7 +80,7 @@ function buildSelectionHtml(body: SubmissionBody): string {
 
 function buildEmailHtml(body: SubmissionBody, account?: Record<string, unknown>): string {
   const accent = body.brandColor1 ?? "#111"
-  const studio = body.studioName ?? (account?.studio_name as string) ?? "Proposl"
+  const studio = body.studioName ?? (account?.studio_name as string) ?? ""
 
   return `
 <!DOCTYPE html>
@@ -118,7 +118,7 @@ function buildEmailHtml(body: SubmissionBody, account?: Record<string, unknown>)
 
 function buildClientEmailHtml(body: SubmissionBody, account?: Record<string, unknown>): string {
   const accent = body.brandColor1 ?? "#111"
-  const studio = body.studioName ?? (account?.studio_name as string) ?? "Proposl"
+  const studio = body.studioName ?? (account?.studio_name as string) ?? ""
   const website = (account?.website as string) ?? "proposl.app"
   const firstName = body.clientName.split(" ")[0]
   const selectionHtml = body.packageLabel ? buildSelectionHtml(body) : ""
@@ -221,7 +221,7 @@ Deno.serve(async (req) => {
       const notifyEmail = (account?.notify_email as string) ?? body.ctaEmail ?? "notifications@proposl.app"
       const ccEmail = account?.cc_email as string | undefined
       const replyTo = body.ctaEmail ?? notifyEmail
-      const senderName = (account?.sender_name as string) ?? (account?.studio_name as string) ?? "Proposl"
+      const senderName = (account?.sender_name as string) ?? (account?.studio_name as string) ?? "Proposals"
       const notifyRecipients = ccEmail ? [notifyEmail, ccEmail] : [notifyEmail]
 
       const sendEmail = (to: string[], subject: string, html: string, replyToAddr?: string) =>

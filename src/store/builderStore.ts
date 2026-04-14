@@ -86,7 +86,7 @@ interface BuilderState {
   canRedo: () => boolean
   setSaveStatus: (status: SaveStatus) => void
   setActiveSection: (section: string) => void
-  initNew: (accountDefaults?: { studioName?: string; ctaEmail?: string; brandColor1?: string; brandColor2?: string }) => void
+  initNew: (accountDefaults?: { studioName?: string; studioLogoUrl?: string; ctaEmail?: string; brandColor1?: string; brandColor2?: string }) => void
   initExisting: (proposal: ProposalData, chatMessages?: ChatMessage[]) => void
   setContextBlobs: (blobs: ContextBlob[]) => void
   setSuggestions: (s: AISuggestions | null) => void
@@ -179,13 +179,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   setActiveSection: (activeSection) => set({ activeSection }),
 
-  initNew: (accountDefaults?: { studioName?: string; ctaEmail?: string; brandColor1?: string; brandColor2?: string }) => {
+  initNew: (accountDefaults?: { studioName?: string; studioLogoUrl?: string; ctaEmail?: string; brandColor1?: string; brandColor2?: string }) => {
     const fresh = {
       ...DEFAULT_PROPOSAL,
       id: uuidv4(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       studioName: accountDefaults?.studioName ?? "",
+      studioLogoUrl: accountDefaults?.studioLogoUrl,
       ctaEmail: accountDefaults?.ctaEmail ?? "",
       brandColor1: accountDefaults?.brandColor1 ?? DEFAULT_PROPOSAL.brandColor1,
       brandColor2: accountDefaults?.brandColor2 ?? DEFAULT_PROPOSAL.brandColor2,

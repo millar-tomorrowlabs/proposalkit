@@ -150,7 +150,7 @@ const WizardPage = () => {
       const proposal: ProposalData = {
         id: proposalId,
         slug: finalSlug,
-        title: data.title || `${clientName} — Proposal`,
+        title: data.title || `${clientName} Proposal`,
         clientName: data.clientName || clientName || "",
         brandColor1: "#000000",
         brandColor2: "#6b7280",
@@ -163,6 +163,10 @@ const WizardPage = () => {
         createdAt: now,
         updatedAt: now,
         heroImageUrl: data.heroImageUrl || undefined,
+        // Denormalize studio branding from account so the public client view can render
+        // without needing to join accounts (which RLS blocks for anon users).
+        studioName: account.studioName,
+        studioLogoUrl: account.logoUrl,
         summary: {
           studioTagline: data.summary?.studioTagline || account.defaultStudioTagline || "",
           studioDescription: data.summary?.studioDescription || account.defaultStudioDescription || "",

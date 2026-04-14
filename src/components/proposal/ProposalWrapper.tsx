@@ -18,8 +18,6 @@ interface ProposalWrapperProps {
   viewportWidth?: number
 }
 
-const DEFAULT_STUDIO_NAME = "Proposl"
-
 const ALL_SECTIONS: SectionKey[] = ["summary", "scope", "timeline", "investment", "cta"]
 
 const SECTION_LABELS: Record<SectionKey, string> = {
@@ -31,7 +29,8 @@ const SECTION_LABELS: Record<SectionKey, string> = {
 }
 
 const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: ProposalWrapperProps) => {
-  const studioName = proposal.studioName || DEFAULT_STUDIO_NAME
+  const studioName = proposal.studioName || ""
+  const studioLogoUrl = proposal.studioLogoUrl
   const [confirmedSelection, setConfirmedSelection] = useState<ConfirmedSelection | null>(null)
   const [addMenuTarget, setAddMenuTarget] = useState<{ relativeTo: SectionKey; position: "above" | "below" } | null>(null)
   useScrollRevealAll({ disabled: isPreview })
@@ -133,7 +132,13 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
           } as React.CSSProperties
         }
       >
-        <ProposalNav sections={proposal.sections} studioName={studioName} isPreview={isPreview} viewportWidth={viewportWidth} />
+        <ProposalNav
+          sections={proposal.sections}
+          studioName={studioName}
+          studioLogoUrl={studioLogoUrl}
+          isPreview={isPreview}
+          viewportWidth={viewportWidth}
+        />
         <HeroSection
           clientName={proposal.clientName}
           heroImageUrl={proposal.heroImageUrl}

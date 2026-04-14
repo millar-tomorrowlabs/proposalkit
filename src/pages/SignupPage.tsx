@@ -70,7 +70,7 @@ const SignupPage = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <p className="text-xs font-medium uppercase tracking-[4px] text-muted-foreground">
@@ -135,6 +135,17 @@ const SignupPage = () => {
           </Link>
         </p>
       </div>
+      <p className="mt-12 text-xs text-muted-foreground">
+        Proposl is a product by{" "}
+        <a
+          href="https://tomorrowstudios.io"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
+        >
+          Tomorrow Studios
+        </a>
+      </p>
     </div>
   )
 }

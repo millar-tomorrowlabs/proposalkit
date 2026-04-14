@@ -25,6 +25,16 @@ const ProposalViewer = () => {
   const [verifying, setVerifying] = useState(false)
   const [proposalId, setProposalId] = useState<string | null>(null)
 
+  // Dynamically set the browser tab title to match the proposal (keeps "Proposl"
+  // out of the tab name for clients viewing a proposal).
+  useEffect(() => {
+    if (proposal?.studioName && proposal?.clientName) {
+      document.title = `${proposal.clientName} — ${proposal.studioName}`
+    } else if (proposal?.title) {
+      document.title = proposal.title
+    }
+  }, [proposal?.studioName, proposal?.clientName, proposal?.title])
+
   useEffect(() => {
     if (!slug) return
 

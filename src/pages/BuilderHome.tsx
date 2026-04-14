@@ -218,6 +218,15 @@ const BuilderHome = () => {
               return
             }
             const merged = { ...data, ...data.data } as ProposalData
+            // Backfill studio branding from account if missing (for proposals created
+            // before denormalization was added). This auto-heals existing rows: the
+            // auto-save will persist the patch on next dirty flush.
+            if (!merged.studioName && account.studioName) {
+              merged.studioName = account.studioName
+            }
+            if (!merged.studioLogoUrl && account.logoUrl) {
+              merged.studioLogoUrl = account.logoUrl
+            }
             initExisting(merged, data.chat_messages ?? [])
             // Restore persisted context blobs (without triggering auto-save)
             if (merged.contextBlobs?.length) {
@@ -229,6 +238,7 @@ const BuilderHome = () => {
     } else {
       initNew({
         studioName: account.studioName,
+        studioLogoUrl: account.logoUrl,
         ctaEmail: account.defaultCtaEmail,
         brandColor1: account.defaultBrandColor1,
         brandColor2: account.defaultBrandColor2,
