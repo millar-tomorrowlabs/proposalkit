@@ -273,40 +273,59 @@ const TeamMembersPage = () => {
 
       {/* Invite form */}
       {isOwner && (
-        <form onSubmit={handleInvite} className="mt-8 space-y-4">
+        <form onSubmit={handleInvite} className="mt-8 rounded-lg border border-border p-6">
           <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
             Invite a team member
           </h2>
-          <div className="flex gap-3">
-            <input
-              type="email"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="colleague@example.com"
-              required
-              className="builder-input flex-1"
-            />
-            <select
-              value={inviteRole}
-              onChange={(e) =>
-                setInviteRole(e.target.value as "member" | "owner")
-              }
-              className="builder-input w-32"
-            >
-              <option value="member">Member</option>
-              <option value="owner">Owner</option>
-            </select>
+          <p className="mt-1 text-xs text-muted-foreground">
+            They'll receive an email with a link to join {account.studioName}.
+          </p>
+
+          <div className="mt-5 space-y-4">
+            <div>
+              <label htmlFor="invite-email" className="mb-1 block text-sm font-medium">
+                Email address
+              </label>
+              <input
+                id="invite-email"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="colleague@example.com"
+                required
+                className="builder-input w-full"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="invite-role" className="mb-1 block text-sm font-medium">
+                Role
+              </label>
+              <select
+                id="invite-role"
+                value={inviteRole}
+                onChange={(e) =>
+                  setInviteRole(e.target.value as "member" | "owner")
+                }
+                className="builder-input w-full"
+              >
+                <option value="member">Member (can create and edit proposals)</option>
+                <option value="owner">Owner (full access, including account settings)</option>
+              </select>
+            </div>
+
             <button
               type="submit"
-              disabled={sending}
+              disabled={sending || !inviteEmail.trim()}
               className="inline-flex items-center gap-2 rounded-md bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               <Send size={14} />
-              {sending ? "Sending..." : "Invite"}
+              {sending ? "Sending…" : "Send invite"}
             </button>
           </div>
+
           {success && (
-            <p className="text-sm text-green-600">{success}</p>
+            <p className="mt-3 text-sm text-green-600">{success}</p>
           )}
         </form>
       )}
