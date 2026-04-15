@@ -367,9 +367,15 @@ function ProposalCard({
         <span className="sr-only">Open {row.title}</span>
       </Link>
 
-      <div className="relative z-10 flex flex-col gap-5 px-6 py-6 md:flex-row md:items-start md:justify-between md:gap-8 md:px-8 md:py-7">
-        {/* Left: title + client + metadata — pointer-events-none so clicks fall through to the overlay Link */}
-        <div className="pointer-events-none min-w-0 flex-1">
+      {/*
+        Content layer. `pointer-events-none` is on the OUTER div so that
+        clicks anywhere in the card's padding or between child elements
+        fall through to the overlay Link underneath. The actions div
+        on the right re-enables pointer events so its buttons still work.
+      */}
+      <div className="pointer-events-none relative z-10 flex flex-col gap-5 px-6 py-6 md:flex-row md:items-start md:justify-between md:gap-8 md:px-8 md:py-7">
+        {/* Left: title + client + metadata */}
+        <div className="min-w-0 flex-1">
           <p
             className="mb-1.5 text-[11px] uppercase tracking-[0.14em]"
             style={{
@@ -435,8 +441,8 @@ function ProposalCard({
           </p>
         </div>
 
-        {/* Right: actions — own pointer-events so they sit above the overlay Link */}
-        <div className="relative z-20 flex shrink-0 items-center gap-5">
+        {/* Right: actions — re-enable pointer-events so buttons are clickable again */}
+        <div className="pointer-events-auto relative z-20 flex shrink-0 items-center gap-5">
           <button
             onClick={(e) => {
               e.preventDefault()
