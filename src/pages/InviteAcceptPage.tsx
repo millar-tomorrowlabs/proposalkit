@@ -1,7 +1,20 @@
+/**
+ * Invite accept page — /invite/:token
+ *
+ * Users land here from a team invite email. Either accepts immediately
+ * if they're logged in, or prompts them to sign up with the invited email.
+ * Styled via AuthLayout in Studio Editorial.
+ */
+
 import { useEffect, useState } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { friendlyError } from "@/lib/errors"
+import AuthLayout, {
+  AuthField,
+  AuthInput,
+  AuthButton,
+} from "@/components/auth/AuthLayout"
 
 interface InviteInfo {
   id: string
@@ -12,7 +25,7 @@ interface InviteInfo {
   expired: boolean
 }
 
-const InviteAcceptPage = () => {
+export default function InviteAcceptPage() {
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()
 
@@ -27,54 +40,49 @@ const InviteAcceptPage = () => {
   const [needsSignup, setNeedsSignup] = useState(false)
 
   useEffect(() => {
+    const loadInvite = async () => {
+      if (!token) {
+        setError("Invalid invite link")
+        setLoading(false)
+        return
+      }
+
+      const { data, error: fetchError } = await supabase
+        .from("account_invites")
+        .select("*, accounts(studio_name)")
+        .eq("token", token)
+        .is("accepted_at", null)
+        .maybeSingle()
+
+      if (fetchError || !data) {
+        setError("This invite link is invalid or has already been used.")
+        setLoading(false)
+        return
+      }
+
+      const expired = new Date(data.expires_at) < new Date()
+      const accountRow = data.accounts as { studio_name: string } | null
+
+      setInvite({
+        id: data.id,
+        email: data.email,
+        role: data.role,
+        accountName: accountRow?.studio_name || "Unknown",
+        accountId: data.account_id,
+        expired,
+      })
+
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (!sessionData.session) setNeedsSignup(true)
+
+      setLoading(false)
+    }
     loadInvite()
   }, [token])
-
-  const loadInvite = async () => {
-    if (!token) {
-      setError("Invalid invite link")
-      setLoading(false)
-      return
-    }
-
-    const { data, error: fetchError } = await supabase
-      .from("account_invites")
-      .select("*, accounts(studio_name)")
-      .eq("token", token)
-      .is("accepted_at", null)
-      .maybeSingle()
-
-    if (fetchError || !data) {
-      setError("This invite link is invalid or has already been used.")
-      setLoading(false)
-      return
-    }
-
-    const expired = new Date(data.expires_at) < new Date()
-    const accountRow = data.accounts as { studio_name: string } | null
-
-    setInvite({
-      id: data.id,
-      email: data.email,
-      role: data.role,
-      accountName: accountRow?.studio_name || "Unknown",
-      accountId: data.account_id,
-      expired,
-    })
-
-    // Check if user is already logged in
-    const { data: sessionData } = await supabase.auth.getSession()
-    if (!sessionData.session) {
-      setNeedsSignup(true)
-    }
-
-    setLoading(false)
-  }
 
   const acceptInvite = async (userId: string) => {
     if (!invite) return
 
-    // Create membership
     const { error: memberError } = await supabase
       .from("account_members")
       .insert({
@@ -90,7 +98,6 @@ const InviteAcceptPage = () => {
       return
     }
 
-    // Mark invite as accepted
     await supabase
       .from("account_invites")
       .update({ accepted_at: new Date().toISOString() })
@@ -133,124 +140,129 @@ const InviteAcceptPage = () => {
     }
   }
 
+  // Avoid flashing layout while we fetch the invite
   if (loading) return null
 
+  // Invalid invite
   if (error && !invite) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="text-center space-y-4">
-          <h1 className="font-serif text-2xl">Invalid invite</h1>
-          <p className="text-muted-foreground">{error}</p>
-          <Link to="/login" className="text-sm underline hover:text-foreground">
-            Go to login
-          </Link>
-        </div>
-      </div>
+      <AuthLayout
+        eyebrow="INVALID INVITE"
+        headline="This invite doesn't work."
+        subhead={error}
+      >
+        <Link
+          to="/login"
+          className="inline-block text-[13px] font-medium transition-colors hover:opacity-70"
+          style={{ color: "var(--color-forest)" }}
+        >
+          Go to sign in ↵
+        </Link>
+      </AuthLayout>
     )
   }
 
+  // Expired
   if (invite?.expired) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="text-center space-y-4">
-          <h1 className="font-serif text-2xl">Invite expired</h1>
-          <p className="text-muted-foreground">
-            This invite has expired. Ask your team to send a new one.
-          </p>
-          <Link to="/login" className="text-sm underline hover:text-foreground">
-            Go to login
-          </Link>
-        </div>
-      </div>
+      <AuthLayout
+        eyebrow="INVITE EXPIRED"
+        headline="This invite has expired."
+        subhead="Ask your team to send a new one."
+      >
+        <Link
+          to="/login"
+          className="inline-block text-[13px] font-medium transition-colors hover:opacity-70"
+          style={{ color: "var(--color-forest)" }}
+        >
+          Go to sign in ↵
+        </Link>
+      </AuthLayout>
     )
   }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center">
-          <p className="text-xs font-medium uppercase tracking-[4px] text-muted-foreground">
-            You're invited
-          </p>
-          <h1 className="mt-2 font-serif text-3xl font-light tracking-tight">
-            Join {invite?.accountName}
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            You've been invited as a {invite?.role}.
-          </p>
-        </div>
+  // Needs signup — create account + accept invite in one flow
+  if (needsSignup) {
+    return (
+      <AuthLayout
+        eyebrow="YOU'RE INVITED"
+        headline={`Join ${invite?.accountName}.`}
+        subhead={`You've been invited as a ${invite?.role}. Set up your account to join the team.`}
+      >
+        <form onSubmit={handleSignupAndAccept} className="space-y-5">
+          <AuthField label="Email">
+            <AuthInput
+              type="email"
+              value={invite?.email || ""}
+              disabled
+              style={{ opacity: 0.6 }}
+            />
+          </AuthField>
 
-        {needsSignup ? (
-          <form onSubmit={handleSignupAndAccept} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium">Email</label>
-              <input
-                type="email"
-                value={invite?.email || ""}
-                disabled
-                className="builder-input w-full opacity-60"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Your name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Jane Smith"
-                required
-                className="builder-input w-full"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Create a password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                required
-                minLength={6}
-                className="builder-input w-full"
-              />
-            </div>
+          <AuthField label="Your name">
+            <AuthInput
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Jane Smith"
+            />
+          </AuthField>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+          <AuthField label="Create a password">
+            <AuthInput
+              type="password"
+              required
+              minLength={6}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 6 characters"
+            />
+          </AuthField>
 
-            <button
-              type="submit"
-              disabled={accepting}
-              className="w-full rounded-md bg-foreground px-4 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {accepting ? "Joining..." : "Join team"}
-            </button>
-
-            <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link to="/login" className="underline hover:text-foreground">
-                Sign in first
-              </Link>
+          {error && (
+            <p className="text-[12px]" style={{ color: "#A33B28" }}>
+              {error}
             </p>
-          </form>
-        ) : (
-          <div className="space-y-4">
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <button
-              onClick={handleAcceptLoggedIn}
-              disabled={accepting}
-              className="w-full rounded-md bg-foreground px-4 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+          )}
+
+          <AuthButton type="submit" disabled={accepting}>
+            {accepting ? "Joining..." : "Join team"}
+          </AuthButton>
+
+          <p className="text-center text-[13px]" style={{ color: "var(--color-ink-soft)" }}>
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="font-medium transition-colors hover:opacity-70"
+              style={{ color: "var(--color-forest)" }}
             >
-              {accepting ? "Joining..." : "Accept invitation"}
-            </button>
-          </div>
+              Sign in first
+            </Link>
+          </p>
+        </form>
+      </AuthLayout>
+    )
+  }
+
+  // Logged in — single-click accept
+  return (
+    <AuthLayout
+      eyebrow="YOU'RE INVITED"
+      headline={`Join ${invite?.accountName}.`}
+      subhead={`You've been invited as a ${invite?.role}.`}
+    >
+      <div className="space-y-5">
+        {error && (
+          <p className="text-[12px]" style={{ color: "#A33B28" }}>
+            {error}
+          </p>
         )}
+        <AuthButton onClick={handleAcceptLoggedIn} disabled={accepting}>
+          {accepting ? "Joining..." : "Accept invitation"}
+        </AuthButton>
       </div>
-    </div>
+    </AuthLayout>
   )
 }
-
-export default InviteAcceptPage

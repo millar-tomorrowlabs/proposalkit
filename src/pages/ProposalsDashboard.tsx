@@ -593,6 +593,16 @@ function Footer() {
             proposl
           </span>
         </div>
+        <Link
+          to="/proposals/deleted"
+          className="text-[11px] uppercase tracking-[0.14em] transition-colors hover:opacity-70"
+          style={{
+            fontFamily: "var(--font-mono)",
+            color: "var(--color-ink-mute)",
+          }}
+        >
+          RECENTLY DELETED →
+        </Link>
         <p
           className="text-[11px] uppercase tracking-[0.14em]"
           style={{

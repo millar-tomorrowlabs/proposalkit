@@ -1,8 +1,20 @@
+/**
+ * Reset password page — /reset-password
+ *
+ * Users land here from the reset link in the password reset email.
+ * Studio Editorial styled via AuthLayout.
+ */
+
 import { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
+import AuthLayout, {
+  AuthField,
+  AuthInput,
+  AuthButton,
+} from "@/components/auth/AuthLayout"
 
-const ResetPasswordPage = () => {
+export default function ResetPasswordPage() {
   const navigate = useNavigate()
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -14,16 +26,11 @@ const ResetPasswordPage = () => {
   // Wait for Supabase to pick up the recovery token from the URL hash
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setReady(true)
-      }
+      if (event === "PASSWORD_RECOVERY") setReady(true)
     })
-
-    // Also check if we already have a session (e.g., if the event fired before this mounted)
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) setReady(true)
     })
-
     return () => subscription.unsubscribe()
   }, [])
 
@@ -35,104 +42,112 @@ const ResetPasswordPage = () => {
       setError("Password must be at least 6 characters.")
       return
     }
-
     if (password !== confirmPassword) {
       setError("Passwords don't match.")
       return
     }
 
     setLoading(true)
-
     const { error: updateError } = await supabase.auth.updateUser({ password })
-
     if (updateError) {
       setError("Failed to update password. The link may have expired. Try requesting a new one.")
       setLoading(false)
       return
     }
-
     setSuccess(true)
     setLoading(false)
-
-    // Redirect to dashboard after a moment
     setTimeout(() => navigate("/proposals"), 2000)
   }
 
+  // ── Success screen ──────────────────────────────────────────────────────
+  if (success) {
+    return (
+      <AuthLayout
+        eyebrow="DONE"
+        headline="Password updated."
+        subhead="Taking you to your proposals in a moment..."
+      >
+        <p
+          className="text-[11px] uppercase tracking-[0.14em]"
+          style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}
+        >
+          REDIRECTING...
+        </p>
+      </AuthLayout>
+    )
+  }
+
+  // ── Loading/verifying screen ────────────────────────────────────────────
+  if (!ready) {
+    return (
+      <AuthLayout
+        eyebrow="VERIFYING"
+        headline="Checking your reset link."
+        subhead="This should only take a second."
+      >
+        <p
+          className="text-[11px] uppercase tracking-[0.14em]"
+          style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+        >
+          VERIFYING...
+        </p>
+      </AuthLayout>
+    )
+  }
+
+  // ── Default: set new password form ─────────────────────────────────────
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-10 text-center">
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
-            Proposl
-          </h1>
-        </div>
+    <AuthLayout
+      eyebrow="NEW PASSWORD"
+      headline="Set a new password."
+      subhead="Choose something you'll remember. At least 6 characters."
+      topLinkLabel="Back to sign in"
+      topLinkTo="/login"
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <AuthField label="New password">
+          <AuthInput
+            type="password"
+            required
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+          />
+        </AuthField>
 
-        {success ? (
-          <div className="text-center space-y-3">
-            <p className="text-sm text-foreground">Password updated successfully.</p>
-            <p className="text-xs text-muted-foreground">Redirecting to your dashboard...</p>
-          </div>
-        ) : !ready ? (
-          <div className="text-center space-y-4">
-            <div className="h-4 w-48 mx-auto animate-pulse rounded bg-muted" />
-            <p className="text-xs text-muted-foreground">Verifying reset link...</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <p className="text-sm text-muted-foreground mb-2">
-              Choose a new password for your account.
-            </p>
+        <AuthField label="Confirm password">
+          <AuthInput
+            type="password"
+            required
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="••••••••"
+          />
+        </AuthField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                New password
-              </label>
-              <input
-                type="password"
-                required
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-foreground transition-colors"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                Confirm password
-              </label>
-              <input
-                type="password"
-                required
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-foreground transition-colors"
-              />
-            </div>
-
-            {error && <p className="text-xs text-red-500">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-colors hover:bg-foreground/80 disabled:opacity-50 mt-2"
-            >
-              {loading ? "Updating..." : "Set new password"}
-            </button>
-
-            <p className="text-center">
-              <Link to="/login" className="text-sm text-muted-foreground underline hover:text-foreground">
-                Back to sign in
-              </Link>
-            </p>
-          </form>
+        {error && (
+          <p className="text-[12px]" style={{ color: "#A33B28" }}>
+            {error}
+          </p>
         )}
-      </div>
-    </div>
+
+        <AuthButton type="submit" disabled={loading}>
+          {loading ? "Updating..." : "Set new password"}
+        </AuthButton>
+
+        <p className="text-center text-[13px]" style={{ color: "var(--color-ink-soft)" }}>
+          Remembered it?{" "}
+          <Link
+            to="/login"
+            className="font-medium transition-colors hover:opacity-70"
+            style={{ color: "var(--color-forest)" }}
+          >
+            Back to sign in
+          </Link>
+        </p>
+      </form>
+    </AuthLayout>
   )
 }
-
-export default ResetPasswordPage

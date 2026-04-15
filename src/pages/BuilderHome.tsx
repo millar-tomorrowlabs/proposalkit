@@ -45,6 +45,45 @@ const BuilderHome = () => {
   // Send proposal dialog (extracted to SendProposalDialog component)
   const [showSendDialog, setShowSendDialog] = useState(false)
 
+  // Top-bar engagement summary — aggregate across all sends for this proposal
+  // so the user can see at a glance whether their client is engaging, without
+  // needing to open the send dialog or navigate to the detail page.
+  const [engagement, setEngagement] = useState<{
+    sendCount: number
+    latestSentAt: string | null
+    opens: number
+    clicks: number
+    replies: number
+  } | null>(null)
+
+  const loadEngagement = useCallback(async () => {
+    if (!proposal.id) return
+    const [sendsRes, subsRes] = await Promise.all([
+      supabase
+        .from("proposal_sends")
+        .select("sent_at, open_count, click_count")
+        .eq("proposal_id", proposal.id)
+        .order("sent_at", { ascending: false }),
+      supabase
+        .from("submissions")
+        .select("id")
+        .eq("proposal_id", proposal.id),
+    ])
+    const sends = sendsRes.data ?? []
+    const subs = subsRes.data ?? []
+    setEngagement({
+      sendCount: sends.length,
+      latestSentAt: sends[0]?.sent_at ?? null,
+      opens: sends.reduce((acc, s) => acc + (s.open_count ?? 0), 0),
+      clicks: sends.reduce((acc, s) => acc + (s.click_count ?? 0), 0),
+      replies: subs.length,
+    })
+  }, [proposal.id])
+
+  useEffect(() => {
+    loadEngagement()
+  }, [loadEngagement])
+
   // Preview viewport
   const [previewWidth, setPreviewWidth] = useState(1280)
   const viewports = [
@@ -53,12 +92,14 @@ const BuilderHome = () => {
     { label: "Mobile", width: 375, icon: Smartphone },
   ] as const
 
-  // Reflect a successful send locally so the top bar status updates immediately.
+  // Reflect a successful send locally so the top bar status updates immediately,
+  // and refetch the engagement summary so the count ticks up.
   const handleSendComplete = useCallback(() => {
     if (!proposal.status || proposal.status === "draft") {
       useBuilderStore.getState().updateField("status", "sent")
     }
-  }, [proposal.status])
+    loadEngagement()
+  }, [proposal.status, loadEngagement])
 
   const leftPaneRef = useRef<HTMLDivElement>(null)
 
@@ -291,6 +332,50 @@ const BuilderHome = () => {
           }`}>
             {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : saveStatus === "error" ? "Save failed" : "·"}
           </span>
+
+          {/*
+            Engagement summary. Only shows when this proposal has been sent
+            at least once. Clickable to open the send dialog (same as the
+            Send button) so users can drill into the history quickly.
+          */}
+          {engagement && engagement.sendCount > 0 && (
+            <button
+              onClick={() => setShowSendDialog(true)}
+              className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+              style={{ fontFamily: "var(--font-mono)" }}
+              title="Open send history"
+            >
+              <span>SENT</span>
+              {engagement.opens > 0 && (
+                <>
+                  <span className="text-border">·</span>
+                  <span>
+                    <span style={{ color: "var(--color-forest)" }}>{engagement.opens}</span>{" "}
+                    {engagement.opens === 1 ? "OPEN" : "OPENS"}
+                  </span>
+                </>
+              )}
+              {engagement.clicks > 0 && (
+                <>
+                  <span className="text-border">·</span>
+                  <span>
+                    <span style={{ color: "var(--color-forest-deep)" }}>{engagement.clicks}</span>{" "}
+                    {engagement.clicks === 1 ? "CLICK" : "CLICKS"}
+                  </span>
+                </>
+              )}
+              {engagement.replies > 0 && (
+                <>
+                  <span className="text-border">·</span>
+                  <span>
+                    <span style={{ color: "var(--color-ochre)" }}>{engagement.replies}</span>{" "}
+                    {engagement.replies === 1 ? "REPLY" : "REPLIES"}
+                  </span>
+                </>
+              )}
+            </button>
+          )}
+
           {proposal.slug && (
             <button
               onClick={() => setShowSendDialog(true)}

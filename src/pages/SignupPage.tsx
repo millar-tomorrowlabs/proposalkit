@@ -1,9 +1,20 @@
+/**
+ * Signup page — /signup
+ *
+ * Studio Editorial styled via AuthLayout.
+ */
+
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { friendlyError } from "@/lib/errors"
+import AuthLayout, {
+  AuthField,
+  AuthInput,
+  AuthButton,
+} from "@/components/auth/AuthLayout"
 
-const SignupPage = () => {
+export default function SignupPage() {
   const navigate = useNavigate()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -29,16 +40,14 @@ const SignupPage = () => {
       return
     }
 
-    // If email confirmation is enabled, show a message instead of redirecting
     if (signUpData?.user?.identities?.length === 0) {
-      // User already exists
       setError("An account with this email already exists.")
       setLoading(false)
       return
     }
 
     if (signUpData?.session) {
-      // Auto-confirmed — redirect to onboarding
+      // Auto-confirmed, redirect to onboarding
       navigate("/onboarding")
     } else {
       // Email confirmation required
@@ -47,107 +56,94 @@ const SignupPage = () => {
     }
   }
 
+  // ── Post-signup confirmation screen ──────────────────────────────────────
   if (emailSent) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm space-y-6 text-center">
-          <h1 className="font-serif text-3xl font-light tracking-tight">
-            Check your email
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            We've sent a confirmation link to <strong>{email}</strong>. Click the
-            link to verify your account and get started.
-          </p>
-          <Link
-            to="/login"
-            className="inline-block text-sm underline hover:text-foreground text-muted-foreground"
-          >
-            Back to sign in
-          </Link>
-        </div>
-      </div>
+      <AuthLayout
+        eyebrow="CHECK YOUR EMAIL"
+        headline="Confirm your account."
+        subhead={`We sent a confirmation link to ${email}. Click it to verify your account and get started.`}
+        topLinkLabel="Sign in"
+        topLinkTo="/login"
+      >
+        <Link
+          to="/login"
+          className="inline-block text-[13px] font-medium transition-colors hover:opacity-70"
+          style={{ color: "var(--color-forest)" }}
+        >
+          Back to sign in ↵
+        </Link>
+      </AuthLayout>
     )
   }
 
+  // ── Signup form ─────────────────────────────────────────────────────────
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center">
-          <p className="text-xs font-medium uppercase tracking-[4px] text-muted-foreground">
-            Get Started
+    <AuthLayout
+      eyebrow="START FREE"
+      headline="Create your Proposl account."
+      subhead="Free while in beta. No credit card. Takes about a minute."
+      topLinkLabel="Sign in"
+      topLinkTo="/login"
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <AuthField label="Your name">
+          <AuthInput
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Jane Smith"
+          />
+        </AuthField>
+
+        <AuthField label="Email">
+          <AuthInput
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+          />
+        </AuthField>
+
+        <AuthField label="Password">
+          <AuthInput
+            type="password"
+            required
+            minLength={6}
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="At least 6 characters"
+          />
+        </AuthField>
+
+        {error && (
+          <p className="text-[12px]" style={{ color: "#A33B28" }}>
+            {error}
           </p>
-          <h1 className="mt-2 font-serif text-3xl font-light tracking-tight">
-            Create your account
-          </h1>
-        </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium">Your name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Jane Smith"
-              required
-              className="builder-input w-full"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              className="builder-input w-full"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
-              required
-              minLength={6}
-              className="builder-input w-full"
-            />
-          </div>
+        <AuthButton type="submit" disabled={loading}>
+          {loading ? "Creating account..." : "Create account"}
+        </AuthButton>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-foreground px-4 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {loading ? "Creating account..." : "Create account"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-muted-foreground">
+        <p
+          className="text-center text-[13px]"
+          style={{ color: "var(--color-ink-soft)" }}
+        >
           Already have an account?{" "}
-          <Link to="/login" className="underline hover:text-foreground">
+          <Link
+            to="/login"
+            className="font-medium transition-colors hover:opacity-70"
+            style={{ color: "var(--color-forest)" }}
+          >
             Sign in
           </Link>
         </p>
-      </div>
-      <p className="mt-12 text-xs text-muted-foreground">
-        Proposl is a product by{" "}
-        <a
-          href="https://tomorrowstudios.io"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
-        >
-          Tomorrow Studios
-        </a>
-      </p>
-    </div>
+      </form>
+    </AuthLayout>
   )
 }
-
-export default SignupPage
