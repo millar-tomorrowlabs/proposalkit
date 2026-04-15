@@ -49,7 +49,7 @@ const BuilderHome = () => {
   const [sendMessage, setSendMessage] = useState("")
   const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
   const [sendType, setSendType] = useState<"initial" | "reminder">("initial")
-  const [sendHistory, setSendHistory] = useState<Array<{ id: string; recipient_name: string; recipient_email: string; subject: string; send_type: string; sent_at: string }>>([])
+  const [sendHistory, setSendHistory] = useState<Array<{ id: string; recipient_name: string; recipient_email: string; subject: string; send_type: string; sent_at: string; delivery_status: string | null; delivered_at: string | null; bounced_at: string | null }>>([])
   const [, setSendHistoryLoading] = useState(false)
 
   // Preview viewport
@@ -65,7 +65,7 @@ const BuilderHome = () => {
     setSendHistoryLoading(true)
     const { data } = await supabase
       .from("proposal_sends")
-      .select("id, recipient_name, recipient_email, subject, send_type, sent_at")
+      .select("id, recipient_name, recipient_email, subject, send_type, sent_at, delivery_status, delivered_at, bounced_at")
       .eq("proposal_id", proposal.id)
       .order("sent_at", { ascending: false })
     setSendHistory(data ?? [])
@@ -583,25 +583,57 @@ const BuilderHome = () => {
               <div className="mt-6 border-t border-border pt-4">
                 <h4 className="text-xs font-medium text-muted-foreground mb-2">Send history</h4>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {sendHistory.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between text-xs">
-                      <div className="min-w-0">
-                        <span className="font-medium text-foreground">{s.recipient_name}</span>
-                        <span className="text-muted-foreground"> · {new Date(s.sent_at).toLocaleDateString()}</span>
-                        {s.send_type === "reminder" && (
-                          <span className="ml-1.5 inline-block rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">Reminder</span>
+                  {sendHistory.map((s) => {
+                    // Delivery status badge styling.
+                    // null / "sent" / "queued" = still in flight, gray
+                    // "delivered" = green
+                    // "delivery_delayed" = amber
+                    // "bounced" / "failed" / "complained" = red
+                    const status = s.delivery_status || "sent"
+                    const badge = status === "delivered"
+                      ? { label: "Delivered", classes: "bg-emerald-500/10 text-emerald-600" }
+                      : status === "delivery_delayed"
+                      ? { label: "Delayed", classes: "bg-amber-500/10 text-amber-700" }
+                      : status === "bounced"
+                      ? { label: "Bounced", classes: "bg-red-500/10 text-red-600" }
+                      : status === "failed"
+                      ? { label: "Failed", classes: "bg-red-500/10 text-red-600" }
+                      : status === "complained"
+                      ? { label: "Spam", classes: "bg-red-500/10 text-red-600" }
+                      : { label: "Sent", classes: "bg-muted text-muted-foreground" }
+
+                    return (
+                      <div key={s.id} className="flex items-center justify-between text-xs">
+                        <div className="min-w-0">
+                          <span className="font-medium text-foreground">{s.recipient_name}</span>
+                          <span className="text-muted-foreground"> · {new Date(s.sent_at).toLocaleDateString()}</span>
+                          {s.send_type === "reminder" && (
+                            <span className="ml-1.5 inline-block rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">Reminder</span>
+                          )}
+                          <span
+                            className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${badge.classes}`}
+                            title={
+                              s.delivered_at
+                                ? `Delivered ${new Date(s.delivered_at).toLocaleString()}`
+                                : s.bounced_at
+                                ? `Bounced ${new Date(s.bounced_at).toLocaleString()}`
+                                : `Status: ${status}`
+                            }
+                          >
+                            {badge.label}
+                          </span>
+                        </div>
+                        {sendStatus !== "sent" && (
+                          <button
+                            onClick={() => handleSendReminder(s)}
+                            className="shrink-0 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Follow up
+                          </button>
                         )}
                       </div>
-                      {sendStatus !== "sent" && (
-                        <button
-                          onClick={() => handleSendReminder(s)}
-                          className="shrink-0 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          Follow up
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}

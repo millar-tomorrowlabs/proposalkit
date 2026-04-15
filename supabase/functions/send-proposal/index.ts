@@ -206,6 +206,11 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Capture Resend's message ID so webhooks can later match delivery events
+    // back to this send record.
+    const resendBody = await emailRes.json().catch(() => null)
+    const resendId: string | null = resendBody?.id ?? null
+
     // Record send in proposal_sends
     let sendId: string | null = null
     if (body.proposalId && accountId) {
@@ -216,6 +221,8 @@ Deno.serve(async (req) => {
           account_id: accountId,
           recipient_email: body.recipientEmail,
           recipient_name: body.recipientName,
+          resend_id: resendId,
+          delivery_status: "sent",
           subject: emailSubject,
           personal_message: body.personalMessage || null,
           send_type: body.sendType || "initial",
