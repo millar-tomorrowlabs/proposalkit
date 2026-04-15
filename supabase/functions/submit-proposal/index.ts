@@ -110,7 +110,7 @@ function buildEmailHtml(body: SubmissionBody, account?: Record<string, unknown>)
       </div>
       ${body.message ? `<div style="margin-top:20px;padding:16px;background:#f9f9f9;border-radius:8px"><p style="margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#999">Message</p><p style="margin:0;color:#333">${body.message}</p></div>` : ""}
     </div>
-    <p style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">Sent by Proposl</p>
+    <p style="text-align:center;margin-top:20px;font-size:12px;color:#aaa">${studio}</p>
   </div>
 </body>
 </html>`
@@ -240,6 +240,26 @@ Deno.serve(async (req) => {
           }),
         })
 
+      // For the client confirmation email, CC the account's notify_email so the
+      // agency has a record of every confirmation sent. This also lets the sender
+      // verify deliverability (if they don't see the CC, something is wrong).
+      const sendEmailWithCc = (to: string[], cc: string[] | undefined, subject: string, html: string, replyToAddr?: string) =>
+        fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${resendKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: `${senderName} <notifications@${SENDER_DOMAIN}>`,
+            to,
+            ...(cc && cc.length > 0 ? { cc } : {}),
+            subject,
+            html,
+            ...(replyToAddr ? { reply_to: replyToAddr } : {}),
+          }),
+        })
+
       try {
         // Send team notification + client confirmation in parallel
         const [teamRes, clientRes] = await Promise.all([
@@ -248,9 +268,10 @@ Deno.serve(async (req) => {
             `New submission: ${body.proposalTitle ?? body.proposalSlug}`,
             buildEmailHtml(body, account ?? undefined)
           ),
-          sendEmail(
+          sendEmailWithCc(
             [body.clientEmail],
-            `Thanks for your submission — ${body.proposalTitle ?? body.proposalSlug}`,
+            [notifyEmail], // CC the agency on the client confirmation too
+            `Thanks for your submission, ${body.proposalTitle ?? body.proposalSlug}`,
             buildClientEmailHtml(body, account ?? undefined),
             replyTo
           ),

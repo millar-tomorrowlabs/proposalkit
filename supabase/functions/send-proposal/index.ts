@@ -171,6 +171,10 @@ Deno.serve(async (req) => {
       || (isReminder ? `Following up: ${body.proposalTitle}` : `Your proposal: ${body.proposalTitle}`)
     const senderName = body.senderName ?? body.studioName ?? "Proposals"
 
+    // CC the person who clicked Send so they get immediate confirmation in their inbox.
+    // Also set reply_to so client replies route directly to them instead of a dead address.
+    // `user.email` is the authenticated sender from the JWT check above.
+    const senderEmail = user.email
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -180,6 +184,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: `${senderName} <notifications@proposl.app>`,
         to: [body.recipientEmail],
+        ...(senderEmail ? { cc: [senderEmail], reply_to: senderEmail } : {}),
         subject: emailSubject,
         html: isReminder ? buildReminderEmailHtml(body) : buildSendEmailHtml(body),
       }),
