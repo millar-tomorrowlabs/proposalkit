@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useCallback, useState } from "react"
+import { useEffect, useRef, useCallback, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
-import { Send, X, Monitor, Tablet, Smartphone, Undo2, Redo2, AlertTriangle } from "lucide-react"
+import { Send, Monitor, Tablet, Smartphone, Undo2, Redo2 } from "lucide-react"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { friendlyError } from "@/lib/errors"
-import { validateProposalForSend } from "@/lib/proposalValidation"
 import { useAuth } from "@/contexts/AuthContext"
 import { useAccount } from "@/contexts/AccountContext"
 import { useBuilderStore } from "@/store/builderStore"
@@ -13,6 +12,7 @@ import ChatPanel from "@/components/builder/ChatPanel"
 import SettingsPanel from "@/components/builder/SettingsPanel"
 import { MessageSquare, Settings, PenTool } from "lucide-react"
 import ProposalWrapper from "@/components/proposal/ProposalWrapper"
+import SendProposalDialog from "@/components/proposal/SendProposalDialog"
 import type { ProposalData } from "@/types/proposal"
 
 const DEBOUNCE_PREVIEW_MS = 300
@@ -42,16 +42,8 @@ const BuilderHome = () => {
     if (pendingChatPrompt) setLeftTab("chat")
   }, [pendingChatPrompt])
 
-  // Send proposal modal
-  const [showSendModal, setShowSendModal] = useState(false)
-  const [sendName, setSendName] = useState("")
-  const [sendEmail, setSendEmail] = useState("")
-  const [sendSubject, setSendSubject] = useState("")
-  const [sendMessage, setSendMessage] = useState("")
-  const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
-  const [sendType, setSendType] = useState<"initial" | "reminder">("initial")
-  const [sendHistory, setSendHistory] = useState<Array<{ id: string; recipient_name: string; recipient_email: string; subject: string; send_type: string; sent_at: string; delivery_status: string | null; delivered_at: string | null; bounced_at: string | null; opened_at: string | null; last_opened_at: string | null; open_count: number; clicked_at: string | null; last_clicked_at: string | null; click_count: number }>>([])
-  const [, setSendHistoryLoading] = useState(false)
+  // Send proposal dialog (extracted to SendProposalDialog component)
+  const [showSendDialog, setShowSendDialog] = useState(false)
 
   // Preview viewport
   const [previewWidth, setPreviewWidth] = useState(1280)
@@ -61,81 +53,12 @@ const BuilderHome = () => {
     { label: "Mobile", width: 375, icon: Smartphone },
   ] as const
 
-  const loadSendHistory = useCallback(async () => {
-    if (!proposal.id) return
-    setSendHistoryLoading(true)
-    const { data } = await supabase
-      .from("proposal_sends")
-      .select("id, recipient_name, recipient_email, subject, send_type, sent_at, delivery_status, delivered_at, bounced_at, opened_at, last_opened_at, open_count, clicked_at, last_clicked_at, click_count")
-      .eq("proposal_id", proposal.id)
-      .order("sent_at", { ascending: false })
-    setSendHistory(data ?? [])
-    setSendHistoryLoading(false)
-  }, [proposal.id])
-
-  const handleOpenSendModal = useCallback(() => {
-    setSendStatus("idle")
-    setSendType("initial")
-    setShowSendModal(true)
-    loadSendHistory()
-  }, [loadSendHistory])
-
-  // Pre-flight validation: flag empty sections/meta before the user sends.
-  // These are warnings only. The user can still send if they want to.
-  const sendWarnings = useMemo(
-    () => (showSendModal ? validateProposalForSend(proposal) : []),
-    [showSendModal, proposal],
-  )
-
-  const handleSendReminder = useCallback((send: typeof sendHistory[0]) => {
-    setSendName(send.recipient_name)
-    setSendEmail(send.recipient_email)
-    setSendSubject("")
-    setSendMessage("")
-    setSendType("reminder")
-    setSendStatus("idle")
-  }, [])
-
-  const handleSendProposal = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!sendName.trim() || !sendEmail.trim()) return
-    setSendStatus("sending")
-
-    const proposalUrl = `${window.location.origin}/p/${proposal.slug || proposal.id}`
-
-    try {
-      const { error: sendError } = await supabase.functions.invoke("send-proposal", {
-        body: {
-          proposalId: proposal.id,
-          recipientName: sendName.trim(),
-          recipientEmail: sendEmail.trim(),
-          proposalTitle: sendSubject.trim() || proposal.title,
-          clientName: proposal.clientName,
-          proposalUrl,
-          studioName: proposal.studioName || account.studioName,
-          senderName: account.senderName || account.studioName,
-          website: account.website,
-          brandColor1: proposal.brandColor1,
-          brandColor2: proposal.brandColor2,
-          personalMessage: sendMessage.trim() || undefined,
-          sendType,
-          subject: sendSubject.trim() || undefined,
-        },
-      })
-      if (!sendError) {
-        setSendStatus("sent")
-        // Server auto-sets status to "sent" — reflect locally
-        if (!proposal.status || proposal.status === "draft") {
-          useBuilderStore.getState().updateField("status", "sent")
-        }
-        loadSendHistory()
-      } else {
-        setSendStatus("error")
-      }
-    } catch {
-      setSendStatus("error")
+  // Reflect a successful send locally so the top bar status updates immediately.
+  const handleSendComplete = useCallback(() => {
+    if (!proposal.status || proposal.status === "draft") {
+      useBuilderStore.getState().updateField("status", "sent")
     }
-  }
+  }, [proposal.status])
 
   const leftPaneRef = useRef<HTMLDivElement>(null)
 
@@ -370,7 +293,7 @@ const BuilderHome = () => {
           </span>
           {proposal.slug && (
             <button
-              onClick={() => { setSendSubject(proposal.title); handleOpenSendModal() }}
+              onClick={() => setShowSendDialog(true)}
               className="flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-colors hover:bg-foreground/80"
             >
               <Send className="h-3 w-3" />
@@ -475,247 +398,17 @@ const BuilderHome = () => {
         </div>
       </div>
 
-      {/* Send proposal modal */}
-      {showSendModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowSendModal(false) }}
-        >
-          <div className="relative w-full max-w-md rounded-2xl bg-background border border-border p-8 shadow-2xl">
-            <button
-              onClick={() => setShowSendModal(false)}
-              className="absolute right-5 top-5 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            {sendStatus === "sent" ? (
-              <div className="py-4 text-center">
-                <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-brand-1">
-                  <Send className="h-4 w-4 text-white" />
-                </div>
-                <h3 className="font-display text-xl font-semibold text-foreground">Sent!</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Proposal sent to {sendEmail}
-                </p>
-                <button
-                  onClick={() => setShowSendModal(false)}
-                  className="mt-4 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSendProposal} className="space-y-4">
-                <div>
-                  <h3 className="font-display text-lg font-semibold text-foreground">Send proposal</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Send a branded email with a link to view this proposal.
-                  </p>
-                </div>
-
-                {sendWarnings.length > 0 && (
-                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-600 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-amber-700">
-                          {sendWarnings.length === 1
-                            ? "1 section looks incomplete"
-                            : `${sendWarnings.length} sections look incomplete`}
-                        </p>
-                        <ul className="mt-1.5 space-y-1">
-                          {sendWarnings.map((w, i) => (
-                            <li key={i} className="text-xs text-amber-700/90">
-                              <span className="font-medium">{w.label}:</span> {w.reason}
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="mt-2 text-[11px] text-amber-700/70">
-                          You can still send, but the client will see these gaps.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Recipient name</label>
-                  <input
-                    type="text"
-                    required
-                    value={sendName}
-                    onChange={(e) => setSendName(e.target.value)}
-                    placeholder="Sarah Chen"
-                    className="builder-input"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Recipient email</label>
-                  <input
-                    type="email"
-                    required
-                    value={sendEmail}
-                    onChange={(e) => setSendEmail(e.target.value)}
-                    placeholder="sarah@client.com"
-                    className="builder-input"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Subject line</label>
-                  <input
-                    type="text"
-                    value={sendSubject}
-                    onChange={(e) => setSendSubject(e.target.value)}
-                    placeholder={proposal.title}
-                    className="builder-input"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Personal message <span className="font-normal text-muted-foreground/60">(optional)</span>
-                  </label>
-                  <textarea
-                    value={sendMessage}
-                    onChange={(e) => setSendMessage(e.target.value)}
-                    rows={3}
-                    placeholder="Hey Sarah, here's the proposal we discussed..."
-                    className="builder-input resize-none"
-                  />
-                </div>
-
-                {sendStatus === "error" && (
-                  <p className="text-xs text-red-500">Something went wrong. Please try again.</p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={sendStatus === "sending"}
-                  className="w-full rounded-full bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-colors hover:bg-foreground/80 disabled:opacity-50"
-                >
-                  {sendStatus === "sending" ? "Sending..." : sendType === "reminder" ? "Send reminder" : "Send proposal"}
-                </button>
-
-                {sendType === "reminder" && (
-                  <button
-                    type="button"
-                    onClick={() => { setSendType("initial"); setSendName(""); setSendEmail(""); setSendMessage("") }}
-                    className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Cancel reminder, send as new
-                  </button>
-                )}
-              </form>
-            )}
-
-            {/* Send history */}
-            {sendHistory.length > 0 && (
-              <div className="mt-6 border-t border-border pt-4">
-                <h4 className="text-xs font-medium text-muted-foreground mb-2">Send history</h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {sendHistory.map((s) => {
-                    // Delivery status badge.
-                    const status = s.delivery_status || "sent"
-                    const badge = status === "delivered"
-                      ? { label: "Delivered", classes: "bg-emerald-500/10 text-emerald-600" }
-                      : status === "delivery_delayed"
-                      ? { label: "Delayed", classes: "bg-amber-500/10 text-amber-700" }
-                      : status === "bounced"
-                      ? { label: "Bounced", classes: "bg-red-500/10 text-red-600" }
-                      : status === "failed"
-                      ? { label: "Failed", classes: "bg-red-500/10 text-red-600" }
-                      : status === "complained"
-                      ? { label: "Spam", classes: "bg-red-500/10 text-red-600" }
-                      : { label: "Sent", classes: "bg-muted text-muted-foreground" }
-
-                    // Apple Mail Privacy Protection heuristic: if the first open
-                    // happened within 5 seconds of delivery, it's almost certainly
-                    // a pre-fetch (Apple Mail loads all remote content on its proxy
-                    // as soon as the email arrives). Flag these so users don't
-                    // treat them as real engagement.
-                    const isPrefetch = (() => {
-                      if (!s.opened_at || !s.delivered_at) return false
-                      const delta = new Date(s.opened_at).getTime() - new Date(s.delivered_at).getTime()
-                      return delta >= 0 && delta < 5000
-                    })()
-
-                    // Format "time since" for tooltips.
-                    const timeSince = (iso: string) => {
-                      const ms = Date.now() - new Date(iso).getTime()
-                      const minutes = Math.floor(ms / 60000)
-                      if (minutes < 1) return "just now"
-                      if (minutes < 60) return `${minutes}m ago`
-                      const hours = Math.floor(minutes / 60)
-                      if (hours < 24) return `${hours}h ago`
-                      const days = Math.floor(hours / 24)
-                      return `${days}d ago`
-                    }
-
-                    return (
-                      <div key={s.id} className="flex items-center justify-between text-xs">
-                        <div className="min-w-0">
-                          <span className="font-medium text-foreground">{s.recipient_name}</span>
-                          <span className="text-muted-foreground"> · {new Date(s.sent_at).toLocaleDateString()}</span>
-                          {s.send_type === "reminder" && (
-                            <span className="ml-1.5 inline-block rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">Reminder</span>
-                          )}
-                          <span
-                            className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${badge.classes}`}
-                            title={
-                              s.delivered_at
-                                ? `Delivered ${new Date(s.delivered_at).toLocaleString()}`
-                                : s.bounced_at
-                                ? `Bounced ${new Date(s.bounced_at).toLocaleString()}`
-                                : `Status: ${status}`
-                            }
-                          >
-                            {badge.label}
-                          </span>
-                          {s.open_count > 0 && (
-                            <span
-                              className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                                isPrefetch
-                                  ? "bg-muted text-muted-foreground"
-                                  : "bg-blue-500/10 text-blue-600"
-                              }`}
-                              title={
-                                isPrefetch
-                                  ? `Likely Apple Mail pre-fetch (opened <5s after delivery). Last open: ${s.last_opened_at ? timeSince(s.last_opened_at) : "never"}`
-                                  : `Opened ${s.open_count}× · Last: ${s.last_opened_at ? timeSince(s.last_opened_at) : "never"}`
-                              }
-                            >
-                              {isPrefetch ? "Pre-fetch" : `Opened ${s.open_count > 1 ? `${s.open_count}×` : ""}`.trim()}
-                            </span>
-                          )}
-                          {s.click_count > 0 && (
-                            <span
-                              className="ml-1.5 inline-block rounded-full bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-medium text-purple-600"
-                              title={`Clicked ${s.click_count}× · Last: ${s.last_clicked_at ? timeSince(s.last_clicked_at) : "never"}`}
-                            >
-                              {`Clicked ${s.click_count > 1 ? `${s.click_count}×` : ""}`.trim()}
-                            </span>
-                          )}
-                        </div>
-                        {sendStatus !== "sent" && (
-                          <button
-                            onClick={() => handleSendReminder(s)}
-                            className="shrink-0 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            Follow up
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <SendProposalDialog
+        open={showSendDialog}
+        onClose={() => setShowSendDialog(false)}
+        proposal={proposal}
+        account={{
+          studioName: account.studioName,
+          senderName: account.senderName,
+          website: account.website,
+        }}
+        onSendComplete={handleSendComplete}
+      />
     </div>
   )
 }

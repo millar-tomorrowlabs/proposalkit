@@ -82,11 +82,12 @@ const ProposalsDashboard = () => {
 
   useEffect(() => {
     const load = async () => {
-      // 1. Load proposals for this account
+      // 1. Load proposals for this account (exclude soft-deleted)
       const { data: proposalData } = await supabase
         .from("proposals")
         .select("id, slug, title, client_name, status, created_at, updated_at")
         .eq("account_id", account.id)
+        .is("deleted_at", null)
         .order("updated_at", { ascending: false })
 
       const proposals = (proposalData ?? []) as ProposalRow[]
@@ -347,15 +348,28 @@ function ProposalCard({
 
   return (
     <article
-      className="group relative rounded-2xl border px-6 py-6 transition-all hover:shadow-[0_1px_3px_rgba(0,0,0,0.05),0_8px_24px_rgba(0,0,0,0.04)] md:px-8 md:py-7"
+      className="group relative rounded-2xl border transition-all hover:shadow-[0_1px_3px_rgba(0,0,0,0.05),0_8px_24px_rgba(0,0,0,0.04)]"
       style={{
         background: "var(--color-paper)",
         borderColor: "var(--color-rule)",
       }}
     >
-      <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-8">
-        {/* Left: title + client + metadata */}
-        <div className="min-w-0 flex-1">
+      {/*
+        The whole card is a link to the detail page. Using an absolute-
+        positioned Link overlay so the action buttons on the right can
+        still be independently clickable without nesting <a> tags.
+      */}
+      <Link
+        to={`/proposals/${row.id}`}
+        className="absolute inset-0 z-0 rounded-2xl"
+        aria-label={`Open ${row.title}`}
+      >
+        <span className="sr-only">Open {row.title}</span>
+      </Link>
+
+      <div className="relative z-10 flex flex-col gap-5 px-6 py-6 md:flex-row md:items-start md:justify-between md:gap-8 md:px-8 md:py-7">
+        {/* Left: title + client + metadata — pointer-events-none so clicks fall through to the overlay Link */}
+        <div className="pointer-events-none min-w-0 flex-1">
           <p
             className="mb-1.5 text-[11px] uppercase tracking-[0.14em]"
             style={{
@@ -365,18 +379,16 @@ function ProposalCard({
           >
             {row.client_name || "UNKNOWN CLIENT"}
           </p>
-          <Link to={`/builder/${row.id}`} className="block">
-            <h2
-              className="text-[24px] leading-[1.2] tracking-[-0.01em] transition-colors group-hover:opacity-90 md:text-[28px]"
-              style={{
-                fontFamily: "var(--font-merchant-display)",
-                fontWeight: 500,
-                color: "var(--color-ink)",
-              }}
-            >
-              {row.title}
-            </h2>
-          </Link>
+          <h2
+            className="text-[24px] leading-[1.2] tracking-[-0.01em] transition-colors group-hover:opacity-90 md:text-[28px]"
+            style={{
+              fontFamily: "var(--font-merchant-display)",
+              fontWeight: 500,
+              color: "var(--color-ink)",
+            }}
+          >
+            {row.title}
+          </h2>
 
           {/* Mono metadata strip */}
           <p
@@ -423,10 +435,14 @@ function ProposalCard({
           </p>
         </div>
 
-        {/* Right: actions */}
-        <div className="flex shrink-0 items-center gap-5">
+        {/* Right: actions — own pointer-events so they sit above the overlay Link */}
+        <div className="relative z-20 flex shrink-0 items-center gap-5">
           <button
-            onClick={onCopy}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onCopy()
+            }}
             className="flex items-center gap-1.5 text-[12px] transition-colors hover:opacity-70"
             style={{ color: "var(--color-ink-soft)" }}
             title="Copy proposal link"
@@ -443,15 +459,19 @@ function ProposalCard({
               </>
             )}
           </button>
-          <Link
-            to={`/p/${row.slug}`}
+          <a
+            href={`/p/${row.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className="text-[12px] transition-colors hover:opacity-70"
             style={{ color: "var(--color-ink-soft)" }}
           >
             View
-          </Link>
+          </a>
           <Link
             to={`/builder/${row.id}`}
+            onClick={(e) => e.stopPropagation()}
             className="text-[12px] font-medium transition-colors hover:opacity-70"
             style={{ color: "var(--color-forest)" }}
           >

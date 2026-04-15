@@ -5,6 +5,7 @@ import AuthProvider from "@/contexts/AuthContext"
 import AccountProvider from "@/contexts/AccountContext"
 import ProposalViewer from "@/pages/ProposalViewer"
 import ProposalsDashboard from "@/pages/ProposalsDashboard"
+import ProposalDetailPage from "@/pages/ProposalDetailPage"
 import BuilderHome from "@/pages/BuilderHome"
 import WizardPage from "@/pages/WizardPage"
 import LoginPage from "@/pages/LoginPage"
@@ -45,6 +46,7 @@ function App() {
             {/* Account-scoped */}
             <Route element={<AccountProvider />}>
               <Route path="/proposals" element={<ProposalsDashboard />} />
+              <Route path="/proposals/:id" element={<ProposalDetailPage />} />
               <Route path="/new" element={<WizardPage />} />
               <Route path="/builder" element={<BuilderHome />} />
               <Route path="/builder/:id" element={<BuilderHome />} />
