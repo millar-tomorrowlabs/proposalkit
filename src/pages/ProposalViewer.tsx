@@ -29,7 +29,7 @@ const ProposalViewer = () => {
   // out of the tab name for clients viewing a proposal).
   useEffect(() => {
     if (proposal?.studioName && proposal?.clientName) {
-      document.title = `${proposal.clientName} — ${proposal.studioName}`
+      document.title = `${proposal.clientName} · ${proposal.studioName}`
     } else if (proposal?.title) {
       document.title = proposal.title
     }

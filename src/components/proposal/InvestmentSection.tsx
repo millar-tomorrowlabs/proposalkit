@@ -159,7 +159,7 @@ const InvestmentSection = ({
 
         <p className="scroll-reveal delay-100 mt-4 text-sm text-muted-foreground">
           Select a package and customize below. When you're happy with your
-          selection, hit Confirm — we'll include the details when you get in touch.
+          selection, hit Confirm and we'll include the details when you get in touch.
         </p>
 
         {recommendation ? (
@@ -176,7 +176,7 @@ const InvestmentSection = ({
             </div>
           </div>
         ) : (
-          <AskAIGhost value={recommendation} prompt="Write a recommendation paragraph explaining which package you suggest and why — be specific to this client's needs." className="mt-6" />
+          <AskAIGhost value={recommendation} prompt="Write a recommendation paragraph explaining which package you suggest and why. Be specific to this client's needs. Never use em dashes." className="mt-6" />
         )}
 
         {/* Package toggle — only shown when > 1 package */}
@@ -193,7 +193,7 @@ const InvestmentSection = ({
                 }`}
               >
                 {pkg.isRecommended && <Star className="h-3.5 w-3.5" />}
-                {pkg.label} — {formatPrice(pkg.basePrice)}
+                {pkg.label} · {formatPrice(pkg.basePrice)}
               </button>
             ))}
           </div>
@@ -404,7 +404,7 @@ const InvestmentSection = ({
                   Post-Launch Optimization
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Optional monthly service — separate from the support retainer
+                  Optional monthly service, separate from the support retainer
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {data.postLaunch.description}
@@ -419,10 +419,10 @@ const InvestmentSection = ({
             {data.postLaunch.includedInPackage === resolvedPackageId && data.postLaunch.includedWeeks && (
               <div className="mt-4 flex items-center gap-2 rounded-lg border border-brand-1/30 bg-brand-1-light px-4 py-2.5">
                 <span className="text-xs text-muted-foreground">
-                  {data.postLaunch.includedWeeks} weeks included with your {currentPackage.label} package —
+                  {data.postLaunch.includedWeeks} weeks included with your {currentPackage.label} package.
                 </span>
                 <span className="text-xs font-medium text-brand-1">
-                  continue monthly from {formatPrice(data.postLaunch.monthlyPrice)}/mo
+                  Continue monthly from {formatPrice(data.postLaunch.monthlyPrice)}/mo
                 </span>
               </div>
             )}

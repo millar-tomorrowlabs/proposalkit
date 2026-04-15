@@ -83,7 +83,7 @@ const BuilderSectionMeta = () => {
           type="text"
           value={proposal.title}
           onChange={(e) => updateField("title", e.target.value)}
-          placeholder="Flush & Seawards — Shopify Migration"
+          placeholder="Flush & Seawards Shopify Migration"
           className="builder-input"
         />
         <SuggestionChip suggestion={suggestions?.title} path="title" onAccept={(v) => updateField("title", v)} />

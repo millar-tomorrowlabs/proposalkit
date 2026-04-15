@@ -12,7 +12,7 @@ function buildSystemPrompt(ctx?: { studioName?: string; studioDescription?: stri
 
   return `You are a proposal writer for ${studio}, ${studioDesc}.
 
-${studio} works with growing brands and businesses. Clients are founders, operators, and brand leads — intelligent people who appreciate directness and specificity over marketing language.
+${studio} works with growing brands and businesses. Clients are founders, operators, and brand leads. Intelligent people who appreciate directness and specificity over marketing language.
 
 VOICE AND TONE:
 - Direct and confident. No hedging, no qualifiers like "we believe" or "we aim to".
@@ -20,23 +20,24 @@ VOICE AND TONE:
 - Client-centric. Every sentence should be about what the client gets or does, not what ${studio} offers.
 - Short sentences mixed with detailed ones. No passive voice. No jargon.
 - Never use: "digital transformation", "leverage", "world-class", "best-in-class", "seamlessly", "cutting-edge", "holistic", "synergy", "empower", "elevate"
+- NEVER use em dashes (—) or en dashes (–). Use periods, commas, colons, or parentheses instead. This rule is absolute and applies to every field you generate.
 - Do use: specific outcomes, real numbers, honest language about tradeoffs
 
 STYLE REFERENCE (example tone and structure):
 - Tagline: "Two stores. One platform."
-- Hero description: "A complete Shopify migration for Flush and Seawards — ecommerce, point-of-sale, and everything in between."
+- Hero description: "A complete Shopify migration for Flush and Seawards. Ecommerce, point-of-sale, and everything in between."
 - Recommendation: "...proceed with the Total package to ensure the project launches by the end of May. This scope includes the brand, content, and growth components that most retailers ultimately implement after launch, allowing the full system to be designed and built together."
 - Outcome example: "Flush and Seawards live on Shopify (online store and POS) by the end of May"
 
-Notice: taglines are punchy (3-8 words). Descriptions are specific to the actual project, not generic. Outcomes name concrete deliverables with timelines. Pillars use 1-2 word labels with 1-sentence descriptions.
+Notice: taglines are punchy (3 to 8 words). Descriptions are specific to the actual project, not generic. Outcomes name concrete deliverables with timelines. Pillars use 1 to 2 word labels with 1-sentence descriptions.
 
 PROPOSAL STRUCTURE:
-- brief: Your synthesis of the client and project — 2-4 sentences capturing who the client is, what they need, and why
-- title: "[Client Name] — [Project Type]" format
+- brief: Your synthesis of the client and project. 2 to 4 sentences capturing who the client is, what they need, and why.
+- title: "[Client Name] [Project Type]" format (no em dash, no separator)
 - clientName: The client's name. Use "+" for multiple parties (e.g. "Flush + Seawards")
-- tagline: The hero headline. 3-8 words. Punchy, specific to this project.
-- heroDescription: 1-2 sentences below the tagline. Sets the scene.
-- recommendation: Completes "Our recommendation is to..." — steer toward the best approach for the client. Reference specific package names if relevant. 2-4 sentences.
+- tagline: The hero headline. 3 to 8 words. Punchy, specific to this project.
+- heroDescription: 1 to 2 sentences below the tagline. Sets the scene.
+- recommendation: Completes "Our recommendation is to...". Steer toward the best approach for the client. Reference specific package names if relevant. 2 to 4 sentences.
 - summary.studioTagline: One-line description of ${studio}
 - summary.studioDescription: 2-4 sentences about ${studio}'s craft and approach
 - summary.studioDescription2: Optional continuation paragraph
@@ -53,7 +54,7 @@ PROPOSAL STRUCTURE:
 IMPORTANT:
 - Do NOT generate any investment/pricing content. No packages, no add-ons, no pricing. This is set manually.
 - Only include fields you can confidently fill based on the context provided. If the context doesn't mention timelines, make reasonable assumptions based on project scope but flag them in the brief.
-- The brief field is your internal working understanding — be honest about what you know and what you're inferring.`
+- The brief field is your internal working understanding. Be honest about what you know and what you're inferring.`
 }
 
 const TOOL_DEFINITION = {
@@ -70,7 +71,7 @@ const TOOL_DEFINITION = {
       },
       title: {
         type: "string",
-        description: 'Proposal title in "[Client] — [Project Type]" format',
+        description: 'Proposal title in "[Client] [Project Type]" format. Never use em dashes or en dashes.',
       },
       clientName: {
         type: "string",
@@ -87,7 +88,7 @@ const TOOL_DEFINITION = {
       recommendation: {
         type: "string",
         description:
-          'Completes "Our recommendation is to..." — 2-4 sentences steering toward best approach',
+          'Completes "Our recommendation is to...". 2 to 4 sentences steering toward best approach. Never use em dashes.',
       },
       summary: {
         type: "object",
@@ -207,13 +208,31 @@ async function scrapeUrl(url: string): Promise<string> {
 }
 
 // --- Hero image generation ---
+//
+// Debug collector — each function appends what happened so the caller can see
+// in the browser network tab what actually failed when hero images aren't generated.
+type HeroDebug = {
+  geminiAttempted: boolean
+  geminiModel?: string
+  geminiStatus?: number
+  geminiError?: string
+  geminiUploaded?: boolean
+  unsplashAttempted: boolean
+  unsplashStatus?: number
+  unsplashError?: string
+  unsplashKeywords?: string
+}
 
 async function generateHeroWithGemini(
   context: { tagline?: string; clientName?: string; brief?: string },
   proposalId: string,
+  debug: HeroDebug,
 ): Promise<string | undefined> {
   const googleKey = Deno.env.get("GOOGLE_AI_API_KEY")
-  if (!googleKey) return undefined
+  if (!googleKey) {
+    debug.geminiError = "GOOGLE_AI_API_KEY not set"
+    return undefined
+  }
 
   // Build a prompt from proposal context
   const parts = []
@@ -221,13 +240,22 @@ async function generateHeroWithGemini(
   if (context.tagline) parts.push(`Tagline: ${context.tagline}`)
   if (context.clientName) parts.push(`Client: ${context.clientName}`)
 
-  if (parts.length === 0) return undefined
+  if (parts.length === 0) {
+    debug.geminiError = "No context for prompt"
+    return undefined
+  }
 
-  const prompt = `Generate a professional hero image for a business proposal website. ${parts.join(". ")}. Style: modern, clean, editorial photography feel with rich colors and depth. Abstract or atmospheric — no text, no logos, no people's faces. Landscape orientation, 16:9 aspect ratio.`
+  const prompt = `Generate a professional hero image for a business proposal website. ${parts.join(". ")}. Style: modern, clean, editorial photography feel with rich colors and depth. Abstract or atmospheric. No text, no logos, no people's faces. Landscape orientation, 16:9 aspect ratio.`
+
+  // Gemini 2.5 Flash Image (Nanobanana) is the current image-gen model.
+  // The old "gemini-2.0-flash-preview-image-generation" returns 404.
+  const model = "gemini-2.5-flash-image"
+  debug.geminiModel = model
+  debug.geminiAttempted = true
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: "POST",
         headers: {
@@ -243,8 +271,12 @@ async function generateHeroWithGemini(
       },
     )
 
+    debug.geminiStatus = response.status
+
     if (!response.ok) {
-      console.error("Gemini error:", response.status, await response.text())
+      const errText = await response.text()
+      console.error("Gemini error:", response.status, errText)
+      debug.geminiError = errText.slice(0, 500)
       return undefined
     }
 
@@ -270,6 +302,7 @@ async function generateHeroWithGemini(
 
           if (uploadError) {
             console.error("Storage upload error:", uploadError)
+            debug.geminiError = `Upload failed: ${uploadError.message}`
             return undefined
           }
 
@@ -277,21 +310,32 @@ async function generateHeroWithGemini(
             .from("proposal-assets")
             .getPublicUrl(`${proposalId}/hero.png`)
 
+          debug.geminiUploaded = true
           return `${publicUrl}?t=${Date.now()}`
         }
       }
     }
 
+    debug.geminiError = "No inlineData.data in response"
     return undefined
   } catch (err) {
     console.error("Gemini image generation error:", err)
+    debug.geminiError = String(err).slice(0, 500)
     return undefined
   }
 }
 
-async function searchUnsplashImage(query: string): Promise<string | undefined> {
+async function searchUnsplashImage(
+  query: string,
+  debug: HeroDebug,
+): Promise<string | undefined> {
   const unsplashKey = Deno.env.get("UNSPLASH_ACCESS_KEY")
-  if (!unsplashKey) return undefined
+  if (!unsplashKey) {
+    debug.unsplashError = "UNSPLASH_ACCESS_KEY not set"
+    return undefined
+  }
+
+  debug.unsplashAttempted = true
 
   try {
     // Extract 2-3 keywords from context
@@ -302,7 +346,12 @@ async function searchUnsplashImage(query: string): Promise<string | undefined> {
       .slice(0, 3)
       .join(" ")
 
-    if (!keywords.trim()) return undefined
+    debug.unsplashKeywords = keywords
+
+    if (!keywords.trim()) {
+      debug.unsplashError = "No keywords extracted from query"
+      return undefined
+    }
 
     const response = await fetch(
       `https://api.unsplash.com/search/photos?query=${encodeURIComponent(keywords)}&orientation=landscape&per_page=1`,
@@ -311,15 +360,24 @@ async function searchUnsplashImage(query: string): Promise<string | undefined> {
       },
     )
 
+    debug.unsplashStatus = response.status
+
     if (!response.ok) {
-      console.error("Unsplash error:", response.status)
+      const errText = await response.text()
+      console.error("Unsplash error:", response.status, errText)
+      debug.unsplashError = errText.slice(0, 500)
       return undefined
     }
 
     const data = await response.json()
-    return data.results?.[0]?.urls?.regular ?? undefined
+    const url = data.results?.[0]?.urls?.regular
+    if (!url) {
+      debug.unsplashError = `No results for "${keywords}"`
+    }
+    return url ?? undefined
   } catch (err) {
     console.error("Unsplash search error:", err)
+    debug.unsplashError = String(err).slice(0, 500)
     return undefined
   }
 }
@@ -442,7 +500,14 @@ Deno.serve(async (req) => {
 
     const proposalDraft = toolUse.input
 
-    // Generate hero image — try Gemini first, fall back to Unsplash
+    // Generate hero image. Try Gemini first, fall back to Unsplash.
+    // heroDebug is surfaced in the response so the browser network tab can show
+    // exactly why an image wasn't returned (wrong model name, expired API key, etc.)
+    const heroDebug: HeroDebug = {
+      geminiAttempted: false,
+      unsplashAttempted: false,
+    }
+
     if (proposalId) {
       let heroImageUrl: string | undefined
 
@@ -455,6 +520,7 @@ Deno.serve(async (req) => {
             brief: proposalDraft.brief,
           },
           proposalId,
+          heroDebug,
         )
       }
 
@@ -464,17 +530,20 @@ Deno.serve(async (req) => {
           proposalDraft.clientName || clientName,
           proposalDraft.tagline,
         ].filter(Boolean).join(" ")
-        heroImageUrl = await searchUnsplashImage(searchQuery)
+        heroImageUrl = await searchUnsplashImage(searchQuery, heroDebug)
       }
 
       if (heroImageUrl) {
         proposalDraft.heroImageUrl = heroImageUrl
       }
+    } else {
+      heroDebug.geminiError = "proposalId not passed from client"
     }
 
-    return new Response(JSON.stringify(proposalDraft), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    })
+    return new Response(
+      JSON.stringify({ ...proposalDraft, _heroDebug: heroDebug }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    )
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,

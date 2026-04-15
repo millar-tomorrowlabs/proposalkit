@@ -1,9 +1,10 @@
-import { useEffect, useRef, useCallback, useState } from "react"
+import { useEffect, useMemo, useRef, useCallback, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
-import { Send, X, Monitor, Tablet, Smartphone, Undo2, Redo2 } from "lucide-react"
+import { Send, X, Monitor, Tablet, Smartphone, Undo2, Redo2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { friendlyError } from "@/lib/errors"
+import { validateProposalForSend } from "@/lib/proposalValidation"
 import { useAuth } from "@/contexts/AuthContext"
 import { useAccount } from "@/contexts/AccountContext"
 import { useBuilderStore } from "@/store/builderStore"
@@ -78,6 +79,13 @@ const BuilderHome = () => {
     setShowSendModal(true)
     loadSendHistory()
   }, [loadSendHistory])
+
+  // Pre-flight validation: flag empty sections/meta before the user sends.
+  // These are warnings only. The user can still send if they want to.
+  const sendWarnings = useMemo(
+    () => (showSendModal ? validateProposalForSend(proposal) : []),
+    [showSendModal, proposal],
+  )
 
   const handleSendReminder = useCallback((send: typeof sendHistory[0]) => {
     setSendName(send.recipient_name)
@@ -506,6 +514,31 @@ const BuilderHome = () => {
                   </p>
                 </div>
 
+                {sendWarnings.length > 0 && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-600 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-amber-700">
+                          {sendWarnings.length === 1
+                            ? "1 section looks incomplete"
+                            : `${sendWarnings.length} sections look incomplete`}
+                        </p>
+                        <ul className="mt-1.5 space-y-1">
+                          {sendWarnings.map((w, i) => (
+                            <li key={i} className="text-xs text-amber-700/90">
+                              <span className="font-medium">{w.label}:</span> {w.reason}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-2 text-[11px] text-amber-700/70">
+                          You can still send, but the client will see these gaps.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">Recipient name</label>
                   <input
@@ -572,7 +605,7 @@ const BuilderHome = () => {
                     onClick={() => { setSendType("initial"); setSendName(""); setSendEmail(""); setSendMessage("") }}
                     className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    Cancel reminder — send as new
+                    Cancel reminder, send as new
                   </button>
                 )}
               </form>
@@ -650,8 +683,8 @@ const BuilderHome = () => {
                               }`}
                               title={
                                 isPrefetch
-                                  ? `Likely Apple Mail pre-fetch (opened <5s after delivery). Last open: ${s.last_opened_at ? timeSince(s.last_opened_at) : "—"}`
-                                  : `Opened ${s.open_count}× · Last: ${s.last_opened_at ? timeSince(s.last_opened_at) : "—"}`
+                                  ? `Likely Apple Mail pre-fetch (opened <5s after delivery). Last open: ${s.last_opened_at ? timeSince(s.last_opened_at) : "never"}`
+                                  : `Opened ${s.open_count}× · Last: ${s.last_opened_at ? timeSince(s.last_opened_at) : "never"}`
                               }
                             >
                               {isPrefetch ? "Pre-fetch" : `Opened ${s.open_count > 1 ? `${s.open_count}×` : ""}`.trim()}
@@ -660,7 +693,7 @@ const BuilderHome = () => {
                           {s.click_count > 0 && (
                             <span
                               className="ml-1.5 inline-block rounded-full bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-medium text-purple-600"
-                              title={`Clicked ${s.click_count}× · Last: ${s.last_clicked_at ? timeSince(s.last_clicked_at) : "—"}`}
+                              title={`Clicked ${s.click_count}× · Last: ${s.last_clicked_at ? timeSince(s.last_clicked_at) : "never"}`}
                             >
                               {`Clicked ${s.click_count > 1 ? `${s.click_count}×` : ""}`.trim()}
                             </span>

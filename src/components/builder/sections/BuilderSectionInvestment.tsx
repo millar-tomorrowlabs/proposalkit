@@ -297,7 +297,7 @@ const BuilderSectionInvestment = () => {
                                 onClick={() => cycleCell(ai, pkg.id)}
                                 className="text-muted-foreground/40 hover:text-muted-foreground transition-colors"
                               >
-                                —
+                                ·
                               </button>
                             )}
                           </td>

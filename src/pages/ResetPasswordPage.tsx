@@ -46,7 +46,7 @@ const ResetPasswordPage = () => {
     const { error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
-      setError("Failed to update password. The link may have expired — try requesting a new one.")
+      setError("Failed to update password. The link may have expired. Try requesting a new one.")
       setLoading(false)
       return
     }

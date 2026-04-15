@@ -3,14 +3,14 @@ import type { ProposalData } from "@/types/proposal"
 export const flushProposal: ProposalData = {
   id: "",
   slug: "flush",
-  title: "Flush & Seawards — Shopify Migration",
+  title: "Flush & Seawards Shopify Migration",
   clientName: "Flush + Seawards",
   brandColor1: "#c2703c",
   brandColor2: "#3d7a8a",
   heroImageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&q=80",
   tagline: "Two stores. One platform.",
   heroDescription:
-    "A complete Shopify migration for Flush and Seawards — ecommerce, point-of-sale, and everything in between.",
+    "A complete Shopify migration for Flush and Seawards. Ecommerce, point-of-sale, and everything in between.",
   ctaEmail: "millar@tomorrowstudios.io",
   recommendation:
     "is to proceed with the Total package to ensure the project launches by the end of May and is positioned for strong performance through June and July. This scope includes the brand, content, and growth components that most retailers ultimately implement after launch, allowing the full system to be designed and built together from the outset rather than layered on later as separate projects.",
@@ -23,7 +23,7 @@ export const flushProposal: ProposalData = {
     studioDescription:
       "Tomorrow Studios is a design and technology studio exploring the future of commerce. Based in Vancouver, Canada with a globally distributed team, we build modern ecommerce experiences, operational systems, and AI-enabled tools that help brands operate more effectively across digital and retail channels.",
     studioDescription2:
-      "Our work sits at the intersection of design, engineering, and emerging technology — combining deep Shopify expertise with a broader focus on building smarter systems and better customer experiences.",
+      "Our work sits at the intersection of design, engineering, and emerging technology, combining deep Shopify expertise with a broader focus on building smarter systems and better customer experiences.",
     projectOverview:
       "We're migrating Flush and Seawards from an offline register workflow to a modern ecommerce + POS setup.",
     projectDetail:
@@ -77,25 +77,25 @@ export const flushProposal: ProposalData = {
       },
       {
         name: "Catalog & Inventory",
-        duration: "Weeks 2–3",
+        duration: "Weeks 2 to 3",
         description:
           "Load product catalogs from supplier spreadsheets, configure variants and pricing, and begin inventory initialization support.",
       },
       {
         name: "Design & Build",
-        duration: "Weeks 3–5",
+        duration: "Weeks 3 to 5",
         description:
           "Design and develop ecommerce storefronts for Flush and Seawards. Flush brand refresh (Total package). Mobile-first, performance-optimized.",
       },
       {
         name: "POS & Payments",
-        duration: "Weeks 5–6",
+        duration: "Weeks 5 to 6",
         description:
           "Configure Shopify POS for both locations, enable Shopify Payments, and set up hardware. Inventory sync between online and in-store.",
       },
       {
         name: "QA & Go-Live",
-        duration: "Weeks 7–8",
+        duration: "Weeks 7 to 8",
         description:
           "Full testing pass, go-live support, and stabilization. Post-launch monitoring to ensure a smooth transition before peak season.",
       },

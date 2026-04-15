@@ -210,7 +210,7 @@ const CTASection = ({
                   </div>
                 ) : (
                   <div className="rounded-lg border border-dashed border-border bg-card p-4 text-sm text-muted-foreground">
-                    No package selected yet — scroll up to confirm your selection, or submit below to get in touch.
+                    No package selected yet. Scroll up to confirm your selection, or submit below to get in touch.
                   </div>
                 )}
 

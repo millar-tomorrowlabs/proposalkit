@@ -52,7 +52,7 @@ const BuilderSectionContext = () => {
         toast.error(friendlyError(error.message))
       } else {
         setSuggestions(data)
-        toast.success("Suggestions ready — check each section tab.")
+        toast.success("Suggestions ready. Check each section tab.")
       }
     } finally {
       setSuggestionsLoading(false)
@@ -89,7 +89,7 @@ const BuilderSectionContext = () => {
             <textarea
               value={blob.content}
               onChange={(e) => updateBlob(blob.id, "content", e.target.value)}
-              placeholder="Paste context here — emails, call notes, briefs..."
+              placeholder="Paste context here. Emails, call notes, briefs..."
               rows={8}
               className="builder-input resize-none text-xs leading-relaxed"
             />
@@ -106,7 +106,7 @@ const BuilderSectionContext = () => {
 
       {suggestions && (
         <p className="text-xs text-brand-1 font-medium">
-          Suggestions generated — check each section for chips to accept or dismiss.
+          Suggestions generated. Check each section for chips to accept or dismiss.
         </p>
       )}
 

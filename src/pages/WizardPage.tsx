@@ -348,7 +348,7 @@ const WizardPage = () => {
                 to="/builder"
                 className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
               >
-                Skip — start blank →
+                Skip, start blank →
               </Link>
             </div>
           </div>

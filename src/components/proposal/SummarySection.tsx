@@ -51,7 +51,7 @@ const SummarySection = ({ data, studioName }: Props) => {
           tag="p"
           className="scroll-reveal delay-100 mt-10 text-lg leading-relaxed text-muted-foreground md:text-xl"
         />
-        <AskAIGhost value={data.projectOverview} prompt="Write a project overview paragraph — describe the client's situation, the opportunity, and what this project will achieve." />
+        <AskAIGhost value={data.projectOverview} prompt="Write a project overview paragraph. Describe the client's situation, the opportunity, and what this project will achieve. Never use em dashes." />
 
         <InlineEditable
           fieldPath="summary.projectDetail"
