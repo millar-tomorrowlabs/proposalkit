@@ -137,7 +137,7 @@ async function main() {
 
   // 2. Edge functions — POST {} with session token. Expect function-level 4xx, never gateway 401.
   // chat-edit-proposal is deprecated — replaced by api/chat.ts Vercel Edge Function.
-  // Not listed here; should be deleted from Supabase in a follow-up.
+  // track-email-open was deleted — Resend webhooks now handle open/click tracking.
   const functions = [
     "invite-member",
     "send-proposal",
@@ -145,9 +145,9 @@ async function main() {
     "generate-proposal",
     "generate-suggestions",
     "track-view",
-    "track-email-open",
     "set-proposal-password",
     "verify-proposal-password",
+    "resend-webhook",
   ]
 
   for (const fn of functions) {

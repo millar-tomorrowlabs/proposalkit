@@ -49,7 +49,7 @@ const BuilderHome = () => {
   const [sendMessage, setSendMessage] = useState("")
   const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
   const [sendType, setSendType] = useState<"initial" | "reminder">("initial")
-  const [sendHistory, setSendHistory] = useState<Array<{ id: string; recipient_name: string; recipient_email: string; subject: string; send_type: string; sent_at: string; delivery_status: string | null; delivered_at: string | null; bounced_at: string | null }>>([])
+  const [sendHistory, setSendHistory] = useState<Array<{ id: string; recipient_name: string; recipient_email: string; subject: string; send_type: string; sent_at: string; delivery_status: string | null; delivered_at: string | null; bounced_at: string | null; opened_at: string | null; last_opened_at: string | null; open_count: number; clicked_at: string | null; last_clicked_at: string | null; click_count: number }>>([])
   const [, setSendHistoryLoading] = useState(false)
 
   // Preview viewport
@@ -65,7 +65,7 @@ const BuilderHome = () => {
     setSendHistoryLoading(true)
     const { data } = await supabase
       .from("proposal_sends")
-      .select("id, recipient_name, recipient_email, subject, send_type, sent_at, delivery_status, delivered_at, bounced_at")
+      .select("id, recipient_name, recipient_email, subject, send_type, sent_at, delivery_status, delivered_at, bounced_at, opened_at, last_opened_at, open_count, clicked_at, last_clicked_at, click_count")
       .eq("proposal_id", proposal.id)
       .order("sent_at", { ascending: false })
     setSendHistory(data ?? [])
@@ -584,11 +584,7 @@ const BuilderHome = () => {
                 <h4 className="text-xs font-medium text-muted-foreground mb-2">Send history</h4>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {sendHistory.map((s) => {
-                    // Delivery status badge styling.
-                    // null / "sent" / "queued" = still in flight, gray
-                    // "delivered" = green
-                    // "delivery_delayed" = amber
-                    // "bounced" / "failed" / "complained" = red
+                    // Delivery status badge.
                     const status = s.delivery_status || "sent"
                     const badge = status === "delivered"
                       ? { label: "Delivered", classes: "bg-emerald-500/10 text-emerald-600" }
@@ -601,6 +597,29 @@ const BuilderHome = () => {
                       : status === "complained"
                       ? { label: "Spam", classes: "bg-red-500/10 text-red-600" }
                       : { label: "Sent", classes: "bg-muted text-muted-foreground" }
+
+                    // Apple Mail Privacy Protection heuristic: if the first open
+                    // happened within 5 seconds of delivery, it's almost certainly
+                    // a pre-fetch (Apple Mail loads all remote content on its proxy
+                    // as soon as the email arrives). Flag these so users don't
+                    // treat them as real engagement.
+                    const isPrefetch = (() => {
+                      if (!s.opened_at || !s.delivered_at) return false
+                      const delta = new Date(s.opened_at).getTime() - new Date(s.delivered_at).getTime()
+                      return delta >= 0 && delta < 5000
+                    })()
+
+                    // Format "time since" for tooltips.
+                    const timeSince = (iso: string) => {
+                      const ms = Date.now() - new Date(iso).getTime()
+                      const minutes = Math.floor(ms / 60000)
+                      if (minutes < 1) return "just now"
+                      if (minutes < 60) return `${minutes}m ago`
+                      const hours = Math.floor(minutes / 60)
+                      if (hours < 24) return `${hours}h ago`
+                      const days = Math.floor(hours / 24)
+                      return `${days}d ago`
+                    }
 
                     return (
                       <div key={s.id} className="flex items-center justify-between text-xs">
@@ -622,6 +641,30 @@ const BuilderHome = () => {
                           >
                             {badge.label}
                           </span>
+                          {s.open_count > 0 && (
+                            <span
+                              className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                                isPrefetch
+                                  ? "bg-muted text-muted-foreground"
+                                  : "bg-blue-500/10 text-blue-600"
+                              }`}
+                              title={
+                                isPrefetch
+                                  ? `Likely Apple Mail pre-fetch (opened <5s after delivery). Last open: ${s.last_opened_at ? timeSince(s.last_opened_at) : "—"}`
+                                  : `Opened ${s.open_count}× · Last: ${s.last_opened_at ? timeSince(s.last_opened_at) : "—"}`
+                              }
+                            >
+                              {isPrefetch ? "Pre-fetch" : `Opened ${s.open_count > 1 ? `${s.open_count}×` : ""}`.trim()}
+                            </span>
+                          )}
+                          {s.click_count > 0 && (
+                            <span
+                              className="ml-1.5 inline-block rounded-full bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-medium text-purple-600"
+                              title={`Clicked ${s.click_count}× · Last: ${s.last_clicked_at ? timeSince(s.last_clicked_at) : "—"}`}
+                            >
+                              {`Clicked ${s.click_count > 1 ? `${s.click_count}×` : ""}`.trim()}
+                            </span>
+                          )}
                         </div>
                         {sendStatus !== "sent" && (
                           <button

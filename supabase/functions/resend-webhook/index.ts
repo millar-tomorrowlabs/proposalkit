@@ -11,7 +11,7 @@
  *   1. Go to https://resend.com/webhooks → Add endpoint
  *   2. URL: https://nkygheptubvogevezpap.supabase.co/functions/v1/resend-webhook
  *   3. Select events: email.sent, email.delivered, email.delivery_delayed,
- *      email.bounced, email.complained
+ *      email.bounced, email.complained, email.failed, email.opened, email.clicked
  *   4. Copy the "Signing secret" (starts with "whsec_...")
  *   5. Add to Supabase secrets:
  *      npx supabase secrets set RESEND_WEBHOOK_SECRET=whsec_... --project-ref nkygheptubvogevezpap
@@ -66,7 +66,7 @@ async function verifySvixSignature(
   }
 }
 
-// Map Resend event types to our delivery_status column values.
+// Delivery events map to our delivery_status column.
 function statusForEvent(eventType: string): string | null {
   switch (eventType) {
     case "email.sent": return "sent"
@@ -75,10 +75,16 @@ function statusForEvent(eventType: string): string | null {
     case "email.bounced": return "bounced"
     case "email.complained": return "complained"
     case "email.failed": return "failed"
-    // email.opened and email.clicked are engagement events, not delivery
-    // events. We don't track them here — see the separate tracking pixel.
     default: return null
   }
+}
+
+// Engagement events (opens, clicks) go through dedicated RPCs that atomically
+// increment counters and update first/last timestamps.
+function isEngagementEvent(eventType: string): "open" | "click" | null {
+  if (eventType === "email.opened") return "open"
+  if (eventType === "email.clicked") return "click"
+  return null
 }
 
 Deno.serve(async (req) => {
@@ -150,6 +156,33 @@ Deno.serve(async (req) => {
     })
   }
 
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  )
+
+  // Engagement events: opens and clicks get atomic counter updates via RPC.
+  const engagement = isEngagementEvent(eventType)
+  if (engagement === "open") {
+    const { error: rpcError } = await supabase.rpc("record_proposal_send_open", {
+      p_resend_id: emailId,
+    })
+    if (rpcError) console.error("record_proposal_send_open failed:", rpcError)
+    return new Response(JSON.stringify({ received: true, type: "open" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    })
+  }
+  if (engagement === "click") {
+    const { error: rpcError } = await supabase.rpc("record_proposal_send_click", {
+      p_resend_id: emailId,
+    })
+    if (rpcError) console.error("record_proposal_send_click failed:", rpcError)
+    return new Response(JSON.stringify({ received: true, type: "click" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    })
+  }
+
+  // Delivery events: update the delivery_status column.
   const newStatus = statusForEvent(eventType)
   if (!newStatus) {
     // Unknown event type — acknowledge but skip the update.
@@ -157,11 +190,6 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
-
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  )
 
   const now = new Date().toISOString()
   const update: Record<string, unknown> = {
