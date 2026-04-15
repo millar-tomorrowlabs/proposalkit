@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="400" height="400">
+  <!--
+    Proposl seal — v2 (Cormorant text approximation)
+    ─────────────────────────────────────────────────
+    Same concept as v1, but this version uses actual Cormorant
+    Garamond letters via SVG <text> elements.
+
+    LIMITATION: SVG text can't be merged into a true ligature
+    without outlining paths in a vector editor. So this version
+    overlays a `p` and an `l` and hopes they line up enough to
+    show the idea. A real ligature needs Figma/Illustrator +
+    pen-tool surgery on outlined letters.
+
+    Viewing: needs internet access for Google Fonts to load.
+  -->
+
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&amp;display=swap');
+      .letter { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500; fill: #2C4A3F; }
+    </style>
+  </defs>
+
+  <!-- Cream background -->
+  <rect width="200" height="200" fill="#FAF8F3"/>
+
+  <!-- Seal boundary -->
+  <circle cx="100" cy="100" r="72" fill="none" stroke="#2C4A3F" stroke-width="3"/>
+
+  <!--
+    The two letters overlaid.
+    The `l` is positioned first with its stem where the `p`'s
+    stem will be. Then the `p` is layered on top. Because they
+    share a stem position, the overlap looks like a ligature
+    (even though it's really just two stacked letters).
+
+    Font size, x, y tuned empirically — adjust in a vector editor.
+  -->
+  <text x="100" y="132" class="letter"
+        font-size="140" text-anchor="middle"
+        letter-spacing="-30">pl</text>
+
+  <!--
+    Why letter-spacing is so aggressive:
+    Cormorant's natural `pl` kerning puts a visible gap between
+    the letters. We're pulling them together until the l's stem
+    visually overlaps the p's stem. This isn't a real ligature;
+    it's a crude fake to show the concept. A real mark would
+    outline both letters, delete one of the two stems, and
+    stitch the remaining paths together.
+  -->
+</svg>

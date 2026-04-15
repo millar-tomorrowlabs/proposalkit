@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { lazy, Suspense } from "react"
 import { Toaster } from "sonner"
 import AuthProvider from "@/contexts/AuthContext"
@@ -8,6 +8,7 @@ import ProposalsDashboard from "@/pages/ProposalsDashboard"
 import BuilderHome from "@/pages/BuilderHome"
 import WizardPage from "@/pages/WizardPage"
 import LoginPage from "@/pages/LoginPage"
+import LandingPage from "@/pages/LandingPage"
 import NotFound from "@/pages/NotFound"
 
 // Lazy-load pages that are not needed on initial load
@@ -30,6 +31,7 @@ function App() {
       <Suspense fallback={null}>
         <Routes>
           {/* Public */}
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -42,7 +44,6 @@ function App() {
 
             {/* Account-scoped */}
             <Route element={<AccountProvider />}>
-              <Route path="/" element={<Navigate to="/proposals" replace />} />
               <Route path="/proposals" element={<ProposalsDashboard />} />
               <Route path="/new" element={<WizardPage />} />
               <Route path="/builder" element={<BuilderHome />} />

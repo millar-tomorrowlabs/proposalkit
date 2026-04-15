@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 220" width="900" height="330">
+  <!--
+    Proposl seal — scale test
+    ──────────────────────────
+    The same geometric mark rendered at five sizes, largest to
+    smallest. The smallest is 16px (favicon). The rightmost
+    target: the mark should still read as distinctive even when
+    no individual letterform is recognizable.
+
+    Rule of thumb: if you can still tell the difference between
+    "the Proposl mark" and "a generic circle logo" at 16px,
+    the mark passes.
+  -->
+
+  <rect width="600" height="220" fill="#FAF8F3"/>
+
+  <!-- 160px -->
+  <g transform="translate(20, 30) scale(0.8)">
+    <circle cx="100" cy="100" r="72" fill="none" stroke="#2C4A3F" stroke-width="3"/>
+    <line x1="92" y1="42" x2="92" y2="158" stroke="#2C4A3F" stroke-width="9" stroke-linecap="square"/>
+    <path d="M 92 85 Q 130 85, 130 107 Q 130 130, 92 130" fill="none" stroke="#2C4A3F" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="100" y="200" font-family="IBM Plex Mono, monospace" font-size="9" fill="#8E8880" text-anchor="middle">160PX</text>
+
+  <!-- 80px -->
+  <g transform="translate(200, 70) scale(0.4)">
+    <circle cx="100" cy="100" r="72" fill="none" stroke="#2C4A3F" stroke-width="5"/>
+    <line x1="92" y1="42" x2="92" y2="158" stroke="#2C4A3F" stroke-width="14" stroke-linecap="square"/>
+    <path d="M 92 85 Q 130 85, 130 107 Q 130 130, 92 130" fill="none" stroke="#2C4A3F" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="240" y="200" font-family="IBM Plex Mono, monospace" font-size="9" fill="#8E8880" text-anchor="middle">80PX</text>
+
+  <!-- 48px -->
+  <g transform="translate(300, 86) scale(0.24)">
+    <circle cx="100" cy="100" r="72" fill="none" stroke="#2C4A3F" stroke-width="8"/>
+    <line x1="92" y1="42" x2="92" y2="158" stroke="#2C4A3F" stroke-width="22" stroke-linecap="square"/>
+    <path d="M 92 85 Q 130 85, 130 107 Q 130 130, 92 130" fill="none" stroke="#2C4A3F" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="324" y="200" font-family="IBM Plex Mono, monospace" font-size="9" fill="#8E8880" text-anchor="middle">48PX</text>
+
+  <!-- 32px -->
+  <g transform="translate(360, 94) scale(0.16)">
+    <circle cx="100" cy="100" r="72" fill="none" stroke="#2C4A3F" stroke-width="12"/>
+    <line x1="92" y1="42" x2="92" y2="158" stroke="#2C4A3F" stroke-width="32" stroke-linecap="square"/>
+    <path d="M 92 85 Q 130 85, 130 107 Q 130 130, 92 130" fill="none" stroke="#2C4A3F" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="376" y="200" font-family="IBM Plex Mono, monospace" font-size="9" fill="#8E8880" text-anchor="middle">32PX</text>
+
+  <!-- 16px (favicon) -->
+  <g transform="translate(420, 102) scale(0.08)">
+    <circle cx="100" cy="100" r="72" fill="none" stroke="#2C4A3F" stroke-width="20"/>
+    <line x1="92" y1="42" x2="92" y2="158" stroke="#2C4A3F" stroke-width="50" stroke-linecap="square"/>
+    <path d="M 92 85 Q 130 85, 130 107 Q 130 130, 92 130" fill="none" stroke="#2C4A3F" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="428" y="200" font-family="IBM Plex Mono, monospace" font-size="9" fill="#8E8880" text-anchor="middle">16PX</text>
+
+  <!-- Caption -->
+  <text x="510" y="90" font-family="IBM Plex Mono, monospace" font-size="8" fill="#57524B">
+    <tspan x="500" dy="0">DOES THE MARK SURVIVE</tspan>
+    <tspan x="500" dy="11">AT 16PX? IF YES, THE</tspan>
+    <tspan x="500" dy="11">CONCEPT IS STRUCTURALLY</tspan>
+    <tspan x="500" dy="11">SOUND. DETAILS CAN BE</tspan>
+    <tspan x="500" dy="11">REFINED IN FIGMA.</tspan>
+  </text>
+</svg>
