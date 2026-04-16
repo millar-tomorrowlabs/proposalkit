@@ -130,6 +130,14 @@ export interface ProposalMeta {
   brandColor1: string
   brandColor2: string
   heroImageUrl?: string
+  /**
+   * AI-authored keyword string used by /api/hero-image when sourcing an
+   * Unsplash background during v1 generation. The AI teases this out of
+   * the user during intake (visual direction / mood / vibe) so we can
+   * search for something more evocative than just "client name + tagline".
+   * Never rendered in the proposal; internal only.
+   */
+  heroImageQuery?: string
   clientLogoUrl?: string
   heroLogoLarge?: boolean // show large logo in hero instead of client name text
   tagline: string

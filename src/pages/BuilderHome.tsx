@@ -235,7 +235,12 @@ const BuilderHome = () => {
         const hasContent = !!(after.tagline && after.tagline.trim())
         const missingHero = !after.heroImageUrl
         if (hasContent && missingHero) {
-          const query = `${after.clientName ?? ""} ${after.tagline ?? ""}`.trim()
+          // Prefer the AI's intake-derived visual direction if it set one.
+          // Fall back to clientName + tagline so we always have SOMETHING
+          // to search on.
+          const query = (after.heroImageQuery && after.heroImageQuery.trim())
+            ? after.heroImageQuery.trim()
+            : `${after.clientName ?? ""} ${after.tagline ?? ""}`.trim()
           fetchHeroImage(query).then((url) => {
             if (url) useBuilderStore.getState().updateField("heroImageUrl", url)
           })
