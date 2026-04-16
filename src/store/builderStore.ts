@@ -69,6 +69,10 @@ interface BuilderState {
   // Edits extracted from UIMessage tool parts (indexed by message ID)
   _uiChatEdits: Record<string, ProposedEdit[]>
 
+  // Document-first editor UI
+  composerVisible: boolean
+  viewport: "desktop" | "tablet" | "mobile"
+
   // Chat
   chatMessages: ChatMessage[]
   chatLoading: boolean
@@ -97,6 +101,8 @@ interface BuilderState {
   applyChatEdits: (messageId: string) => void
   registerChatEdits: (messageId: string, edits: ProposedEdit[]) => void
   setChatLoading: (loading: boolean) => void
+  setComposerVisible: (visible: boolean) => void
+  setViewport: (viewport: "desktop" | "tablet" | "mobile") => void
   setChatPanelOpen: (open: boolean) => void
   setPendingChatPrompt: (prompt: string | null) => void
   syncChatFromUIMessages: (uiMessages: UIMessage[]) => void
@@ -117,6 +123,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   redoStack: [],
   appliedEditIds: new Set(),
   _uiChatEdits: {},
+  composerVisible: true,
+  viewport: "desktop" as const,
   chatMessages: [],
   chatLoading: false,
   chatPanelOpen: false,
@@ -257,6 +265,10 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     }),
 
   setChatLoading: (chatLoading) => set({ chatLoading }),
+
+  setComposerVisible: (composerVisible) => set({ composerVisible }),
+
+  setViewport: (viewport) => set({ viewport }),
 
   setChatPanelOpen: (chatPanelOpen) => set({ chatPanelOpen }),
 
