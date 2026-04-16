@@ -1,6 +1,8 @@
-import { useEffect, useRef, useCallback, useState } from "react"
+import { useEffect, useRef, useCallback, useState, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
+import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
 import { supabase } from "@/lib/supabase"
 import { friendlyError } from "@/lib/errors"
 import { useAuth } from "@/contexts/AuthContext"
@@ -23,7 +25,7 @@ const ALL_SECTIONS: SectionKey[] = ["summary", "scope", "timeline", "investment"
 
 const BuilderHome = () => {
   const { id } = useParams<{ id?: string }>()
-  const { userId } = useAuth()
+  const { userId, session } = useAuth()
   const { account } = useAccount()
   const navigate = useNavigate()
   const {
@@ -37,9 +39,6 @@ const BuilderHome = () => {
     initExisting,
     contextBlobs,
     updateField,
-    chatMessages,
-    chatLoading,
-    addChatMessage,
     composerVisible,
     setComposerVisible,
     viewport,
@@ -55,6 +54,61 @@ const BuilderHome = () => {
 
   // Loading state for existing proposals
   const [isLoading, setIsLoading] = useState(!!id)
+
+  // ── AI chat (replaces deleted ChatPanel) ────────────────────────────────
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        headers: async () => {
+          const { data } = await supabase.auth.getSession()
+          const token = data.session?.access_token ?? session.access_token
+          return { Authorization: `Bearer ${token}` }
+        },
+        body: {
+          proposal,
+          accountContext: {
+            studioName: account.studioName,
+            studioDescription: account.aiStudioDescription,
+            studioTagline: account.aiStudioTagline,
+            brief: proposal.brief,
+          },
+        },
+      }),
+    [proposal, account, session],
+  )
+
+  const {
+    messages: uiMessages,
+    sendMessage,
+    status: chatStatus,
+  } = useChat({
+    id: `chat-${proposal.id}`,
+    transport,
+    onError: (err) => {
+      console.error("Chat error:", err)
+      toast.error("AI request failed. Please try again.")
+    },
+  })
+
+  const isStreaming = chatStatus === "streaming" || chatStatus === "submitted"
+
+  // Sync UIMessages back to the store so they persist via the autosave path
+  useEffect(() => {
+    if (uiMessages.length > 0 && chatStatus === "ready") {
+      useBuilderStore.getState().syncChatFromUIMessages(uiMessages)
+    }
+  }, [uiMessages, chatStatus])
+
+  // Auto-send pending chat prompt (triggered by AskAIGhost buttons)
+  useEffect(() => {
+    if (pendingChatPrompt && !isStreaming) {
+      const prompt = pendingChatPrompt
+      setPendingChatPrompt(null)
+      setComposerVisible(true)
+      setTimeout(() => sendMessage({ text: prompt }), 0)
+    }
+  }, [pendingChatPrompt, isStreaming, setPendingChatPrompt, setComposerVisible, sendMessage])
 
   // Document-first editor state
   const [previewMode, setPreviewMode] = useState(false)
@@ -150,18 +204,21 @@ const BuilderHome = () => {
     }
   }, [id])
 
-  // Track when AI produces a response -- save a snapshot before and offer revert
-  const prevMessageCount = useRef(chatMessages.length)
+  // Track when AI produces a NEW response from the live chat (not initial load)
+  // and save a snapshot before, so revert is available for that change.
+  // We only set canRevert true when uiMessages grows from a real user→AI roundtrip
+  // in this session — never just because the loaded chat history ends with an
+  // assistant message.
+  const prevUIMessageCount = useRef(0)
   useEffect(() => {
-    if (chatMessages.length > prevMessageCount.current) {
-      const latest = chatMessages[chatMessages.length - 1]
-      if (latest.role === "assistant") {
-        saveSnapshot("ai-edit")
-        setCanRevert(true)
+    if (uiMessages.length > prevUIMessageCount.current && prevUIMessageCount.current > 0) {
+      const latest = uiMessages[uiMessages.length - 1]
+      if (latest.role === "assistant" && chatStatus === "ready") {
+        saveSnapshot("ai-edit").then(() => setCanRevert(true))
       }
     }
-    prevMessageCount.current = chatMessages.length
-  }, [chatMessages.length, saveSnapshot])
+    prevUIMessageCount.current = uiMessages.length
+  }, [uiMessages.length, chatStatus, saveSnapshot])
 
   // Debounce preview flush
   useEffect(() => {
@@ -328,23 +385,17 @@ const BuilderHome = () => {
         {/* Floating composer */}
         {!previewMode && (
           <FloatingComposer
-            messages={chatMessages.map((m) => ({
-              id: m.id,
-              role: m.role,
-              content: m.content,
-              createdAt: m.createdAt,
-            }))}
-            loading={chatLoading}
-            onSend={(text) => {
-              // For now, just add user message to store
-              // AI integration will be connected in a later task
-              addChatMessage({
-                id: crypto.randomUUID(),
-                role: "user",
-                content: text,
+            messages={uiMessages.map((m) => {
+              const textParts = m.parts.filter((p) => p.type === "text") as Array<{ type: "text"; text: string }>
+              return {
+                id: m.id,
+                role: m.role as "user" | "assistant",
+                content: textParts.map((p) => p.text).join(""),
                 createdAt: new Date().toISOString(),
-              })
-            }}
+              }
+            })}
+            loading={isStreaming}
+            onSend={(text) => sendMessage({ text })}
             onAttach={() => setShowContext(true)}
             onRevert={revertToLatestSnapshot}
             canRevert={canRevert}
