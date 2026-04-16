@@ -165,15 +165,20 @@ const BuilderHome = () => {
       data: proposal,
       trigger,
     })
-    // Prune old snapshots (keep latest 50)
-    const { data: all } = await supabase
-      .from("proposal_snapshots")
-      .select("id")
-      .eq("proposal_id", proposal.id)
-      .order("created_at", { ascending: true })
-    if (all && all.length > 50) {
-      const toDelete = all.slice(0, all.length - 50).map((s: { id: string }) => s.id)
-      await supabase.from("proposal_snapshots").delete().in("id", toDelete)
+    // Prune to the latest 50 snapshots. We only run this occasionally
+    // (1-in-10 saves) because it's a light maintenance op, not a
+    // consistency requirement — a few extra rows don't hurt, and we
+    // avoid the SELECT+DELETE overhead on every AI edit.
+    if (Math.random() < 0.1) {
+      const { data: all } = await supabase
+        .from("proposal_snapshots")
+        .select("id")
+        .eq("proposal_id", proposal.id)
+        .order("created_at", { ascending: false })
+      if (all && all.length > 50) {
+        const toDelete = all.slice(50).map((s: { id: string }) => s.id)
+        await supabase.from("proposal_snapshots").delete().in("id", toDelete)
+      }
     }
   }, [proposal])
 

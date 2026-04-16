@@ -3,18 +3,20 @@ import { lazy, Suspense } from "react"
 import { Toaster } from "sonner"
 import AuthProvider from "@/contexts/AuthContext"
 import AccountProvider from "@/contexts/AccountContext"
-import ProposalViewer from "@/pages/ProposalViewer"
-import ProposalsDashboard from "@/pages/ProposalsDashboard"
-import ProposalDetailPage from "@/pages/ProposalDetailPage"
-import DeletedProposalsPage from "@/pages/DeletedProposalsPage"
-import BuilderHome from "@/pages/BuilderHome"
-import NewProposalRedirect from "@/pages/NewProposalRedirect"
-import LoginPage from "@/pages/LoginPage"
 import LandingPage from "@/pages/LandingPage"
+import LoginPage from "@/pages/LoginPage"
 import NotFound from "@/pages/NotFound"
-import SettingsShell from "@/pages/SettingsShell"
 
-// Lazy-load pages that are not needed on initial load
+// All authenticated / high-weight pages are lazy so a cold visit to the
+// landing page doesn't pay for the builder, AI SDK, Supabase chain, or
+// the editor's proposal section components up front.
+const ProposalViewer = lazy(() => import("@/pages/ProposalViewer"))
+const ProposalsDashboard = lazy(() => import("@/pages/ProposalsDashboard"))
+const ProposalDetailPage = lazy(() => import("@/pages/ProposalDetailPage"))
+const DeletedProposalsPage = lazy(() => import("@/pages/DeletedProposalsPage"))
+const BuilderHome = lazy(() => import("@/pages/BuilderHome"))
+const NewProposalRedirect = lazy(() => import("@/pages/NewProposalRedirect"))
+const SettingsShell = lazy(() => import("@/pages/SettingsShell"))
 const SignupPage = lazy(() => import("@/pages/SignupPage"))
 const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"))
 const InviteAcceptPage = lazy(() => import("@/pages/InviteAcceptPage"))
