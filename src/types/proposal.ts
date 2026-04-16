@@ -181,3 +181,31 @@ export interface ProposalData extends ProposalMeta {
   }
   investment: InvestmentConfig
 }
+
+export interface ProposalContextSource {
+  id: string
+  proposalId: string
+  sourceType: "file" | "url" | "paste"
+  name: string
+  url?: string
+  fileSize?: number
+  extractedText: string
+  createdAt: string
+}
+
+export interface ProposalMessage {
+  id: string
+  proposalId: string
+  role: "user" | "assistant"
+  content: string
+  sectionContext?: string
+  createdAt: string
+}
+
+export interface ProposalSnapshot {
+  id: string
+  proposalId: string
+  data: ProposalData
+  trigger: string
+  createdAt: string
+}
