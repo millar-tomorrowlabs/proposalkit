@@ -47,6 +47,8 @@ const BuilderHome = () => {
     setViewport,
     pendingChatPrompt,
     setPendingChatPrompt,
+    autoSendChatPrompt,
+    setAutoSendChatPrompt,
   } = useBuilderStore()
 
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -139,15 +141,17 @@ const BuilderHome = () => {
 
   const isStreaming = chatStatus === "streaming" || chatStatus === "submitted"
 
-  // Auto-send pending chat prompt (triggered by AskAIGhost buttons)
+  // Auto-send chat prompt (triggered by AskAIGhost buttons and Skip-intake).
+  // Separate from pendingChatPrompt so the text doesn't also get stuffed into
+  // the composer input — this path bypasses the input entirely.
   useEffect(() => {
-    if (pendingChatPrompt && !isStreaming) {
-      const prompt = pendingChatPrompt
-      setPendingChatPrompt(null)
+    if (autoSendChatPrompt && !isStreaming) {
+      const prompt = autoSendChatPrompt
+      setAutoSendChatPrompt(null)
       setComposerVisible(true)
       setTimeout(() => sendMessage({ text: prompt }), 0)
     }
-  }, [pendingChatPrompt, isStreaming, setPendingChatPrompt, setComposerVisible, sendMessage])
+  }, [autoSendChatPrompt, isStreaming, setAutoSendChatPrompt, setComposerVisible, sendMessage])
 
   // Document-first editor state
   const [previewMode, setPreviewMode] = useState(false)
@@ -425,7 +429,7 @@ const BuilderHome = () => {
         focusComposer: (prefill?: string) => {
           setComposerVisible(true)
           if (prefill) {
-            setPendingChatPrompt(prefill)
+            setAutoSendChatPrompt(prefill)
           }
         },
       }}
@@ -471,7 +475,7 @@ const BuilderHome = () => {
               contextCount={contextSources.length}
               onSkip={() => {
                 setComposerVisible(true)
-                setPendingChatPrompt(
+                setAutoSendChatPrompt(
                   "Skip the questions and draft v1 with whatever you have.",
                 )
               }}

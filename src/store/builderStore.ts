@@ -78,7 +78,17 @@ interface BuilderState {
   chatMessages: ChatMessage[]
   chatLoading: boolean
   chatPanelOpen: boolean
+  /**
+   * Prefill the composer input with text so the user can review/edit/send.
+   * FloatingComposer consumes this and calls onClearPendingPrompt when done.
+   */
   pendingChatPrompt: string | null
+  /**
+   * Fire-and-forget: send a message immediately without routing through the
+   * composer input. Used by "Skip intake" and similar shortcuts where we
+   * don't want the prompt text to sit in the textbox afterward.
+   */
+  autoSendChatPrompt: string | null
 
   // Actions
   setProposal: (proposal: ProposalData) => void
@@ -106,6 +116,7 @@ interface BuilderState {
   setViewport: (viewport: "desktop" | "tablet" | "mobile") => void
   setChatPanelOpen: (open: boolean) => void
   setPendingChatPrompt: (prompt: string | null) => void
+  setAutoSendChatPrompt: (prompt: string | null) => void
   syncChatFromUIMessages: (uiMessages: UIMessage[]) => void
 }
 
@@ -130,6 +141,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   chatLoading: false,
   chatPanelOpen: false,
   pendingChatPrompt: null,
+  autoSendChatPrompt: null,
 
   setProposal: (proposal) => set({ proposal, previewProposal: proposal }),
 
@@ -274,6 +286,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   setChatPanelOpen: (chatPanelOpen) => set({ chatPanelOpen }),
 
   setPendingChatPrompt: (pendingChatPrompt) => set({ pendingChatPrompt }),
+
+  setAutoSendChatPrompt: (autoSendChatPrompt) => set({ autoSendChatPrompt }),
 
   // Sync UIMessage[] from useChat hook to legacy chatMessages for DB persistence
   syncChatFromUIMessages: (uiMessages) => {
