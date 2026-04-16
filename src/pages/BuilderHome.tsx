@@ -16,6 +16,7 @@ import FloatingComposer from "@/components/builder/FloatingComposer"
 import SettingsPopover from "@/components/builder/SettingsPopover"
 import ContextDialog from "@/components/builder/ContextDialog"
 import HistoryPopover from "@/components/builder/HistoryPopover"
+import DraftingReveal from "@/components/builder/DraftingReveal"
 import { VIEWPORT_WIDTHS } from "@/components/builder/ViewportSwitcher"
 import { stripStreamingEditsBlock } from "@/lib/proposalEdits"
 import { fetchHeroImage } from "@/lib/heroImage"
@@ -170,6 +171,11 @@ const BuilderHome = () => {
   // Snapshot-based undo for AI edits
   const [canRevert, setCanRevert] = useState(false)
 
+  // Drafting reveal overlay — shown between user confirming a v1 draft
+  // and the first edits landing. Only triggers on the empty → populated
+  // transition (first draft); refinement edits don't get the ceremony.
+  const [isDrafting, setIsDrafting] = useState(false)
+
   const saveSnapshot = useCallback(async (trigger: string) => {
     if (!proposal.id) return
     await supabase.from("proposal_snapshots").insert({
@@ -231,6 +237,38 @@ const BuilderHome = () => {
     }
   }, [proposal.id])
 
+  // DraftingReveal trigger: the moment the AI starts its reply with
+  // "Drafting now." during streaming, flip into the reveal overlay so the
+  // user sees ceremony instead of a stalled textarea. Only fires for v1
+  // drafts (when the proposal is still effectively empty). Safety net: a
+  // long-timer fallback so we never get stuck in the overlay if edits
+  // fail to arrive.
+  useEffect(() => {
+    if (isDrafting || uiMessages.length === 0) return
+    const last = uiMessages[uiMessages.length - 1]
+    if (last.role !== "assistant") return
+    const text = last.parts
+      ?.map((p) => (p.type === "text" ? p.text : ""))
+      .join("") ?? ""
+    if (!/drafting now/i.test(text)) return
+    const p = useBuilderStore.getState().proposal
+    const isEmpty =
+      (!p.tagline || p.tagline.trim() === "") &&
+      (p.scope?.outcomes?.length ?? 0) === 0 &&
+      (p.investment?.packages?.length ?? 0) === 0
+    if (!isEmpty) return
+    setIsDrafting(true)
+  }, [uiMessages, isDrafting])
+
+  // Safety fallback: if the drafting reveal stays up longer than 90s (AI
+  // errored, edits block malformed, network stall) drop it so the user
+  // isn't stuck staring at the mark.
+  useEffect(() => {
+    if (!isDrafting) return
+    const t = setTimeout(() => setIsDrafting(false), 90_000)
+    return () => clearTimeout(t)
+  }, [isDrafting])
+
   // Sync UIMessages back to the store + auto-apply any new AI edits.
   // The store extracts edits both from tool parts AND from `proposal-edits`
   // code blocks the AI streams in text. When a fresh assistant message
@@ -258,6 +296,11 @@ const BuilderHome = () => {
           // alive without feeling sluggish for a typical v1 (10-15 edits).
           useBuilderStore.getState().applyChatEdits(m.id, { staggerMs: 120 })
         }
+        // Exit the drafting reveal the instant stagger begins. The overlay
+        // backdrop takes 700ms to fade, during which the first ~5 staggered
+        // edits land — so the document materialises behind the dissolving
+        // cream. Mark finishes migrating to the top-bar at ~800ms.
+        setIsDrafting(false)
         setCanRevert(true)
         // After applying edits, if the AI just populated a previously-empty
         // proposal but didn't set a hero image (it can't generate images),
@@ -469,6 +512,7 @@ const BuilderHome = () => {
       }}
     >
       <div className="min-h-screen" style={{ background: "var(--color-paper)" }}>
+        <DraftingReveal active={isDrafting} />
         <BuilderTopBar
           title={proposal.title}
           onTitleChange={(t) => updateField("title", t)}
@@ -524,6 +568,11 @@ const BuilderHome = () => {
               contextCount={contextSources.length}
               onSkip={() => {
                 setComposerVisible(true)
+                // Open the ceremonial reveal immediately — no wait for the
+                // AI to echo "Drafting now." since the user already told us
+                // what they want. They'll see the reveal instead of a blank
+                // textarea while the first v1 generates.
+                setIsDrafting(true)
                 setAutoSendChatPrompt(
                   "Skip the questions and draft v1 with whatever you have.",
                 )

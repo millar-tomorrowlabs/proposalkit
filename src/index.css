@@ -314,6 +314,120 @@
   border-color: var(--brand-1) !important;
 }
 
+/* DraftingReveal overlay — shown between user confirming a draft and
+   the first edits landing. Mark migrates to the top-bar position on
+   exit (option D), falls back to fade-only for reduced motion. */
+.drafting-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--color-cream);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease-out;
+}
+.drafting-reveal--in {
+  opacity: 1;
+}
+.drafting-reveal--hold {
+  opacity: 1;
+}
+.drafting-reveal--out {
+  opacity: 0;
+  /* Slower fade than the mark migration so the mark reaches its
+     top-bar home before the backdrop vanishes. */
+  transition: opacity 700ms ease-out 100ms;
+}
+
+.drafting-reveal__mark {
+  color: var(--color-forest);
+  /* Anchor the mark in the viewport center so the migration animates
+     to fixed top-bar coordinates deterministically. */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  /* The centered position: translate(-50%, -50%). We change this on
+     exit to move the mark to the top-bar mark position. */
+  transform: translate(-50%, -50%) scale(1);
+  transition:
+    top 800ms cubic-bezier(0.77, 0, 0.175, 1),
+    left 800ms cubic-bezier(0.77, 0, 0.175, 1),
+    transform 800ms cubic-bezier(0.77, 0, 0.175, 1);
+  /* Subtle breathing pulse during hold. */
+  animation: drafting-mark-breathe 2400ms ease-in-out infinite;
+}
+.drafting-reveal__mark--in,
+.drafting-reveal__mark--hold {
+  /* Default in/hold position (centered). */
+}
+.drafting-reveal__mark--out {
+  /* Top-bar position: header has px-4 (16px left) and items-center in
+     a 44px-tall bar, mark is ~40px, so center sits at (36, 22). */
+  top: 22px;
+  left: 36px;
+  transform: translate(-50%, -50%) scale(0.3125);
+  animation: none;
+}
+
+.drafting-reveal__caption {
+  position: relative;
+  /* Offset below the centered mark so it doesn't clip the breathing
+     animation. Mark is ~128px tall; 96px below its center lands
+     comfortably under it. */
+  margin-top: 170px;
+  min-height: 1.5em;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-mute);
+  transition: opacity 400ms ease-out;
+}
+.drafting-reveal--out .drafting-reveal__caption {
+  opacity: 0;
+  transition: opacity 250ms ease-out;
+}
+.drafting-reveal__caption-text {
+  display: inline-block;
+  animation: drafting-caption-fade 400ms ease-out;
+}
+
+@keyframes drafting-mark-breathe {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+@keyframes drafting-caption-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Reduced-motion fallback — option A (simple fade + scale). No
+     position migration, no breathing pulse, no caption slide. */
+  .drafting-reveal__mark {
+    animation: none;
+    transition: opacity 500ms ease-out, transform 500ms ease-out;
+  }
+  .drafting-reveal__mark--out {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0;
+  }
+  .drafting-reveal__caption-text {
+    animation: none;
+  }
+}
+
 /* Inline-editable flash: plays when the AI streams an edit into a field.
    Soft highlight that fades out in 900ms, with a slight vertical rise
    to sell the "just materialised" feel. Respects prefers-reduced-motion. */
