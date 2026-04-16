@@ -916,7 +916,6 @@ export default function ProposalDetailPage() {
       <DeleteConfirmDialog
         open={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
-        clientName={proposal.clientName}
         proposalTitle={proposal.title}
         onConfirm={handleDelete}
       />
@@ -1048,13 +1047,11 @@ function StatusPill({ status }: { status: string }) {
 function DeleteConfirmDialog({
   open,
   onClose,
-  clientName,
   proposalTitle,
   onConfirm,
 }: {
   open: boolean
   onClose: () => void
-  clientName: string
   proposalTitle: string
   onConfirm: () => void
 }) {
@@ -1062,7 +1059,7 @@ function DeleteConfirmDialog({
 
   if (!open) return null
 
-  const match = confirmText.trim() === clientName.trim()
+  const match = confirmText.trim().toLowerCase() === "delete"
 
   return (
     <div
@@ -1112,13 +1109,13 @@ function DeleteConfirmDialog({
             className="mb-1.5 block text-[11px] uppercase tracking-[0.12em]"
             style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
           >
-            TYPE "{clientName.toUpperCase()}" TO CONFIRM
+            TYPE "DELETE" TO CONFIRM
           </span>
           <input
             type="text"
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
-            placeholder={clientName}
+            placeholder="delete"
             className="w-full rounded-lg border bg-white/50 px-3 py-2.5 text-[14px] outline-none"
             style={{
               borderColor: "var(--color-rule)",
