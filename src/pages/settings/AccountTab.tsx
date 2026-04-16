@@ -43,6 +43,9 @@ export default function AccountTab() {
     account.defaultHourlyRate != null ? String(account.defaultHourlyRate) : "",
   )
   const [defaultCurrency, setDefaultCurrency] = useState(account.defaultCurrency || "")
+  const [aiTailorAgencyBio, setAiTailorAgencyBio] = useState<boolean>(
+    account.aiTailorAgencyBio !== false, // undefined or true → true
+  )
 
   // Delete account state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -74,6 +77,7 @@ export default function AccountTab() {
         banned_phrases: bannedPhrases || null,
         default_hourly_rate: defaultHourlyRate.trim() === "" ? null : Number(defaultHourlyRate),
         default_currency: defaultCurrency.trim() === "" ? null : defaultCurrency.trim().toUpperCase(),
+        ai_tailor_agency_bio: aiTailorAgencyBio,
         updated_at: new Date().toISOString(),
       })
       .eq("id", account.id)
@@ -390,6 +394,27 @@ export default function AccountTab() {
               ISO 4217 (USD, EUR, GBP...)
             </p>
           </div>
+        </div>
+
+        {/* AI tailoring toggle for the agency bio */}
+        <div className="mt-2">
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={aiTailorAgencyBio}
+              onChange={(e) => setAiTailorAgencyBio(e.target.checked)}
+              className="mt-0.5 h-4 w-4 cursor-pointer"
+              style={{ accentColor: "var(--color-forest)" }}
+            />
+            <div className="flex-1">
+              <div className="text-[13px] font-medium" style={{ color: "var(--color-ink)" }}>
+                Let AI tailor the agency bio per proposal
+              </div>
+              <p className="mt-1 text-[12px]" style={{ color: "var(--color-ink-soft)" }}>
+                When on, the AI keeps the core of your default agency description but adjusts phrasing to name the client or project type. Turn off to force the bio to render verbatim in every proposal.
+              </p>
+            </div>
+          </label>
         </div>
       </section>
 

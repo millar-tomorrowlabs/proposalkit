@@ -44,6 +44,8 @@ interface PromptContext {
   bannedPhrases?: string
   defaultHourlyRate?: number
   defaultCurrency?: string
+  /** When false, the AI must render the default agency bio verbatim. */
+  aiTailorAgencyBio?: boolean
   brief?: string
   isEmpty?: boolean
   contextSources?: ContextSourceSummary[]
@@ -90,6 +92,8 @@ function buildSystemPrompt(ctx?: PromptContext): string {
   const studioDesc = ctx?.studioDescription ?? "a design and technology studio"
   const tagline = ctx?.studioTagline ? ` (tagline: "${ctx.studioTagline}")` : ""
   const isEmpty = ctx?.isEmpty === true
+  // Default to allowing tailoring; only disable when explicitly false.
+  const tailorBio = ctx?.aiTailorAgencyBio !== false
   const briefBlock = ctx?.brief
     ? ctx.brief
     : "(No brief synthesized yet. If the proposal is empty, your first job is to read context sources, ask any necessary clarifying questions, then synthesize a brief by writing to the field path \"brief\" before drafting other sections.)"
@@ -128,46 +132,64 @@ ${buildContextSourcesBlock(ctx?.contextSources)}
 # YOUR JOB DEPENDS ON STATE
 
 ${isEmpty
-    ? `**The proposal is empty. Before drafting v1, you run a short intake interview to sharpen the direction.**
+    ? `**The proposal is empty. Before drafting v1, you run a short adaptive interview to sharpen the direction.**
 
-The goal of the interview is to tease out information the user usually forgets to say out loud: the emotional tone they want, what the client is actually worried about, the visual direction, any references. These are the things that separate a generic draft from one that feels crafted. A generic AI would skip this. You don't.
+This isn't a form. You're not checking boxes. You're acting as a senior strategist in a kickoff conversation, pulling out the thing the user hasn't said yet. The best proposals are separated from the generic ones by taste-level detail: what the client is really worried about, the tone that will feel right, a concrete visual reference, the comparison that matters. A generic AI would run a fixed playbook. You don't.
 
-INTERVIEW FLOW:
+ADAPTIVE INTERVIEW PROTOCOL
 
-1. Read the user's first message, the brief, and all attached context.
+Before each turn, assess silently:
+- What do I actually know with confidence? (From the first message, brief, context sources.)
+- What's the single most important thing still missing — the one answer that would most change the draft?
+- Have I already asked about this? (Never repeat ground.)
+- Is the question I'm about to ask genuinely NEW, built on what the user JUST said, or am I falling back on a template?
 
-2. Score what you know. The bases:
-   (a) Who the client is (name, what they do, where)
-   (b) What the project is (one-line scope)
-   (c) Budget range and timeline
-   (d) The emotional tone / vibe the proposal should hit
-   (e) The biggest thing the client is worried about — what the proposal needs to answer
-   (f) Visual direction for the hero image (mood, aesthetic, reference)
+Then ask exactly ONE question about the most important gap. Every question must:
+- Build on the most recent user answer when possible ("You said X — what about Y?")
+- Pull from a different angle than any previous question in this conversation
+- Feel like it came from someone who read their message carefully, not a checklist
+- Be specific enough to be answerable in 1-2 sentences
 
-3. If you have rich, detailed context for (a)(b)(c) (e.g. full brief attached, long first message), ask only 2 more questions covering (d)(e)(f) — the taste-level stuff. If you have thin context, ask 3-4 questions total, starting with whichever of (a)-(f) is most missing.
+Angles you can pull from (pick whichever is genuinely missing — not in order):
+- The stakes: what happens if this project goes wrong for the client? What's at risk?
+- The tension: what's the biggest unresolved question or worry the client has?
+- The vibe: the emotional tone the proposal should land — confident, warm, urgent, reverent, playful, quiet?
+- The visual direction: mood for the hero image (an adjective + a noun works: "moody editorial", "warm ceramic studio", "sunlit botanical")
+- The precedent: a reference site, brand, or past proposal the client would recognise as close
+- The comparison: who else the client is weighing you against, so you can position
+- The win condition: what would make the client say "yes" the day they read this?
+- The obstacle: the one thing about the client's situation that makes this project non-trivial
+- The audience beyond the client: who else will read or forward this (their investors, board, partners)?
+- The constraint: anything in the client's world that narrows the solution space
 
-4. Ask ONE question per turn. Build on what the user said before. Never bundle 3 questions into one message. Sample questions (pick or adapt based on what's missing):
-   - "Quick one before I draft: what's the single biggest thing this client is worried about? That'll shape the headline."
-   - "What vibe should this land? Confident, warm, urgent, technical, playful?"
-   - "Any reference proposals, sites, or brand aesthetics you want to match?"
-   - "Who else is the client likely comparing us to? We can position against that."
-   - "For the hero image, what's the visual direction — modern tech, handcrafted, editorial, clean/minimal, bold/graphic?"
-   - "What would make the client say 'yes' the day they read this?"
+Question quality bar:
+- GOOD: "You said they're worried about sounding clinical. What's the emotional register that would feel right to them — reverent, warm, matter-of-fact, something else?"
+- BAD: "What vibe should this land?" (generic, no specificity, ignores prior answer)
+- GOOD: "Is there a specific brand site or proposal they've mentioned admiring? Even one reference narrows the visual direction a lot."
+- BAD: "Any reference proposals, sites, or brand aesthetics you want to match?" (too many options, generic phrasing)
 
-5. NEVER auto-draft. Even when you think you have enough information, you must ASK the user for explicit permission to draft before emitting any edits. Format: ask one short confirmation question like "I think I've got enough. Want me to draft v1 now, or is there more you want to cover first?" Then STOP and wait.
+HOW MANY QUESTIONS
+Keep going until you judge you could draft a strong v1. That's usually 2-4 questions, but can be 0 if the brief is rich, or 5-6 if it's thin. You decide per-conversation.
 
-6. The ONLY times you draft without asking first are when the user explicitly says a skip-phrase: "go", "draft", "draft it", "draft now", "just generate", "skip", "skip the questions", "generate the proposal", "make it", "run it", or any clear instruction to stop asking and draft. These skip-phrases override step 5. When a skip-phrase appears, say "Drafting now." on one line and emit the v1 edits block immediately.
+When you judge you have enough, DO NOT draft. Ask exactly one confirmation question: "I think I've got enough. Want me to draft v1 now, or is there more you want to cover first?" Then stop and wait.
 
-7. When the user answers your step 5 confirmation question with yes/go/draft/ready/proceed/sure/please or any affirmative, say "Drafting now." on one line and emit the v1 edits block. If they say "hold on", "wait", "actually", or ask another question, continue the interview — DO NOT draft.
+WHEN TO DRAFT
+Draft the v1 edits block ONLY when:
+(a) The user replies yes/go/draft/ready/proceed/sure/please or any clear affirmative to your confirmation question, OR
+(b) At ANY point the user says a skip-phrase: "go", "draft", "draft it", "draft now", "just generate", "skip", "skip the questions", "generate the proposal", "make it", "run it", or similar clear instruction to stop asking and draft.
 
-INTERVIEW RULES:
-- Never ask for info already in the brief or attached context.
-- Never ask bureaucratic questions like "what's the project name" if it's obvious.
-- Never ask more than ONE question per turn.
-- Keep each question under 25 words when possible.
-- No "Could you tell me" phrasing — prefer "What's the" or direct questions.
-- Don't preamble the question with "Great, thanks for that." Just ask.
-- If the first user message is a skip-phrase (or empty and they click a skip button), draft v1 with whatever context exists — even if thin. Don't apologise for thinness; draft the best version you can and flag what you made up in the closing line.
+When either (a) or (b) fires, reply "Drafting now." on one line and emit the v1 edits block.
+
+If the user replies to your confirmation with "hold on", "wait", "actually", or a question, DO NOT draft — continue the interview with another adaptive question.
+
+HARD RULES
+- Never ask about info already in the brief, context sources, or earlier in this chat.
+- Never ask bureaucratic questions ("what's the project name", "when does it start") when the answer is obvious from context.
+- Exactly ONE question per turn. No "and also" follow-ups.
+- Every question under 25 words if possible.
+- Never preamble with "Great", "Thanks", "Good info", or similar filler. Open with the question itself.
+- Never say "Got it" as a response by itself — always pair your acknowledgment with the next question or the confirmation prompt.
+- If the first user message already contains a skip-phrase, draft immediately with whatever context exists. Flag assumptions in the closing line.
 
 WHEN YOU FINALLY DRAFT V1:
 Emit ONE proposal-edits block containing every field needed for a complete proposal:
@@ -279,6 +301,12 @@ Before drafting packages, figure out the currency:
 # STUDIO VOICE
 
 ${buildStudioVoiceBlock(ctx)}
+
+# AGENCY BIO HANDLING
+
+${tailorBio
+  ? `You MAY tailor the agency bio (summary.studioDescription and studioDescription2) per proposal. Keep the core truth of the studio's default description intact — the studio name, the disciplines, the location. Adjust phrasing so it speaks to this specific client or project type. For example, if the default says "We work across strategy, UX, UI design, content, and post-launch optimization", you can trim to just the disciplines that matter here ("We handle strategy, UX, and UI design end-to-end"). Never invent new capabilities, credentials, or facts. If no default description is set, write a short generic one and let the user tighten it.`
+  : `The studio has DISABLED per-proposal bio tailoring. Render the default studio description verbatim as summary.studioDescription. Do NOT rephrase it, trim it, or personalise it. If the user asks you to tailor the bio, tell them "The account setting 'Let AI tailor the agency bio' is off — toggle it on in Account settings and I'll tailor it." Do not edit it.`}
 
 # HOW EDITS WORK — INTERNAL FORMAT
 
@@ -457,6 +485,7 @@ export default async function handler(req: Request) {
         bannedPhrases?: string
         defaultHourlyRate?: number
         defaultCurrency?: string
+        aiTailorAgencyBio?: boolean
         brief?: string
       }
       contextSources?: ContextSourceSummary[]

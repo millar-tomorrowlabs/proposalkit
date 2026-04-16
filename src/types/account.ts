@@ -22,6 +22,14 @@ export interface Account {
   bannedPhrases?: string      // comma-separated; appended to the universal banned list
   defaultHourlyRate?: number  // used in pricing recommendations
   defaultCurrency?: string    // ISO 4217, e.g. "USD"
+  /**
+   * When true (default), the AI is permitted to tailor the agency bio
+   * (summary.studioDescription etc.) on a per-proposal basis — keeping the
+   * core of the defaultStudioDescription but adjusting phrasing to name the
+   * client or project type. When false, the AI must use the default
+   * description verbatim and never touch it.
+   */
+  aiTailorAgencyBio?: boolean
 }
 
 export interface AccountMember {

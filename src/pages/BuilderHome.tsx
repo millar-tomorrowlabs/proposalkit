@@ -111,13 +111,17 @@ const BuilderHome = () => {
           proposal,
           accountContext: {
             studioName: account.studioName,
-            // studioDescription/studioTagline removed — the new voice fields
-            // below have replaced the old aiStudioDescription/aiStudioTagline.
+            // Default studio description seeds the AI's agency bio handling.
+            // The aiTailorAgencyBio flag controls whether the AI is allowed
+            // to adjust it per-proposal or must render it verbatim.
+            studioDescription: account.defaultStudioDescription,
+            studioTagline: account.defaultStudioTagline,
             voiceDescription: account.voiceDescription,
             voiceExamples: account.voiceExamples,
             bannedPhrases: account.bannedPhrases,
             defaultHourlyRate: account.defaultHourlyRate,
             defaultCurrency: account.defaultCurrency,
+            aiTailorAgencyBio: account.aiTailorAgencyBio !== false,
             brief: proposal.brief,
           },
           contextSources,

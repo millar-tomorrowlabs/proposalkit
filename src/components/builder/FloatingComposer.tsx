@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { Sparkles, Paperclip, X, RotateCcw } from "lucide-react"
+import { Sparkles, Paperclip, X, RotateCcw, ChevronDown } from "lucide-react"
 
 interface ComposerMessage {
   id: string
@@ -43,17 +43,33 @@ export default function FloatingComposer({
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Cmd+K toggle
+  // Cmd+K to toggle. Escape: if the chat history is expanded, collapse
+  // it first; if already collapsed, hide the whole composer.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault()
         onToggle()
+        return
+      }
+      if (e.key === "Escape" && visible) {
+        // Don't steal Escape from inputs in dialogs/popovers. Only act when
+        // nothing else is focused on the input inside the composer. A more
+        // nuanced check: if the active element is outside the composer, skip.
+        const active = document.activeElement
+        const insideComposer = active && inputRef.current?.contains(active as Node)
+        if (!insideComposer) return
+        e.preventDefault()
+        if (expanded && messages.length > 0) {
+          setExpanded(false)
+        } else {
+          onToggle()
+        }
       }
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-  }, [onToggle])
+  }, [onToggle, visible, expanded, messages.length])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -134,10 +150,30 @@ export default function FloatingComposer({
       {/* Conversation history */}
       {showHistory && (
         <div
-          ref={scrollRef}
-          className="max-h-[45vh] overflow-y-auto border-b px-4 py-3"
+          className="border-b"
           style={{ borderColor: "var(--color-rule)" }}
         >
+          <div className="flex items-center justify-between px-4 pt-2.5 pb-1.5">
+            <span
+              className="text-[10px] uppercase tracking-[0.14em]"
+              style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+            >
+              Chat with AI
+            </span>
+            <button
+              onClick={() => setExpanded(false)}
+              className="flex items-center gap-1 rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] transition-colors hover:bg-black/5"
+              style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+              title="Collapse history (Esc)"
+            >
+              <ChevronDown className="h-3 w-3" />
+              Collapse
+            </button>
+          </div>
+          <div
+            ref={scrollRef}
+            className="max-h-[45vh] overflow-y-auto px-4 pb-3"
+          >
           <div className="flex flex-col gap-2.5">
             {messages.map((msg) => (
               <div
@@ -184,6 +220,7 @@ export default function FloatingComposer({
               Revert last change
             </button>
           )}
+          </div>
         </div>
       )}
 
@@ -226,11 +263,12 @@ export default function FloatingComposer({
         </button>
         <button
           onClick={onToggle}
-          className="mb-1 shrink-0 transition-colors hover:opacity-70"
+          className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/5"
           style={{ color: "var(--color-ink-mute)" }}
-          title="Hide composer"
+          title="Hide composer (Esc or ⌘K)"
+          aria-label="Hide chat composer"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
     </div>
