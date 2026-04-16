@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { Settings, FileText, Eye, Edit2, Send } from "lucide-react"
+import { Settings, FileText, Eye, Edit2, Send, History } from "lucide-react"
 import ProposlMark from "@/components/brand/ProposlMark"
 import ViewportSwitcher, { type Viewport } from "./ViewportSwitcher"
 
@@ -13,9 +13,11 @@ interface BuilderTopBarProps {
   onTogglePreview: () => void
   onOpenSettings: () => void
   onOpenContext: () => void
+  onOpenHistory: () => void
   onSend: () => void
   saveStatus: string
   settingsButtonRef?: React.RefObject<HTMLButtonElement | null>
+  historyButtonRef?: React.RefObject<HTMLButtonElement | null>
 }
 
 export default function BuilderTopBar({
@@ -28,9 +30,11 @@ export default function BuilderTopBar({
   onTogglePreview,
   onOpenSettings,
   onOpenContext,
+  onOpenHistory,
   onSend,
   saveStatus,
   settingsButtonRef,
+  historyButtonRef,
 }: BuilderTopBarProps) {
   return (
     <header
@@ -84,6 +88,16 @@ export default function BuilderTopBar({
         >
           <FileText className="h-3 w-3" />
           Context
+        </button>
+
+        <button
+          ref={historyButtonRef}
+          onClick={onOpenHistory}
+          className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors hover:opacity-70"
+          style={{ borderColor: "var(--color-rule)", color: "var(--color-ink-soft)" }}
+          title="Version history"
+        >
+          <History className="h-3 w-3" />
         </button>
 
         <button

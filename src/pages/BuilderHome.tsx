@@ -15,6 +15,7 @@ import BuilderTopBar from "@/components/builder/BuilderTopBar"
 import FloatingComposer from "@/components/builder/FloatingComposer"
 import SettingsPopover from "@/components/builder/SettingsPopover"
 import ContextDialog from "@/components/builder/ContextDialog"
+import HistoryPopover from "@/components/builder/HistoryPopover"
 import { VIEWPORT_WIDTHS } from "@/components/builder/ViewportSwitcher"
 import { stripStreamingEditsBlock } from "@/lib/proposalEdits"
 import { fetchHeroImage } from "@/lib/heroImage"
@@ -162,7 +163,9 @@ const BuilderHome = () => {
   const [showSettings, setShowSettings] = useState(false)
   const [showContext, setShowContext] = useState(false)
   const [showSendDialog, setShowSendDialog] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const settingsButtonRef = useRef<HTMLButtonElement>(null)
+  const historyButtonRef = useRef<HTMLButtonElement>(null)
 
   // Snapshot-based undo for AI edits
   const [canRevert, setCanRevert] = useState(false)
@@ -174,18 +177,18 @@ const BuilderHome = () => {
       data: proposal,
       trigger,
     })
-    // Prune to the latest 50 snapshots. We only run this occasionally
-    // (1-in-10 saves) because it's a light maintenance op, not a
-    // consistency requirement — a few extra rows don't hurt, and we
-    // avoid the SELECT+DELETE overhead on every AI edit.
+    // Prune to the latest 200 snapshots. We treat history as persistent
+    // now (the HistoryPopover lets users restore any of the recent 30),
+    // but we still cap to prevent unbounded growth. Run occasionally
+    // (1-in-10 saves) because it's maintenance, not consistency.
     if (Math.random() < 0.1) {
       const { data: all } = await supabase
         .from("proposal_snapshots")
         .select("id")
         .eq("proposal_id", proposal.id)
         .order("created_at", { ascending: false })
-      if (all && all.length > 50) {
-        const toDelete = all.slice(50).map((s: { id: string }) => s.id)
+      if (all && all.length > 200) {
+        const toDelete = all.slice(200).map((s: { id: string }) => s.id)
         await supabase.from("proposal_snapshots").delete().in("id", toDelete)
       }
     }
@@ -193,19 +196,29 @@ const BuilderHome = () => {
 
   const revertToLatestSnapshot = useCallback(async () => {
     if (!proposal.id) return
+    // Save CURRENT state first so the revert is itself undoable from the
+    // history panel. Then swap in the most recent snapshot. We no longer
+    // delete the snapshot on revert — the History popover lets users step
+    // through any version.
+    const store = useBuilderStore.getState()
+    await supabase.from("proposal_snapshots").insert({
+      proposal_id: proposal.id,
+      data: store.proposal,
+      trigger: "before-restore",
+    })
     const { data } = await supabase
       .from("proposal_snapshots")
       .select("*")
       .eq("proposal_id", proposal.id)
+      .eq("trigger", "ai-edit")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle()
     if (data) {
       const snapshotData = data.data as unknown as ProposalData
-      useBuilderStore.getState().setProposal(snapshotData)
-      await supabase.from("proposal_snapshots").delete().eq("id", data.id)
+      store.setProposal(snapshotData)
       setCanRevert(false)
-      toast.info("Reverted to previous version")
+      toast.info("Reverted to previous version. Open history for older versions.")
     }
   }, [proposal.id])
 
@@ -458,9 +471,11 @@ const BuilderHome = () => {
           }}
           onOpenSettings={() => setShowSettings(!showSettings)}
           onOpenContext={() => setShowContext(true)}
+          onOpenHistory={() => setShowHistory(!showHistory)}
           onSend={() => setShowSendDialog(true)}
           saveStatus={saveStatus}
           settingsButtonRef={settingsButtonRef}
+          historyButtonRef={historyButtonRef}
         />
 
         {/* Settings popover -- positioned below top bar, right-aligned */}
@@ -470,6 +485,18 @@ const BuilderHome = () => {
               open={showSettings}
               onClose={() => setShowSettings(false)}
               anchorRef={settingsButtonRef}
+            />
+          </div>
+        </div>
+
+        {/* History popover -- same anchor rail as Settings */}
+        <div className="relative">
+          <div className="absolute right-4 top-0 z-50">
+            <HistoryPopover
+              open={showHistory}
+              onClose={() => setShowHistory(false)}
+              proposalId={proposal.id}
+              anchorRef={historyButtonRef}
             />
           </div>
         </div>
