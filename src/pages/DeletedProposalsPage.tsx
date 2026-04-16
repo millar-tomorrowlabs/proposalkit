@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { ArrowLeft, RotateCcw } from "lucide-react"
+import { ArrowLeft, RotateCcw, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useAccount } from "@/contexts/AccountContext"
 import ProposlMark from "@/components/brand/ProposlMark"
@@ -81,6 +81,17 @@ export default function DeletedProposalsPage() {
     },
     [],
   )
+
+  // Hard delete. Removes the proposal row and cascades to
+  // proposal_sends, proposal_messages, proposal_snapshots, proposal_context,
+  // and submissions via their on-delete-cascade FKs. Irreversible, so gate
+  // behind a confirm.
+  const handlePurge = useCallback(async (id: string, title: string) => {
+    const label = title && title.trim() ? `"${title}"` : "this proposal"
+    if (!confirm(`Permanently delete ${label}? This can't be undone.`)) return
+    await supabase.from("proposals").delete().eq("id", id)
+    setRows((prev) => prev.filter((r) => r.id !== id))
+  }, [])
 
   return (
     <div
@@ -209,6 +220,7 @@ export default function DeletedProposalsPage() {
                 key={row.id}
                 row={row}
                 onRestore={() => handleRestore(row.id)}
+                onPurge={() => handlePurge(row.id, row.title)}
               />
             ))}
           </div>
@@ -263,9 +275,11 @@ export default function DeletedProposalsPage() {
 function DeletedCard({
   row,
   onRestore,
+  onPurge,
 }: {
   row: DeletedRow
   onRestore: () => void
+  onPurge: () => void
 }) {
   const remaining = daysLeft(row.deleted_at)
   const urgent = remaining <= 3
@@ -321,17 +335,31 @@ function DeletedCard({
           </p>
         </div>
 
-        <button
-          onClick={onRestore}
-          className="flex shrink-0 items-center gap-2 rounded-full border px-5 py-2.5 text-[13px] font-medium transition-colors hover:opacity-80"
-          style={{
-            borderColor: "var(--color-forest)",
-            color: "var(--color-forest)",
-          }}
-        >
-          <RotateCcw className="h-4 w-4" />
-          Restore
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={onRestore}
+            className="flex items-center gap-2 rounded-full border px-5 py-2.5 text-[13px] font-medium transition-colors hover:opacity-80"
+            style={{
+              borderColor: "var(--color-forest)",
+              color: "var(--color-forest)",
+            }}
+          >
+            <RotateCcw className="h-4 w-4" />
+            Restore
+          </button>
+          <button
+            onClick={onPurge}
+            className="flex items-center gap-2 rounded-full border px-4 py-2.5 text-[13px] font-medium transition-colors hover:opacity-80"
+            style={{
+              borderColor: "#A33B2840",
+              color: "#A33B28",
+            }}
+            title="Permanently delete this proposal"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </button>
+        </div>
       </div>
     </article>
   )
