@@ -114,7 +114,7 @@ interface BuilderState {
   setSuggestionsLoading: (loading: boolean) => void
   setChatMessages: (messages: ChatMessage[]) => void
   addChatMessage: (message: ChatMessage) => void
-  applyChatEdits: (messageId: string) => void
+  applyChatEdits: (messageId: string, options?: { staggerMs?: number }) => void
   registerChatEdits: (messageId: string, edits: ProposedEdit[]) => void
   setChatLoading: (loading: boolean) => void
   setComposerVisible: (visible: boolean) => void
@@ -248,41 +248,77 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       _uiChatEdits: { ...state._uiChatEdits, [messageId]: edits },
     })),
 
-  applyChatEdits: (messageId) =>
-    set((state) => {
-      if (state.appliedEditIds.has(messageId)) return state
+  applyChatEdits: (messageId, options) => {
+    const staggerMs = options?.staggerMs ?? 0
+    const state = get()
+    if (state.appliedEditIds.has(messageId)) return
 
-      // Try old format first (legacy chatMessages)
-      const msg = state.chatMessages.find((m) => m.id === messageId)
-      const edits: ProposedEdit[] = msg?.edits ?? []
+    const msg = state.chatMessages.find((m) => m.id === messageId)
+    const legacyEdits: ProposedEdit[] = msg?.edits ?? []
+    const finalEdits = legacyEdits.length > 0 ? legacyEdits : state._uiChatEdits[messageId] ?? []
+    if (finalEdits.length === 0) return
 
-      // If no edits found in legacy format, check uiChatEdits
-      const finalEdits = edits.length > 0 ? edits : state._uiChatEdits[messageId] ?? []
-      if (finalEdits.length === 0) return state
+    // Atomic path — all edits in one set() call. Used for non-streamed
+    // applies (undo/redo, tool-call batches, initial loads).
+    if (staggerMs <= 0) {
+      set((prev) => {
+        let updated = prev.proposal
+        for (const edit of finalEdits) {
+          updated = setAtPath(updated, edit.fieldPath, edit.newValue)
+        }
+        const newApplied = new Set(prev.appliedEditIds)
+        newApplied.add(messageId)
+        return {
+          undoStack: [...prev.undoStack, prev.proposal].slice(-MAX_UNDO_STACK),
+          redoStack: [],
+          proposal: { ...updated, updatedAt: new Date().toISOString() },
+          previewProposal: { ...updated, updatedAt: new Date().toISOString() },
+          isDirty: true,
+          appliedEditIds: newApplied,
+          chatMessages: prev.chatMessages.map((m) =>
+            m.id === messageId ? { ...m, editsApplied: true } : m,
+          ),
+        }
+      })
+      return
+    }
 
-      let updated = state.proposal
-      for (const edit of finalEdits) {
-        updated = setAtPath(updated, edit.fieldPath, edit.newValue)
-      }
+    // Staggered path — push one undo entry up-front, then apply edits
+    // individually on a timer so the document visibly populates field by
+    // field instead of popping in all at once.
+    set((prev) => ({
+      undoStack: [...prev.undoStack, prev.proposal].slice(-MAX_UNDO_STACK),
+      redoStack: [],
+      isDirty: true,
+    }))
 
-      const newApplied = new Set(state.appliedEditIds)
-      newApplied.add(messageId)
+    const applyOne = (i: number) => {
+      const s = get()
+      const edit = finalEdits[i]
+      const updated = setAtPath(s.proposal, edit.fieldPath, edit.newValue)
+      const isLast = i === finalEdits.length - 1
+      set((prev) => {
+        const newApplied = new Set(prev.appliedEditIds)
+        if (isLast) newApplied.add(messageId)
+        return {
+          proposal: { ...updated, updatedAt: new Date().toISOString() },
+          previewProposal: { ...updated, updatedAt: new Date().toISOString() },
+          appliedEditIds: newApplied,
+          chatMessages: isLast
+            ? prev.chatMessages.map((m) =>
+                m.id === messageId ? { ...m, editsApplied: true } : m,
+              )
+            : prev.chatMessages,
+        }
+      })
+    }
 
-      // Also update legacy format if applicable
-      const newMessages = state.chatMessages.map((m) =>
-        m.id === messageId ? { ...m, editsApplied: true } : m,
-      )
-
-      return {
-        undoStack: [...state.undoStack, state.proposal].slice(-MAX_UNDO_STACK),
-        redoStack: [],
-        proposal: { ...updated, updatedAt: new Date().toISOString() },
-        previewProposal: { ...updated, updatedAt: new Date().toISOString() },
-        isDirty: true,
-        appliedEditIds: newApplied,
-        chatMessages: newMessages,
-      }
-    }),
+    // Fire the first immediately, stagger the rest.
+    applyOne(0)
+    for (let i = 1; i < finalEdits.length; i++) {
+      setTimeout(() => applyOne(i), i * staggerMs)
+    }
+  },
 
   setChatLoading: (chatLoading) => set({ chatLoading }),
 

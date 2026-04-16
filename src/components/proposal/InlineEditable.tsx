@@ -23,12 +23,26 @@ const InlineEditable = ({
   const committedRef = useRef(value)
   const isEditingRef = useRef(false)
 
-  // Set content via DOM — React doesn't manage contentEditable content
+  // Set content via DOM — React doesn't manage contentEditable content.
+  // When the value changes from outside (e.g. staggered AI edits streaming
+  // in), briefly flash the "ai-applied" class so the field animates in
+  // rather than popping. Skip the flash on the first render (value coming
+  // from DB load) so you don't get a flash of animation when opening a
+  // saved proposal.
+  const firstRenderRef = useRef(true)
   useLayoutEffect(() => {
     const el = ref.current
     if (!el || isEditingRef.current) return
+    const prev = committedRef.current
     el.innerText = value || ""
     committedRef.current = value
+    if (!firstRenderRef.current && prev !== value && value) {
+      el.classList.remove("inline-editable-flash")
+      // Force reflow so re-adding the class restarts the animation.
+      void el.offsetWidth
+      el.classList.add("inline-editable-flash")
+    }
+    firstRenderRef.current = false
   }, [value])
 
   const handleFocus = useCallback(() => {

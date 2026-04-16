@@ -314,6 +314,38 @@
   border-color: var(--brand-1) !important;
 }
 
+/* Inline-editable flash: plays when the AI streams an edit into a field.
+   Soft highlight that fades out in 900ms, with a slight vertical rise
+   to sell the "just materialised" feel. Respects prefers-reduced-motion. */
+@keyframes inline-editable-flash {
+  0% {
+    background-color: color-mix(in oklch, var(--color-forest) 12%, transparent);
+    transform: translateY(2px);
+    opacity: 0.8;
+  }
+  40% {
+    background-color: color-mix(in oklch, var(--color-forest) 6%, transparent);
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    background-color: transparent;
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.inline-editable-flash {
+  animation: inline-editable-flash 900ms ease-out;
+  border-radius: 4px;
+  /* Keep the animation contained so it doesn't shift layout. */
+  display: inline-block;
+}
+@media (prefers-reduced-motion: reduce) {
+  .inline-editable-flash {
+    animation: none;
+  }
+}
+
 /* Chat panel */
 .chat-message-user {
   @apply rounded-2xl rounded-br-sm bg-foreground text-background px-3 py-2 text-xs leading-relaxed;

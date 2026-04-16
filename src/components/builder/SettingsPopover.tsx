@@ -1,6 +1,7 @@
 import { useRef, useEffect } from "react"
 import { X } from "lucide-react"
 import { useBuilderStore } from "@/store/builderStore"
+import ImageUpload from "./ImageUpload"
 import type { SectionKey } from "@/types/proposal"
 
 interface SettingsPopoverProps {
@@ -85,6 +86,39 @@ export default function SettingsPopover({ open, onClose, anchorRef }: SettingsPo
       </div>
 
       <div className="space-y-4">
+        {/* Hero image upload */}
+        <div>
+          <span className={labelClass} style={labelStyle}>HERO IMAGE</span>
+          <ImageUpload
+            value={proposal.heroImageUrl}
+            onChange={(url) => updateField("heroImageUrl", url)}
+            storagePath={`proposal-${proposal.id}/hero`}
+            label=""
+            hint="16:9 landscape image. PNG, JPG, or WebP."
+          />
+        </div>
+
+        {/* Client logo upload */}
+        <div>
+          <span className={labelClass} style={labelStyle}>CLIENT LOGO</span>
+          <ImageUpload
+            value={proposal.clientLogoUrl}
+            onChange={(url) => updateField("clientLogoUrl", url)}
+            storagePath={`proposal-${proposal.id}/client-logo`}
+            label=""
+            hint="Transparent PNG or SVG preferred."
+          />
+          <label className="mt-2 flex items-center gap-2 text-[11px]" style={{ color: "var(--color-ink-soft)" }}>
+            <input
+              type="checkbox"
+              checked={!!proposal.heroLogoLarge}
+              onChange={(e) => updateField("heroLogoLarge", e.target.checked)}
+              style={{ accentColor: "var(--color-forest)" }}
+            />
+            Show logo large in hero (replaces client name text)
+          </label>
+        </div>
+
         {/* Brand colors */}
         <div>
           <span className={labelClass} style={labelStyle}>BRAND COLORS</span>

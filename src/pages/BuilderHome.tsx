@@ -244,7 +244,10 @@ const BuilderHome = () => {
       // pre-AI state in one click.
       saveSnapshot("ai-edit").then(() => {
         for (const m of unapplied) {
-          useBuilderStore.getState().applyChatEdits(m.id)
+          // Stagger the edits so the document visibly populates one field
+          // at a time instead of popping in all at once. 120ms feels
+          // alive without feeling sluggish for a typical v1 (10-15 edits).
+          useBuilderStore.getState().applyChatEdits(m.id, { staggerMs: 120 })
         }
         setCanRevert(true)
         // After applying edits, if the AI just populated a previously-empty
