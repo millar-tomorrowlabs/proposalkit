@@ -1,6 +1,5 @@
 import { Sparkles } from "lucide-react"
 import { useBuilderPreview } from "@/contexts/BuilderPreviewContext"
-import { useBuilderStore } from "@/store/builderStore"
 
 interface AskAIGhostProps {
   /** The value to check — if empty/falsy, the ghost button appears */
@@ -14,17 +13,17 @@ interface AskAIGhostProps {
 }
 
 const AskAIGhost = ({ value, prompt, label = "Ask AI to write this", className = "" }: AskAIGhostProps) => {
-  const { isEditable } = useBuilderPreview()
+  const { isEditable, focusComposer } = useBuilderPreview()
 
-  // Only show in builder when the field is empty
-  if (!isEditable || (value && value.trim())) return null
+  // Only show in builder when the field is empty and focusComposer is available
+  if (!isEditable || !focusComposer || (value && value.trim())) return null
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
 
-    // Switch to chat tab and send the prompt
-    useBuilderStore.getState().setPendingChatPrompt(prompt)
+    // Open the floating composer with the prompt pre-filled
+    focusComposer(prompt)
   }
 
   return (

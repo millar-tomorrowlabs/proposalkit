@@ -7,6 +7,7 @@ interface BuilderPreviewContextValue {
   updateAtPath: (path: string, value: unknown) => void
   addSection: (relativeTo: SectionKey, position: "above" | "below") => void
   removeSection: (key: SectionKey) => void
+  focusComposer?: (prefill?: string) => void
 }
 
 const BuilderPreviewContext = createContext<BuilderPreviewContextValue>({
@@ -15,6 +16,7 @@ const BuilderPreviewContext = createContext<BuilderPreviewContextValue>({
   updateAtPath: () => {},
   addSection: () => {},
   removeSection: () => {},
+  focusComposer: undefined,
 })
 
 export const useBuilderPreview = () => useContext(BuilderPreviewContext)

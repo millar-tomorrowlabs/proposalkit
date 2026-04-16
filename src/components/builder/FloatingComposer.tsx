@@ -18,6 +18,8 @@ interface FloatingComposerProps {
   visible: boolean
   onToggle: () => void
   sectionContext?: string
+  pendingPrompt?: string | null
+  onClearPendingPrompt?: () => void
 }
 
 export default function FloatingComposer({
@@ -30,6 +32,8 @@ export default function FloatingComposer({
   visible,
   onToggle,
   sectionContext,
+  pendingPrompt,
+  onClearPendingPrompt,
 }: FloatingComposerProps) {
   const [input, setInput] = useState("")
   const [expanded, setExpanded] = useState(false)
@@ -59,6 +63,16 @@ export default function FloatingComposer({
   useEffect(() => {
     if (visible) inputRef.current?.focus()
   }, [visible])
+
+  // Pre-fill input from pending prompt (e.g. AskAIGhost button)
+  useEffect(() => {
+    if (pendingPrompt) {
+      setInput(pendingPrompt)
+      onClearPendingPrompt?.()
+      // Focus after a tick to ensure the composer is visible
+      requestAnimationFrame(() => inputRef.current?.focus())
+    }
+  }, [pendingPrompt])
 
   const handleSubmit = () => {
     const trimmed = input.trim()

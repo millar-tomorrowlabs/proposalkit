@@ -44,6 +44,8 @@ const BuilderHome = () => {
     setComposerVisible,
     viewport,
     setViewport,
+    pendingChatPrompt,
+    setPendingChatPrompt,
   } = useBuilderStore()
 
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -60,6 +62,46 @@ const BuilderHome = () => {
   const [showContext, setShowContext] = useState(false)
   const [showSendDialog, setShowSendDialog] = useState(false)
   const settingsButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Snapshot-based undo for AI edits
+  const [canRevert, setCanRevert] = useState(false)
+
+  const saveSnapshot = useCallback(async (trigger: string) => {
+    if (!proposal.id) return
+    await supabase.from("proposal_snapshots").insert({
+      proposal_id: proposal.id,
+      data: proposal,
+      trigger,
+    })
+    // Prune old snapshots (keep latest 50)
+    const { data: all } = await supabase
+      .from("proposal_snapshots")
+      .select("id")
+      .eq("proposal_id", proposal.id)
+      .order("created_at", { ascending: true })
+    if (all && all.length > 50) {
+      const toDelete = all.slice(0, all.length - 50).map((s: { id: string }) => s.id)
+      await supabase.from("proposal_snapshots").delete().in("id", toDelete)
+    }
+  }, [proposal])
+
+  const revertToLatestSnapshot = useCallback(async () => {
+    if (!proposal.id) return
+    const { data } = await supabase
+      .from("proposal_snapshots")
+      .select("*")
+      .eq("proposal_id", proposal.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (data) {
+      const snapshotData = data.data as unknown as ProposalData
+      useBuilderStore.getState().setProposal(snapshotData)
+      await supabase.from("proposal_snapshots").delete().eq("id", data.id)
+      setCanRevert(false)
+      toast.info("Reverted to previous version")
+    }
+  }, [proposal.id])
 
   // Init on mount
   useEffect(() => {
@@ -107,6 +149,19 @@ const BuilderHome = () => {
       setIsLoading(false)
     }
   }, [id])
+
+  // Track when AI produces a response -- save a snapshot before and offer revert
+  const prevMessageCount = useRef(chatMessages.length)
+  useEffect(() => {
+    if (chatMessages.length > prevMessageCount.current) {
+      const latest = chatMessages[chatMessages.length - 1]
+      if (latest.role === "assistant") {
+        saveSnapshot("ai-edit")
+        setCanRevert(true)
+      }
+    }
+    prevMessageCount.current = chatMessages.length
+  }, [chatMessages.length, saveSnapshot])
 
   // Debounce preview flush
   useEffect(() => {
@@ -220,6 +275,12 @@ const BuilderHome = () => {
         updateAtPath: useBuilderStore.getState().updateAtPath,
         addSection,
         removeSection,
+        focusComposer: (prefill?: string) => {
+          setComposerVisible(true)
+          if (prefill) {
+            setPendingChatPrompt(prefill)
+          }
+        },
       }}
     >
       <div className="min-h-screen" style={{ background: "var(--color-paper)" }}>
@@ -285,8 +346,12 @@ const BuilderHome = () => {
               })
             }}
             onAttach={() => setShowContext(true)}
+            onRevert={revertToLatestSnapshot}
+            canRevert={canRevert}
             visible={composerVisible}
             onToggle={() => setComposerVisible(!composerVisible)}
+            pendingPrompt={pendingChatPrompt}
+            onClearPendingPrompt={() => setPendingChatPrompt(null)}
           />
         )}
 
