@@ -374,7 +374,7 @@ function Footer() {
           className="text-[11px] uppercase tracking-[0.14em]"
           style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
         >
-          © 2026 TOMORROW STUDIOS
+          © 2026 TOMORROW LABS INC.
         </p>
       </div>
     </footer>
