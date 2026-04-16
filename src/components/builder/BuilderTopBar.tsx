@@ -15,6 +15,7 @@ interface BuilderTopBarProps {
   onOpenContext: () => void
   onSend: () => void
   saveStatus: string
+  settingsButtonRef?: React.RefObject<HTMLButtonElement | null>
 }
 
 export default function BuilderTopBar({
@@ -29,6 +30,7 @@ export default function BuilderTopBar({
   onOpenContext,
   onSend,
   saveStatus,
+  settingsButtonRef,
 }: BuilderTopBarProps) {
   return (
     <header
@@ -85,6 +87,7 @@ export default function BuilderTopBar({
         </button>
 
         <button
+          ref={settingsButtonRef}
           onClick={onOpenSettings}
           className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors hover:opacity-70"
           style={{ borderColor: "var(--color-rule)", color: "var(--color-ink-soft)" }}

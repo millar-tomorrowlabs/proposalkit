@@ -456,6 +456,7 @@ const BuilderHome = () => {
           onOpenContext={() => setShowContext(true)}
           onSend={() => setShowSendDialog(true)}
           saveStatus={saveStatus}
+          settingsButtonRef={settingsButtonRef}
         />
 
         {/* Settings popover -- positioned below top bar, right-aligned */}

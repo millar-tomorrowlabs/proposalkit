@@ -86,6 +86,16 @@ export default function SendProposalDialog({
   const [sendType, setSendType] = useState<"initial" | "reminder">("initial")
   const [history, setHistory] = useState<SendHistoryRow[]>([])
 
+  // Escape key closes the dialog (in addition to the X button and backdrop click).
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [open, onClose])
+
   // Empty-section pre-flight warnings
   const warnings = useMemo(
     () => (open ? validateProposalForSend(proposal) : []),

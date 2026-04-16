@@ -45,6 +45,16 @@ export default function ContextDialog({ open, onClose, proposalId, brief }: Cont
     if (open) load()
   }, [open, load])
 
+  // Escape key closes the dialog.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [open, onClose])
+
   const handleAdd = async () => {
     if (!name.trim() || !content.trim()) return
     setSaving(true)

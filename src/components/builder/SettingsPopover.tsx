@@ -1,11 +1,14 @@
 import { useRef, useEffect } from "react"
+import { X } from "lucide-react"
 import { useBuilderStore } from "@/store/builderStore"
 import type { SectionKey } from "@/types/proposal"
 
 interface SettingsPopoverProps {
   open: boolean
   onClose: () => void
-  anchorRef: React.RefObject<HTMLElement | null>
+  /** Optional anchor element. Clicks inside it are ignored so the button
+   *  that toggles the popover doesn't re-open it on the same mousedown. */
+  anchorRef?: React.RefObject<HTMLElement | null>
 }
 
 const SECTION_LABELS: Record<SectionKey, string> = {
@@ -20,21 +23,24 @@ export default function SettingsPopover({ open, onClose, anchorRef }: SettingsPo
   const popoverRef = useRef<HTMLDivElement>(null)
   const { proposal, updateField } = useBuilderStore()
 
-  // Close on click outside
+  // Close on click outside, and on Escape.
   useEffect(() => {
     if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node) &&
-        anchorRef.current &&
-        !anchorRef.current.contains(e.target as Node)
-      ) {
-        onClose()
-      }
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (popoverRef.current?.contains(target)) return
+      if (anchorRef?.current?.contains(target)) return
+      onClose()
     }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    document.addEventListener("mousedown", onMouseDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown)
+      document.removeEventListener("keydown", onKey)
+    }
   }, [open, onClose, anchorRef])
 
   if (!open) return null
@@ -61,12 +67,22 @@ export default function SettingsPopover({ open, onClose, anchorRef }: SettingsPo
         boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
       }}
     >
-      <p
-        className="mb-4 text-[10px] uppercase tracking-[0.14em]"
-        style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
-      >
-        PROPOSAL SETTINGS
-      </p>
+      <div className="mb-4 flex items-center justify-between">
+        <p
+          className="text-[10px] uppercase tracking-[0.14em]"
+          style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+        >
+          PROPOSAL SETTINGS
+        </p>
+        <button
+          onClick={onClose}
+          className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-black/5"
+          style={{ color: "var(--color-ink-mute)" }}
+          title="Close (Esc)"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
 
       <div className="space-y-4">
         {/* Brand colors */}
