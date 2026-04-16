@@ -181,6 +181,11 @@ const BuilderHome = () => {
     // now (the HistoryPopover lets users restore any of the recent 30),
     // but we still cap to prevent unbounded growth. Run occasionally
     // (1-in-10 saves) because it's maintenance, not consistency.
+    //
+    // Deletes are chunked: Supabase/PostgREST rejects DELETEs with very
+    // long IN clauses (the request URL can exceed server limits), which
+    // previously flooded the console with 400s. 50 per batch keeps the
+    // URL well under 8 KB even with dashed UUIDs.
     if (Math.random() < 0.1) {
       const { data: all } = await supabase
         .from("proposal_snapshots")
@@ -189,7 +194,11 @@ const BuilderHome = () => {
         .order("created_at", { ascending: false })
       if (all && all.length > 200) {
         const toDelete = all.slice(200).map((s: { id: string }) => s.id)
-        await supabase.from("proposal_snapshots").delete().in("id", toDelete)
+        const CHUNK = 50
+        for (let i = 0; i < toDelete.length; i += CHUNK) {
+          const batch = toDelete.slice(i, i + CHUNK)
+          await supabase.from("proposal_snapshots").delete().in("id", batch)
+        }
       }
     }
   }, [proposal])
