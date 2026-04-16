@@ -221,23 +221,29 @@ Rewrite of the current 366-line page. Same functionality:
 
 ## 7. Data Model Changes
 
-### New column: `proposals.context_sources`
+### New table: `proposal_context`
+
+Each context source is its own row so the user can see, add, and remove individual items at any time.
 
 ```sql
-ALTER TABLE proposals
-ADD COLUMN context_sources JSONB DEFAULT '[]';
+CREATE TABLE proposal_context (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+  source_type TEXT NOT NULL CHECK (source_type IN ('file', 'url', 'paste')),
+  name TEXT NOT NULL,
+  url TEXT,                    -- for source_type = 'url'
+  file_size INTEGER,           -- for source_type = 'file', in bytes
+  extracted_text TEXT NOT NULL, -- text content the AI can reference
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_proposal_context_proposal ON proposal_context(proposal_id);
 ```
 
-Shape:
-```json
-[
-  { "type": "file", "name": "discovery-call.txt", "size": 14200, "content": "...", "added_at": "..." },
-  { "type": "url", "name": "Brand brief", "url": "https://notion.so/...", "content": "...", "added_at": "..." },
-  { "type": "paste", "name": "Client notes", "content": "...", "added_at": "..." }
-]
-```
-
-Content is stored as extracted text (not the original binary) so the AI can reference it throughout editing.
+- Each row is one context source (a file, a URL, or pasted text)
+- `extracted_text` is the parsed content (not the original binary) so the AI can reference it throughout editing
+- RLS scoped by account_id via the parent proposal
+- The UI shows these as a clear list: name, type badge, size, added date, remove button
 
 ## 8. Out of Scope
 
