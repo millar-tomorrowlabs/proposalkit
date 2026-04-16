@@ -9,8 +9,6 @@ export interface Account {
   notifyEmail: string
   ccEmail?: string
   senderName?: string
-  aiStudioDescription?: string
-  aiStudioTagline?: string
   defaultCtaEmail?: string
   defaultBrandColor1: string
   defaultBrandColor2: string

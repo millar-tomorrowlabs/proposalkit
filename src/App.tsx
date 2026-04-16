@@ -8,7 +8,7 @@ import ProposalsDashboard from "@/pages/ProposalsDashboard"
 import ProposalDetailPage from "@/pages/ProposalDetailPage"
 import DeletedProposalsPage from "@/pages/DeletedProposalsPage"
 import BuilderHome from "@/pages/BuilderHome"
-import IntakePage from "@/pages/IntakePage"
+import NewProposalRedirect from "@/pages/NewProposalRedirect"
 import LoginPage from "@/pages/LoginPage"
 import LandingPage from "@/pages/LandingPage"
 import NotFound from "@/pages/NotFound"
@@ -51,7 +51,7 @@ function App() {
               <Route path="/proposals/deleted" element={<DeletedProposalsPage />} />
               <Route path="/proposals/:id" element={<ProposalDetailPage />} />
               <Route path="/builder" element={<BuilderHome />} />
-              <Route path="/builder/new" element={<IntakePage />} />
+              <Route path="/builder/new" element={<NewProposalRedirect />} />
               <Route path="/builder/:id" element={<BuilderHome />} />
               <Route path="/settings" element={<SettingsShell />}>
                 <Route index element={<AccountTab />} />

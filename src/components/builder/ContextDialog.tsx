@@ -7,14 +7,17 @@ interface ContextDialogProps {
   open: boolean
   onClose: () => void
   proposalId: string
+  /** The AI's working brief (proposals.brief). Read-only — the AI synthesizes it. */
+  brief?: string
 }
 
-export default function ContextDialog({ open, onClose, proposalId }: ContextDialogProps) {
+export default function ContextDialog({ open, onClose, proposalId, brief }: ContextDialogProps) {
   const [sources, setSources] = useState<ProposalContextSource[]>([])
   const [adding, setAdding] = useState<"paste" | "url" | null>(null)
   const [name, setName] = useState("")
   const [content, setContent] = useState("")
   const [saving, setSaving] = useState(false)
+  const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -91,33 +94,109 @@ export default function ContextDialog({ open, onClose, proposalId }: ContextDial
             className="text-[10px] uppercase tracking-[0.14em]"
             style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
           >
-            CONTEXT SOURCES · {sources.length}
+            CONTEXT · {sources.length} {sources.length === 1 ? "source" : "sources"}
           </p>
           <button onClick={onClose} className="transition-colors hover:opacity-70" style={{ color: "var(--color-ink-mute)" }}>
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Source list */}
-        <div className="space-y-2">
-          {sources.map((s) => (
+        {/* Scrollable body — brief on top, then sources. Modal body caps at
+            ~70vh so very long briefs/transcripts don't blow out the dialog. */}
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+          {/* The AI's working brief — read-only snapshot of what it's
+              grounding on. Only shown when non-empty; the AI can overwrite it
+              via the chat. */}
+          {brief && brief.trim().length > 0 && (
             <div
-              key={s.id}
-              className="flex items-center gap-3 rounded-lg border px-3 py-2.5"
-              style={{ borderColor: "var(--color-rule)", background: "#fff" }}
+              className="rounded-lg border p-4"
+              style={{ borderColor: "var(--color-rule)", background: "var(--color-paper)" }}
             >
-              <span style={{ color: "var(--color-forest)" }}>{typeIcon(s.sourceType)}</span>
-              <div className="flex-1 min-w-0">
-                <p className="truncate text-[12px] font-medium" style={{ color: "var(--color-ink)" }}>{s.name}</p>
-                <p className="truncate text-[10px]" style={{ color: "var(--color-ink-mute)", fontFamily: "var(--font-mono)" }}>
-                  {s.sourceType.toUpperCase()}{s.fileSize ? ` · ${Math.round(s.fileSize / 1024)}KB` : ""}
-                </p>
-              </div>
-              <button onClick={() => handleRemove(s.id)} className="shrink-0 transition-colors hover:opacity-70" style={{ color: "var(--color-ink-mute)" }}>
-                <X className="h-3.5 w-3.5" />
-              </button>
+              <p
+                className="mb-2 text-[10px] uppercase tracking-[0.14em]"
+                style={{ fontFamily: "var(--font-mono)", color: "var(--color-forest)" }}
+              >
+                WORKING BRIEF
+              </p>
+              <p
+                className="whitespace-pre-wrap text-[12px] leading-[1.55]"
+                style={{ color: "var(--color-ink)" }}
+              >
+                {brief}
+              </p>
+              <p
+                className="mt-2 text-[10px]"
+                style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+              >
+                AI-synthesized. Ask the chat to refine it if it&apos;s off.
+              </p>
             </div>
-          ))}
+          )}
+
+          {/* Source list with click-to-expand */}
+          <div className="space-y-2">
+            {sources.map((s) => {
+              const isOpen = expandedSourceId === s.id
+              return (
+                <div
+                  key={s.id}
+                  className="rounded-lg border"
+                  style={{ borderColor: "var(--color-rule)", background: "#fff" }}
+                >
+                  <div className="flex items-center gap-3 px-3 py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedSourceId(isOpen ? null : s.id)}
+                      className="flex flex-1 items-center gap-3 text-left min-w-0"
+                    >
+                      <span style={{ color: "var(--color-forest)" }}>{typeIcon(s.sourceType)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-[12px] font-medium" style={{ color: "var(--color-ink)" }}>{s.name}</p>
+                        <p className="truncate text-[10px]" style={{ color: "var(--color-ink-mute)", fontFamily: "var(--font-mono)" }}>
+                          {s.sourceType.toUpperCase()}
+                          {s.fileSize ? ` · ${Math.round(s.fileSize / 1024)}KB` : ""}
+                          {s.extractedText ? ` · ${s.extractedText.length.toLocaleString()} chars` : ""}
+                          {" · "}{isOpen ? "HIDE" : "VIEW"}
+                        </p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleRemove(s.id)}
+                      className="shrink-0 transition-colors hover:opacity-70"
+                      style={{ color: "var(--color-ink-mute)" }}
+                      title="Remove"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {isOpen && (
+                    <div
+                      className="border-t px-3 py-3"
+                      style={{ borderColor: "var(--color-rule)", background: "var(--color-paper)" }}
+                    >
+                      {s.url && (
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mb-2 inline-block text-[11px] underline"
+                          style={{ color: "var(--color-forest)" }}
+                        >
+                          {s.url}
+                        </a>
+                      )}
+                      <p
+                        className="whitespace-pre-wrap text-[11px] leading-[1.55]"
+                        style={{ color: "var(--color-ink-soft)" }}
+                      >
+                        {s.extractedText}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* Add new */}

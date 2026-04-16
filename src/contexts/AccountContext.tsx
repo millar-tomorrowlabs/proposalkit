@@ -30,8 +30,6 @@ function toAccount(row: Record<string, unknown>): Account {
     notifyEmail: row.notify_email as string,
     ccEmail: row.cc_email as string | undefined,
     senderName: row.sender_name as string | undefined,
-    aiStudioDescription: row.ai_studio_description as string | undefined,
-    aiStudioTagline: row.ai_studio_tagline as string | undefined,
     defaultCtaEmail: row.default_cta_email as string | undefined,
     defaultBrandColor1: row.default_brand_color_1 as string || "#000000",
     defaultBrandColor2: row.default_brand_color_2 as string || "#6b7280",

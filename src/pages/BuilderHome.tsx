@@ -108,8 +108,8 @@ const BuilderHome = () => {
           proposal,
           accountContext: {
             studioName: account.studioName,
-            studioDescription: account.aiStudioDescription,
-            studioTagline: account.aiStudioTagline,
+            // studioDescription/studioTagline removed — the new voice fields
+            // below have replaced the old aiStudioDescription/aiStudioTagline.
             voiceDescription: account.voiceDescription,
             voiceExamples: account.voiceExamples,
             bannedPhrases: account.bannedPhrases,
@@ -376,6 +376,16 @@ const BuilderHome = () => {
     setShowSendDialog(false)
   }, [proposal.status])
 
+  // A proposal is "empty" when the user hasn't drafted anything yet —
+  // no tagline, no scope outcomes, no investment packages. In that state
+  // we render an intake hero over the builder instead of the empty
+  // proposal template, so the experience feels like Lovable's first-run
+  // (one screen, one chat, no separate wizard).
+  const isProposalEmpty =
+    (!proposal.tagline || proposal.tagline.trim() === "") &&
+    (proposal.scope?.outcomes?.length ?? 0) === 0 &&
+    (proposal.investment?.packages?.length ?? 0) === 0
+
   // Show nothing while loading existing proposal
   if (isLoading) return null
 
@@ -425,16 +435,26 @@ const BuilderHome = () => {
           </div>
         </div>
 
-        {/* Document area */}
+        {/* Document area — either the empty-state intake hero or the
+            populated proposal. "Empty" means the user hasn't drafted
+            anything yet; the AI's first response will populate sections
+            and this view will swap to the full document in the same frame. */}
         <div className="pt-11">
-          <div
-            className="builder-preview mx-auto transition-all duration-200"
-            style={{
-              maxWidth: VIEWPORT_WIDTHS[viewport] || undefined,
-            }}
-          >
-            <ProposalWrapper proposal={previewProposal} isPreview viewportWidth={viewport === "tablet" ? 768 : viewport === "mobile" ? 375 : undefined} />
-          </div>
+          {isProposalEmpty ? (
+            <IntakeHero
+              onAddContext={() => setShowContext(true)}
+              contextCount={contextSources.length}
+            />
+          ) : (
+            <div
+              className="builder-preview mx-auto transition-all duration-200"
+              style={{
+                maxWidth: VIEWPORT_WIDTHS[viewport] || undefined,
+              }}
+            >
+              <ProposalWrapper proposal={previewProposal} isPreview viewportWidth={viewport === "tablet" ? 768 : viewport === "mobile" ? 375 : undefined} />
+            </div>
+          )}
         </div>
 
         {/* Floating composer */}
@@ -464,6 +484,11 @@ const BuilderHome = () => {
             onToggle={() => setComposerVisible(!composerVisible)}
             pendingPrompt={pendingChatPrompt}
             onClearPendingPrompt={() => setPendingChatPrompt(null)}
+            placeholder={
+              isProposalEmpty
+                ? "Describe the project, paste a brief, or ask a question\u2026"
+                : undefined
+            }
           />
         )}
 
@@ -476,6 +501,7 @@ const BuilderHome = () => {
             loadContextSources()
           }}
           proposalId={proposal.id}
+          brief={proposal.brief}
         />
 
         {/* Send dialog */}
@@ -496,3 +522,57 @@ const BuilderHome = () => {
 }
 
 export default BuilderHome
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IntakeHero — the empty-state rendered over the builder for a fresh
+// proposal. Replaces the old /builder/new wizard. One screen, one chat,
+// no hand-off: as soon as the AI produces a v1, the document renders in
+// the same frame and this hero disappears.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface IntakeHeroProps {
+  onAddContext: () => void
+  contextCount: number
+}
+
+function IntakeHero({ onAddContext, contextCount }: IntakeHeroProps) {
+  return (
+    <div
+      className="flex min-h-[calc(100vh-11rem)] flex-col items-center justify-center px-6 pb-36 text-center"
+    >
+      <p
+        className="mb-5 text-[11px] uppercase tracking-[0.14em]"
+        style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+      >
+        NEW PROPOSAL
+      </p>
+      <h1
+        className="max-w-2xl text-[44px] leading-[1.05] tracking-[-0.01em] md:text-[56px]"
+        style={{ fontFamily: "var(--font-merchant-display)", fontWeight: 500, color: "var(--color-ink)" }}
+      >
+        What are we proposing?
+      </h1>
+      <p
+        className="mt-5 max-w-lg text-[14px] leading-[1.55]"
+        style={{ color: "var(--color-ink-soft)" }}
+      >
+        Describe the project in the chat below, or attach a brief, call
+        transcript, or Notion page first. I&apos;ll draft a full v1 once
+        I have enough to go on.
+      </p>
+      <button
+        onClick={onAddContext}
+        className="mt-6 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[12px] font-medium transition-colors hover:opacity-80"
+        style={{
+          borderColor: "var(--color-rule)",
+          color: "var(--color-ink-soft)",
+          background: "var(--color-cream)",
+        }}
+      >
+        {contextCount > 0
+          ? `${contextCount} context ${contextCount === 1 ? "source" : "sources"} attached — manage`
+          : "Attach context first"}
+      </button>
+    </div>
+  )
+}

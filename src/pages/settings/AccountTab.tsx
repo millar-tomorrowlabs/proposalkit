@@ -32,7 +32,6 @@ export default function AccountTab() {
   const [notifyEmail, setNotifyEmail] = useState(account.notifyEmail)
   const [ccEmail, setCcEmail] = useState(account.ccEmail || "")
   const [defaultCtaEmail, setDefaultCtaEmail] = useState(account.defaultCtaEmail || "")
-  const [aiDescription, setAiDescription] = useState(account.aiStudioDescription || "")
   const [studioTagline, setStudioTagline] = useState(account.defaultStudioTagline || "")
   const [studioDescription, setStudioDescription] = useState(account.defaultStudioDescription || "")
   const [studioDescription2, setStudioDescription2] = useState(account.defaultStudioDescription2 || "")
@@ -67,7 +66,6 @@ export default function AccountTab() {
         notify_email: notifyEmail,
         cc_email: ccEmail || null,
         default_cta_email: defaultCtaEmail || null,
-        ai_studio_description: aiDescription || null,
         default_studio_tagline: studioTagline || null,
         default_studio_description: studioDescription || null,
         default_studio_description_2: studioDescription2 || null,
@@ -219,26 +217,6 @@ export default function AccountTab() {
       </section>
 
       <hr style={{ borderColor: "var(--color-rule)" }} />
-
-      {/* AI settings */}
-      <section className="space-y-5">
-        <div>
-          <label className={labelClass} style={labelStyle}>
-            AI studio description
-          </label>
-          <textarea
-            value={aiDescription}
-            onChange={(e) => setAiDescription(e.target.value)}
-            rows={3}
-            placeholder="Describe your studio for AI-generated proposal content..."
-            className={inputClass + " resize-none"}
-            style={inputStyle}
-          />
-          <p className={helperClass} style={helperStyle}>
-            Used by AI when generating proposal content
-          </p>
-        </div>
-      </section>
 
       <hr style={{ borderColor: "var(--color-rule)" }} />
 

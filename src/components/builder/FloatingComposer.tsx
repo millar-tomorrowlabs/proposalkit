@@ -20,6 +20,8 @@ interface FloatingComposerProps {
   sectionContext?: string
   pendingPrompt?: string | null
   onClearPendingPrompt?: () => void
+  /** Override the default input placeholder. Useful for intake mode. */
+  placeholder?: string
 }
 
 export default function FloatingComposer({
@@ -34,6 +36,7 @@ export default function FloatingComposer({
   sectionContext,
   pendingPrompt,
   onClearPendingPrompt,
+  placeholder,
 }: FloatingComposerProps) {
   const [input, setInput] = useState("")
   const [expanded, setExpanded] = useState(false)
@@ -194,9 +197,10 @@ export default function FloatingComposer({
           onFocus={() => messages.length > 0 && setExpanded(true)}
           onKeyDown={handleKeyDown}
           placeholder={
-            sectionContext
+            placeholder ??
+            (sectionContext
               ? `Ask AI about ${sectionContext}...`
-              : "Ask AI anything, or \u2318K to toggle..."
+              : "Ask AI anything, or \u2318K to toggle...")
           }
           rows={1}
           className="flex-1 resize-none bg-transparent text-[13px] leading-[1.5] outline-none"
