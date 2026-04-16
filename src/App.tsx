@@ -9,6 +9,7 @@ import ProposalDetailPage from "@/pages/ProposalDetailPage"
 import DeletedProposalsPage from "@/pages/DeletedProposalsPage"
 import BuilderHome from "@/pages/BuilderHome"
 import WizardPage from "@/pages/WizardPage"
+import IntakePage from "@/pages/IntakePage"
 import LoginPage from "@/pages/LoginPage"
 import LandingPage from "@/pages/LandingPage"
 import NotFound from "@/pages/NotFound"
@@ -52,6 +53,7 @@ function App() {
               <Route path="/proposals/:id" element={<ProposalDetailPage />} />
               <Route path="/new" element={<WizardPage />} />
               <Route path="/builder" element={<BuilderHome />} />
+              <Route path="/builder/new" element={<IntakePage />} />
               <Route path="/builder/:id" element={<BuilderHome />} />
               <Route path="/settings" element={<SettingsShell />}>
                 <Route index element={<AccountTab />} />

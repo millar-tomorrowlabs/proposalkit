@@ -228,7 +228,7 @@ const ProposalsDashboard = () => {
             Sign out
           </button>
           <Link
-            to="/new"
+            to="/builder/new"
             className="flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-medium transition-transform hover:scale-[1.02]"
             style={{
               background: "var(--color-forest)",
@@ -561,7 +561,7 @@ function EmptyState() {
         No proposals yet. Your first one takes about three minutes.
       </h2>
       <Link
-        to="/new"
+        to="/builder/new"
         className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-[13px] font-medium transition-transform hover:scale-[1.02]"
         style={{
           background: "var(--color-forest)",
