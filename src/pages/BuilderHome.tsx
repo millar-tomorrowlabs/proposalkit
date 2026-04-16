@@ -469,6 +469,12 @@ const BuilderHome = () => {
             <IntakeHero
               onAddContext={() => setShowContext(true)}
               contextCount={contextSources.length}
+              onSkip={() => {
+                setComposerVisible(true)
+                setPendingChatPrompt(
+                  "Skip the questions and draft v1 with whatever you have.",
+                )
+              }}
             />
           ) : (
             <div
@@ -558,9 +564,10 @@ export default BuilderHome
 interface IntakeHeroProps {
   onAddContext: () => void
   contextCount: number
+  onSkip: () => void
 }
 
-function IntakeHero({ onAddContext, contextCount }: IntakeHeroProps) {
+function IntakeHero({ onAddContext, contextCount, onSkip }: IntakeHeroProps) {
   return (
     <div
       className="flex min-h-[calc(100vh-11rem)] flex-col items-center justify-center px-6 pb-36 text-center"
@@ -582,22 +589,35 @@ function IntakeHero({ onAddContext, contextCount }: IntakeHeroProps) {
         style={{ color: "var(--color-ink-soft)" }}
       >
         Describe the project in the chat below, or attach a brief, call
-        transcript, or Notion page first. I&apos;ll draft a full v1 once
-        I have enough to go on.
+        transcript, or Notion page first. I&apos;ll ask a few quick
+        questions, then draft a full v1 once you say go.
       </p>
-      <button
-        onClick={onAddContext}
-        className="mt-6 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[12px] font-medium transition-colors hover:opacity-80"
-        style={{
-          borderColor: "var(--color-rule)",
-          color: "var(--color-ink-soft)",
-          background: "var(--color-cream)",
-        }}
-      >
-        {contextCount > 0
-          ? `${contextCount} context ${contextCount === 1 ? "source" : "sources"} attached — manage`
-          : "Attach context first"}
-      </button>
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <button
+          onClick={onAddContext}
+          className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[12px] font-medium transition-colors hover:opacity-80"
+          style={{
+            borderColor: "var(--color-rule)",
+            color: "var(--color-ink-soft)",
+            background: "var(--color-cream)",
+          }}
+        >
+          {contextCount > 0
+            ? `${contextCount} context ${contextCount === 1 ? "source" : "sources"} attached — manage`
+            : "Attach context first"}
+        </button>
+        <button
+          onClick={onSkip}
+          className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12px] font-medium transition-colors hover:opacity-80"
+          style={{
+            color: "var(--color-ink-mute)",
+            background: "transparent",
+          }}
+          title="Skip the intake questions and jump straight to an editable draft"
+        >
+          Skip intake, draft v1 now →
+        </button>
+      </div>
     </div>
   )
 }
