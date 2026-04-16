@@ -180,6 +180,8 @@ Emit ONE proposal-edits block containing every field needed for a complete propo
 - scope.responsibilities (whole array)
 - timeline.phases (whole array)
 - investment.packages (whole array with recommendation flag)
+- investment.addOnCategories (2-3 category buckets)
+- investment.addOns (3-5 project-specific add-ons, each with per-package pricing)
 - recommendation (one-sentence explanation of which tier and why)
 - title (the admin/email title — "[Client Name] — [Short Project Descriptor]")
 - currency (ISO code like "EUR" or "USD" — detect from user messages per the currency rule)
@@ -250,9 +252,13 @@ Never invent deliverables not implied by context. If unsure, leave it out.
 
 TIMELINE
 Phase names are verbs or short nouns: "Discovery", "Design", "Build", "Launch".
-Each phase has a duration in weeks: "Weeks 1-3".
-Total project length must equal the sum of phases.
+Each phase has a duration written as a contiguous range in weeks: "Weeks 1-3", "Weeks 4-6", "Weeks 7-8". Ranges MUST be contiguous (no gaps, no overlaps) and MUST sum to the total project length.
+Before emitting the timeline.phases array, do this sanity check:
+1. Add up the number of weeks in each phase range (inclusive: "Weeks 1-3" = 3 weeks).
+2. Confirm the total matches the project length the user or brief specified.
+3. If they don't match, fix the phase durations before emitting. Never publish a 10-week project with phases that add to 8.
 If the client gave a launch date, work backward from it.
+If the user didn't specify a timeline, pick a realistic length for the scope and make the phases sum correctly.
 
 PRICING
 Always recommend a tier. Label it explicitly.
@@ -293,6 +299,8 @@ VALID FIELD PATHS:
 - Scope arrays: "scope.outcomes" for the whole list, or "scope.outcomes.0" for a specific item. Same for "scope.responsibilities".
 - Timeline: "timeline.subtitle", "timeline.phases" for the whole array, or "timeline.phases.0.name" / "timeline.phases.0.duration" / "timeline.phases.0.description".
 - Investment packages (array): "investment.packages" for the whole list, or "investment.packages.0.label" / "investment.packages.0.basePrice" / "investment.packages.0.highlights" / "investment.packages.0.isRecommended".
+- Investment add-on categories (array): "investment.addOnCategories" — groups for add-ons. Each item: {"id": "content", "label": "Content & Design"}.
+- Investment add-ons (array): "investment.addOns" — each item: {"id": "launch-shoot", "label": "Launch photoshoot", "description": "Half-day product shoot with retouching", "category": "content", "packages": {"total": {"price": 2500}, "light": {"price": 2500}}}. The "packages" field maps each package id to either {"price": number} (offered at this price) or {"included": true} (bundled free into that tier).
 
 EMPTY-ARRAY RULE (IMPORTANT):
 You CANNOT write to an indexed path inside an empty array. If "scope.outcomes" is [], "scope.outcomes.0" silently fails. For v1 generation (empty proposal), use the WHOLE-ARRAY path with the full array as the value.
@@ -309,6 +317,16 @@ Similarly, for v1 generation use whole-array paths:
 - "scope.responsibilities": ["What you provide 1", "What you provide 2"]
 - "timeline.phases": [{"name": "Discovery", "duration": "Weeks 1-2", "description": "..."}, ...]
 - "summary.pillars": [{"label": "Commerce", "description": "..."}, ...]
+- "investment.addOnCategories": [{"id": "content", "label": "Content & Design"}, {"id": "post-launch", "label": "Post-Launch"}]
+- "investment.addOns": [{"id": "launch-shoot", "label": "Launch photoshoot", "description": "...", "category": "content", "packages": {"total": {"price": 2500}, "light": {"price": 2500}}}]
+
+ADD-ON GENERATION for v1:
+Generate 3-5 add-ons grouped into 2-3 categories. Each add-on must be a natural upsell for THIS project, not generic filler. Price add-ons in the same currency as the packages. Tune them to the project's shape:
+- Brand/web projects: photography direction, copy polish pass, extra revision rounds, brand guidelines doc, accessibility audit.
+- Ecommerce projects: product import, SEO foundations, email flows setup, loyalty integration, post-launch CRO sprint.
+- Booking/service projects: booking system migration, staff training, reminder email flows, review-gathering setup.
+- Retainer-style add-ons: monthly SEO, monthly content updates, quarterly design refresh.
+Include each add-on in each package with a realistic price. Optionally flag items as "included" in the premium tier to strengthen its value — e.g. a launch photoshoot included in the "Full" tier but priced as an add-on for "Light".
 
 For refinement (populated proposal), use indexed paths: "scope.outcomes.2" to edit the third outcome.
 

@@ -245,9 +245,14 @@ const BuilderHome = () => {
           const query = (after.heroImageQuery && after.heroImageQuery.trim())
             ? after.heroImageQuery.trim()
             : `${after.clientName ?? ""} ${after.tagline ?? ""}`.trim()
-          fetchHeroImage(query).then((url) => {
-            if (url) useBuilderStore.getState().updateField("heroImageUrl", url)
-          })
+          useBuilderStore.getState().setHeroImageLoading(true)
+          fetchHeroImage(query)
+            .then((url) => {
+              if (url) useBuilderStore.getState().updateField("heroImageUrl", url)
+            })
+            .finally(() => {
+              useBuilderStore.getState().setHeroImageLoading(false)
+            })
         }
       })
     }

@@ -89,6 +89,11 @@ interface BuilderState {
    * don't want the prompt text to sit in the textbox afterward.
    */
   autoSendChatPrompt: string | null
+  /**
+   * True while /api/hero-image is being fetched after a v1 edit. Used by
+   * HeroSection in builder context to render a branded loading state.
+   */
+  heroImageLoading: boolean
 
   // Actions
   setProposal: (proposal: ProposalData) => void
@@ -117,6 +122,7 @@ interface BuilderState {
   setChatPanelOpen: (open: boolean) => void
   setPendingChatPrompt: (prompt: string | null) => void
   setAutoSendChatPrompt: (prompt: string | null) => void
+  setHeroImageLoading: (loading: boolean) => void
   syncChatFromUIMessages: (uiMessages: UIMessage[]) => void
 }
 
@@ -142,6 +148,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   chatPanelOpen: false,
   pendingChatPrompt: null,
   autoSendChatPrompt: null,
+  heroImageLoading: false,
 
   setProposal: (proposal) => set({ proposal, previewProposal: proposal }),
 
@@ -288,6 +295,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   setPendingChatPrompt: (pendingChatPrompt) => set({ pendingChatPrompt }),
 
   setAutoSendChatPrompt: (autoSendChatPrompt) => set({ autoSendChatPrompt }),
+
+  setHeroImageLoading: (heroImageLoading) => set({ heroImageLoading }),
 
   // Sync UIMessage[] from useChat hook to legacy chatMessages for DB persistence
   syncChatFromUIMessages: (uiMessages) => {

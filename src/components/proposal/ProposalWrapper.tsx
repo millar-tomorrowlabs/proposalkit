@@ -31,6 +31,7 @@ const SECTION_LABELS: Record<SectionKey, string> = {
 const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: ProposalWrapperProps) => {
   const studioName = proposal.studioName || ""
   const studioLogoUrl = proposal.studioLogoUrl
+  const heroImageLoading = useBuilderStore((s) => s.heroImageLoading)
   const [confirmedSelection, setConfirmedSelection] = useState<ConfirmedSelection | null>(null)
   const [addMenuTarget, setAddMenuTarget] = useState<{ relativeTo: SectionKey; position: "above" | "below" } | null>(null)
   useScrollRevealAll({ disabled: isPreview })
@@ -146,6 +147,7 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
           heroLogoLarge={proposal.heroLogoLarge}
           tagline={proposal.tagline}
           description={proposal.heroDescription}
+          imageLoading={heroImageLoading}
         />
         {proposal.sections.map((key) => (
           <SectionWrapper key={key} sectionKey={key}>

@@ -11,9 +11,11 @@ interface HeroSectionProps {
   heroLogoLarge?: boolean
   tagline: string
   description: string
+  /** When true and no heroImageUrl yet, render a branded loading state. */
+  imageLoading?: boolean
 }
 
-const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, tagline, description }: HeroSectionProps) => {
+const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, tagline, description, imageLoading }: HeroSectionProps) => {
   const ref = useScrollReveal()
 
   // Large logo mode: show logo prominently, hide client name text
@@ -32,6 +34,8 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, t
             />
             <div className="absolute inset-0 bg-black/40" />
           </>
+        ) : imageLoading ? (
+          <HeroImageSkeleton />
         ) : (
           <div
             className="h-full w-full"
@@ -121,3 +125,55 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, t
 }
 
 export default HeroSection
+
+/**
+ * Branded loading state shown while /api/hero-image is being fetched in the
+ * builder. Kept inside this file so it travels with the hero. Uses the
+ * Studio Editorial palette tokens (cream/ink) plus a soft shimmer, paired
+ * with small mono caption text so it reads as "intentional" rather than
+ * "something broke".
+ */
+function HeroImageSkeleton() {
+  return (
+    <div className="relative h-full w-full overflow-hidden" style={{ background: "var(--color-cream)" }}>
+      <div
+        className="absolute inset-0 opacity-60"
+        style={{
+          background:
+            "linear-gradient(110deg, transparent 10%, rgba(255,255,255,0.4) 30%, transparent 50%)",
+          backgroundSize: "200% 100%",
+          animation: "hero-shimmer 2.4s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 20% 30%, rgba(0,0,0,0.04) 0%, transparent 40%), radial-gradient(circle at 80% 70%, rgba(0,0,0,0.04) 0%, transparent 40%)",
+        }}
+      />
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2.5">
+        <span
+          className="inline-block h-1.5 w-1.5 rounded-full"
+          style={{ background: "var(--color-ink-mute)", animation: "hero-dot 1.4s ease-in-out infinite" }}
+        />
+        <span
+          className="text-[10px] uppercase tracking-[0.18em]"
+          style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+        >
+          Finding an image
+        </span>
+      </div>
+      <style>{`
+        @keyframes hero-shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @keyframes hero-dot {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+      `}</style>
+    </div>
+  )
+}

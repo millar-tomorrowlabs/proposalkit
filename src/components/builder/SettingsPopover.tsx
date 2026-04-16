@@ -143,6 +143,30 @@ export default function SettingsPopover({ open, onClose, anchorRef }: SettingsPo
           />
         </div>
 
+        {/* Currency */}
+        <div>
+          <span className={labelClass} style={labelStyle}>CURRENCY</span>
+          <select
+            value={proposal.currency || ""}
+            onChange={(e) => updateField("currency", e.target.value || undefined)}
+            className={inputClass}
+            style={inputStyle}
+          >
+            <option value="">Use studio default</option>
+            <option value="USD">USD · US Dollar ($)</option>
+            <option value="EUR">EUR · Euro (€)</option>
+            <option value="GBP">GBP · British Pound (£)</option>
+            <option value="CAD">CAD · Canadian Dollar</option>
+            <option value="AUD">AUD · Australian Dollar</option>
+            <option value="JPY">JPY · Japanese Yen (¥)</option>
+            <option value="CHF">CHF · Swiss Franc</option>
+            <option value="NZD">NZD · New Zealand Dollar</option>
+            <option value="SEK">SEK · Swedish Krona</option>
+            <option value="NOK">NOK · Norwegian Krone</option>
+            <option value="DKK">DKK · Danish Krone</option>
+          </select>
+        </div>
+
         {/* Section order */}
         <div>
           <span className={labelClass} style={labelStyle}>SECTIONS</span>
