@@ -554,7 +554,7 @@ interface Step2Props {
   chatInput: string
   generating: boolean
   hasUserMessages: boolean
-  messagesEndRef: React.RefObject<HTMLDivElement>
+  messagesEndRef: React.RefObject<HTMLDivElement | null>
   onChatInputChange: (v: string) => void
   onSend: () => void
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
