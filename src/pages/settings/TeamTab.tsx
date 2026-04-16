@@ -204,6 +204,13 @@ export default function TeamTab() {
   const eyebrowClass = "text-[10px] uppercase tracking-[0.12em]"
   const eyebrowStyle = { fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }
 
+  // Seat accounting for plan enforcement. Pending invites count against
+  // the cap so someone can't queue up 100 invites on a 3-seat plan and
+  // have them all accept.
+  const maxSeats = account.maxTeamSeats ?? 3
+  const seatsUsed = members.length + invites.length
+  const atSeatCap = seatsUsed >= maxSeats
+
   return (
     <div className="space-y-8">
       {/* Feedback messages */}
@@ -371,12 +378,35 @@ export default function TeamTab() {
           className="rounded-xl border p-6"
           style={{ borderColor: "var(--color-rule)" }}
         >
-          <p className={eyebrowClass} style={eyebrowStyle}>
-            Invite member
-          </p>
-          <p className="mt-1 text-[13px]" style={{ color: "var(--color-ink-soft)" }}>
-            They'll receive an email with a link to join {account.studioName}.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className={eyebrowClass} style={eyebrowStyle}>
+                Invite member
+              </p>
+              <p className="mt-1 text-[13px]" style={{ color: "var(--color-ink-soft)" }}>
+                They'll receive an email with a link to join {account.studioName}.
+              </p>
+            </div>
+            <span
+              className="rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em]"
+              style={{
+                fontFamily: "var(--font-mono)",
+                borderColor: atSeatCap ? "#A33B2840" : "var(--color-rule)",
+                color: atSeatCap ? "#A33B28" : "var(--color-ink-mute)",
+              }}
+            >
+              {seatsUsed} / {maxSeats} SEATS
+            </span>
+          </div>
+
+          {atSeatCap && (
+            <p
+              className="mt-4 rounded-lg px-4 py-3 text-[12px]"
+              style={{ background: "#A33B2810", color: "#A33B28" }}
+            >
+              You've used all {maxSeats} seats on the Friends &amp; Family plan. Remove a member or revoke a pending invite to free one up.
+            </p>
+          )}
 
           <form onSubmit={handleInvite} className="mt-5 space-y-4">
             <div>
@@ -390,6 +420,7 @@ export default function TeamTab() {
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="colleague@example.com"
                 required
+                disabled={atSeatCap}
                 className={inputClass}
                 style={inputStyle}
               />
@@ -403,6 +434,7 @@ export default function TeamTab() {
                 id="invite-role"
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value as "member" | "owner")}
+                disabled={atSeatCap}
                 className={inputClass}
                 style={inputStyle}
               >
@@ -413,8 +445,8 @@ export default function TeamTab() {
 
             <button
               type="submit"
-              disabled={sending || !inviteEmail.trim()}
-              className="rounded-full px-6 py-3 text-[14px] font-medium transition-transform hover:scale-[1.01] disabled:opacity-50"
+              disabled={sending || !inviteEmail.trim() || atSeatCap}
+              className="rounded-full px-6 py-3 text-[14px] font-medium transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
               style={{ background: "var(--color-forest)", color: "var(--color-cream)" }}
             >
               {sending ? "Sending..." : "Send invite"}

@@ -643,9 +643,12 @@ const BuilderHome = () => {
           onClose={() => setShowSendDialog(false)}
           proposal={proposal}
           account={{
+            id: account.id,
             studioName: account.studioName,
             senderName: account.senderName,
             website: account.website,
+            maxMonthlySends: account.maxMonthlySends,
+            plan: account.plan,
           }}
           onSendComplete={handleSendComplete}
         />

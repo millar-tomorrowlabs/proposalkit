@@ -30,6 +30,14 @@ export interface Account {
    * description verbatim and never touch it.
    */
   aiTailorAgencyBio?: boolean
+  // ── Plan metadata ──────────────────────────────────────────────────────
+  // "Friends & Family - Feedback" / Studio / Agency / Enterprise. Used
+  // for display + client-side seat/send enforcement. Server-side enforcement
+  // happens in edge functions and /api/chat which re-read from the DB.
+  plan?: string
+  maxTeamSeats?: number
+  maxMonthlySends?: number
+  // ai_model_tier intentionally omitted: admin-controlled, server-only.
 }
 
 export interface AccountMember {

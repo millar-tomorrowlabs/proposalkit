@@ -110,8 +110,52 @@ export default function AccountTab() {
     navigate("/login")
   }
 
+  // Plan display metadata. We show this as a small read-only badge so
+  // the user knows which limits apply. Plan assignment is admin-only
+  // (changed via SQL) so there's no edit affordance here.
+  const planLabel = (() => {
+    switch (account.plan) {
+      case "friends_family": return "Friends & Family — Feedback"
+      case "studio": return "Studio"
+      case "agency": return "Agency"
+      case "enterprise": return "Enterprise"
+      default: return "Friends & Family — Feedback"
+    }
+  })()
+  const maxSeats = account.maxTeamSeats ?? 3
+  const maxSends = account.maxMonthlySends ?? 10
+
   return (
     <div className="space-y-8">
+      {/* Plan badge */}
+      <section
+        className="rounded-xl border p-5"
+        style={{ borderColor: "var(--color-rule)", background: "var(--color-cream)" }}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p
+              className="text-[10px] uppercase tracking-[0.14em]"
+              style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+            >
+              CURRENT PLAN
+            </p>
+            <p
+              className="mt-1 text-[15px] font-medium"
+              style={{ color: "var(--color-ink)" }}
+            >
+              {planLabel}
+            </p>
+            <p
+              className="mt-2 text-[12px]"
+              style={{ color: "var(--color-ink-soft)" }}
+            >
+              Up to {maxSeats} team members. {maxSends} sent proposals per month. Paid plans coming soon — you'll be the first to know.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Studio identity */}
       <section className="space-y-5">
         <div>

@@ -18,6 +18,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import ProposlMark from "@/components/brand/ProposlMark"
 import HandDrawnUnderline from "@/components/brand/HandDrawnUnderline"
+import WaitlistForm from "@/components/landing/WaitlistForm"
 
 export default function LandingPage() {
   const navigate = useNavigate()
@@ -82,16 +83,16 @@ function Nav() {
         >
           Sign in
         </Link>
-        <Link
-          to="/signup"
+        <a
+          href="#request-access"
           className="rounded-full px-5 py-2.5 text-[13px] font-medium transition-transform hover:scale-[1.02]"
           style={{
             background: "var(--color-forest)",
             color: "var(--color-cream)",
           }}
         >
-          Start free
-        </Link>
+          Request access
+        </a>
       </nav>
     </header>
   )
@@ -108,7 +109,7 @@ function Hero() {
         className="mb-8 text-[11px] uppercase tracking-[0.18em]"
         style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
       >
-        FREE WHILE IN BETA · TAKES 2 MINUTES
+        INVITE-ONLY BETA · REQUEST ACCESS
       </p>
 
       <h1
@@ -133,23 +134,8 @@ function Hero() {
         A proposal tool for freelancers and small studios who want to spend less time writing and more time making.
       </p>
 
-      <div className="mt-10 flex flex-col items-center gap-4">
-        <Link
-          to="/signup"
-          className="rounded-full px-7 py-3.5 text-[14px] font-medium transition-transform hover:scale-[1.02]"
-          style={{
-            background: "var(--color-forest)",
-            color: "var(--color-cream)",
-          }}
-        >
-          Start free
-        </Link>
-        <p
-          className="text-[11px] uppercase tracking-[0.14em]"
-          style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
-        >
-          NO CREDIT CARD · FREE WHILE IN BETA
-        </p>
+      <div className="mt-12" id="request-access">
+        <WaitlistForm variant="hero" />
       </div>
     </section>
   )
@@ -317,18 +303,9 @@ function CTABlock() {
           className="mx-auto mb-10 max-w-[460px] text-[16px] leading-[1.55] md:text-[18px]"
           style={{ color: "var(--color-ink-soft)" }}
         >
-          Free while Proposl is in beta. No credit card. Takes about two minutes to get your first proposal out the door.
+          Proposl is in invite-only beta. Drop your email and we'll get in touch when your spot opens.
         </p>
-        <Link
-          to="/signup"
-          className="inline-block rounded-full px-8 py-4 text-[15px] font-medium transition-transform hover:scale-[1.02]"
-          style={{
-            background: "var(--color-forest)",
-            color: "var(--color-cream)",
-          }}
-        >
-          Start free
-        </Link>
+        <WaitlistForm variant="compact" />
       </div>
     </section>
   )

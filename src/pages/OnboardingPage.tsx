@@ -2,12 +2,17 @@
  * Onboarding page — /onboarding
  *
  * Post-signup 2-step flow: studio basics, then notification preferences.
- * Creates the account + membership row on finish, then redirects to
- * /proposals. Styled via AuthLayout in Studio Editorial.
+ * During invite-only beta, an invite code is required. On finish we call
+ * the accept-invite edge function (which validates the code server-side
+ * and creates the account/membership with the F&F plan).
+ *
+ * The invite code can come from:
+ *   - The ?invite= query string (passed through from /signup)
+ *   - A field the user fills in here if they navigated directly
  */
 
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
 import { friendlyError } from "@/lib/errors"
@@ -19,13 +24,16 @@ import AuthLayout, {
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
-  const { userId, session } = useAuth()
+  const { session } = useAuth()
+  const [searchParams] = useSearchParams()
+  const codeFromUrl = (searchParams.get("invite") ?? "").trim().toUpperCase()
 
   const [step, setStep] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
   // Step 1: Studio basics
+  const [inviteCode, setInviteCode] = useState(codeFromUrl)
   const [studioName, setStudioName] = useState("")
   const [displayName, setDisplayName] = useState(
     session.user.user_metadata?.display_name || "",
@@ -39,7 +47,7 @@ export default function OnboardingPage() {
   const [ctaEmail, setCtaEmail] = useState(session.user.email || "")
 
   const handleContinue = () => {
-    if (!studioName.trim() || !displayName.trim()) return
+    if (!inviteCode.trim() || !studioName.trim() || !displayName.trim()) return
     setStep(2)
   }
 
@@ -47,39 +55,32 @@ export default function OnboardingPage() {
     setError("")
     setLoading(true)
 
-    // Generate account ID client-side so we can insert into both tables
-    // without needing .select() (which fails because the SELECT policy
-    // requires account_members membership that doesn't exist yet)
-    const accountId = crypto.randomUUID()
+    // Call the edge function that validates the invite code, creates the
+    // account with the F&F plan + limits, and links the waitlist row. All
+    // of this runs under service-role server-side so clients can't bypass.
+    const { data, error: fnError } = await supabase.functions.invoke(
+      "accept-invite",
+      {
+        body: {
+          code: inviteCode.trim().toUpperCase(),
+          studioName,
+          displayName,
+          legalEntity: legalEntity || undefined,
+          website: website || undefined,
+          notifyEmail,
+          ccEmail: ccEmail || undefined,
+          ctaEmail: ctaEmail || undefined,
+        },
+      },
+    )
 
-    const { error: accountError } = await supabase.from("accounts").insert({
-      id: accountId,
-      studio_name: studioName,
-      legal_entity: legalEntity || null,
-      website: website || null,
-      notify_email: notifyEmail,
-      cc_email: ccEmail || null,
-      sender_name: studioName,
-      default_cta_email: ctaEmail || null,
-    })
-
-    if (accountError) {
-      setError(friendlyError(accountError.message))
+    if (fnError) {
+      setError(friendlyError(fnError.message))
       setLoading(false)
       return
     }
-
-    const { error: memberError } = await supabase
-      .from("account_members")
-      .insert({
-        account_id: accountId,
-        user_id: userId,
-        role: "owner",
-        display_name: displayName,
-      })
-
-    if (memberError) {
-      setError(friendlyError(memberError.message))
+    if (data?.error) {
+      setError(friendlyError(data.error))
       setLoading(false)
       return
     }
@@ -102,6 +103,31 @@ export default function OnboardingPage() {
           }}
           className="space-y-5"
         >
+          {!codeFromUrl && (
+            <div>
+              <AuthField label="Invite code">
+                <AuthInput
+                  type="text"
+                  required
+                  value={inviteCode}
+                  onChange={(e) =>
+                    setInviteCode(e.target.value.trim().toUpperCase())
+                  }
+                  placeholder="PASTE YOUR CODE"
+                />
+              </AuthField>
+              <p
+                className="mt-1.5 text-[11px] uppercase tracking-[0.12em]"
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  color: "var(--color-ink-mute)",
+                }}
+              >
+                BETA IS INVITE-ONLY. CHECK YOUR INVITE EMAIL FOR THE CODE.
+              </p>
+            </div>
+          )}
+
           <AuthField label="Studio or agency name">
             <AuthInput
               type="text"
@@ -151,7 +177,12 @@ export default function OnboardingPage() {
             />
           </AuthField>
 
-          <AuthButton type="submit" disabled={!studioName.trim() || !displayName.trim()}>
+          <AuthButton
+            type="submit"
+            disabled={
+              !inviteCode.trim() || !studioName.trim() || !displayName.trim()
+            }
+          >
             Continue →
           </AuthButton>
         </form>

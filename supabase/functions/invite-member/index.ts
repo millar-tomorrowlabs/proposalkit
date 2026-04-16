@@ -104,6 +104,37 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Plan cap: don't let an owner oversubscribe their team on the F&F
+    // plan. Pending invites count toward the cap so someone can't queue
+    // 100 invites on a 3-seat plan. Client-side UI enforces the same,
+    // but this is the server-side belt.
+    const { data: planRow } = await supabase
+      .from("accounts")
+      .select("max_team_seats")
+      .eq("id", body.accountId)
+      .single()
+    const maxSeats = (planRow?.max_team_seats as number | undefined) ?? 3
+
+    const { count: memberCount } = await supabase
+      .from("account_members")
+      .select("id", { count: "exact", head: true })
+      .eq("account_id", body.accountId)
+    const { count: pendingInvites } = await supabase
+      .from("account_invites")
+      .select("id", { count: "exact", head: true })
+      .eq("account_id", body.accountId)
+      .is("accepted_at", null)
+
+    const seatsUsed = (memberCount ?? 0) + (pendingInvites ?? 0)
+    if (seatsUsed >= maxSeats) {
+      return new Response(
+        JSON.stringify({
+          error: `Seat cap reached (${seatsUsed}/${maxSeats} on the Friends & Family plan). Remove a member or revoke a pending invite first.`,
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      )
+    }
+
     // Check if user is already a member
     const { data: existingMember } = await supabase
       .from("account_members")

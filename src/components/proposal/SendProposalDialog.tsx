@@ -39,9 +39,12 @@ export interface SendHistoryRow {
 }
 
 interface AccountContext {
+  id?: string
   studioName?: string
   senderName?: string
   website?: string
+  maxMonthlySends?: number
+  plan?: string
 }
 
 interface Props {
@@ -85,6 +88,7 @@ export default function SendProposalDialog({
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
   const [sendType, setSendType] = useState<"initial" | "reminder">("initial")
   const [history, setHistory] = useState<SendHistoryRow[]>([])
+  const [monthSendCount, setMonthSendCount] = useState<number | null>(null)
 
   // Escape key closes the dialog (in addition to the X button and backdrop click).
   useEffect(() => {
@@ -123,6 +127,32 @@ export default function SendProposalDialog({
       loadHistory()
     }
   }, [open, loadHistory])
+
+  // Count this month's initial sends against the plan cap. Reminders
+  // don't count (matches the server-side enforcement in send-proposal).
+  // Runs on open so the counter is fresh; skipped if we don't have the
+  // account id (e.g. during local dev snapshots).
+  useEffect(() => {
+    if (!open || !account.id) return
+    let cancelled = false
+    const fetchCount = async () => {
+      const now = new Date()
+      const monthStart = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+      ).toISOString()
+      const { count } = await supabase
+        .from("proposal_sends")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", account.id)
+        .eq("send_type", "initial")
+        .gte("sent_at", monthStart)
+      if (!cancelled) setMonthSendCount(count ?? 0)
+    }
+    fetchCount()
+    return () => {
+      cancelled = true
+    }
+  }, [open, account.id])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -322,10 +352,46 @@ export default function SendProposalDialog({
               </p>
             )}
 
+            {/* Monthly send counter. Reminders don't count against it,
+                mirroring the server-side enforcement in send-proposal. */}
+            {(() => {
+              if (sendType === "reminder") return null
+              const max = account.maxMonthlySends ?? 10
+              if (monthSendCount == null) return null
+              const atCap = monthSendCount >= max
+              return (
+                <div
+                  className="flex items-center justify-between rounded-lg border px-3.5 py-2.5"
+                  style={{
+                    borderColor: atCap ? "#A33B2840" : "var(--color-rule)",
+                    background: atCap ? "#A33B2810" : "transparent",
+                  }}
+                >
+                  <span
+                    className="text-[11px] uppercase tracking-[0.12em]"
+                    style={{ fontFamily: "var(--font-mono)", color: atCap ? "#A33B28" : "var(--color-ink-mute)" }}
+                  >
+                    {atCap ? "MONTHLY CAP REACHED" : "SENDS THIS MONTH"}
+                  </span>
+                  <span
+                    className="text-[12px] font-medium"
+                    style={{ color: atCap ? "#A33B28" : "var(--color-ink)" }}
+                  >
+                    {monthSendCount} / {max}
+                  </span>
+                </div>
+              )
+            })()}
+
             <button
               type="submit"
-              disabled={status === "sending"}
-              className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-[14px] font-medium transition-transform hover:scale-[1.01] disabled:opacity-50"
+              disabled={
+                status === "sending" ||
+                (sendType === "initial" &&
+                  monthSendCount != null &&
+                  monthSendCount >= (account.maxMonthlySends ?? 10))
+              }
+              className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-[14px] font-medium transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
               style={{
                 background: "var(--color-forest)",
                 color: "var(--color-cream)",

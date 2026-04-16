@@ -153,6 +153,40 @@ Deno.serve(async (req) => {
             { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           )
         }
+
+        // Plan cap: enforce monthly send limit (initial sends only; reminders
+        // don't count against the cap since they're follow-ups on an
+        // already-paid-for send). Client-side shows the same counter.
+        const isReminder = body.sendType === "reminder"
+        if (!isReminder) {
+          const { data: planRow } = await supabase
+            .from("accounts")
+            .select("max_monthly_sends")
+            .eq("id", accountId)
+            .single()
+          const maxSends = (planRow?.max_monthly_sends as number | undefined) ?? 10
+
+          // Start of calendar month in UTC. Matches how proposal_sends are
+          // counted on the client-side counter.
+          const now = new Date()
+          const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
+
+          const { count: sendsThisMonth } = await supabase
+            .from("proposal_sends")
+            .select("id", { count: "exact", head: true })
+            .eq("account_id", accountId)
+            .eq("send_type", "initial")
+            .gte("sent_at", monthStart)
+
+          if ((sendsThisMonth ?? 0) >= maxSends) {
+            return new Response(
+              JSON.stringify({
+                error: `Monthly send cap reached (${sendsThisMonth}/${maxSends} on the Friends & Family plan). Resets on the 1st.`,
+              }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            )
+          }
+        }
       }
     }
 

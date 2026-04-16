@@ -398,26 +398,78 @@ You: "I can draft one. Quick question first: is the client coming from WooCommer
 - Never discuss Proposl's features, pricing, or roadmap beyond editing proposals. If asked: "That's a question for the Proposl team — I'm here to help with your proposal."`
 }
 
-// --- Auth ---
+// --- Auth + server-side account lookup ---
+//
+// We intentionally source ai_model_tier, plan, and send limits from the
+// DB via service role rather than trusting anything in the client payload.
+// Users can't bump themselves to a higher model tier by editing the POST
+// body: we ignore whatever they send for those fields.
 
-async function verifyAuth(req: Request): Promise<string> {
-  const authHeader = req.headers.get("authorization")
-  if (!authHeader?.startsWith("Bearer ")) {
-    throw new Error("UNAUTHORIZED")
-  }
+type AccountSecurityContext = {
+  userId: string
+  accountId: string | null
+  plan: string
+  aiModelTier: "haiku" | "sonnet" | "opus"
+  maxMonthlySends: number
+}
 
-  const supabase = createClient(
+function serviceRoleClient() {
+  return createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
+}
 
+async function verifyAuthWithAccount(req: Request): Promise<AccountSecurityContext> {
+  const authHeader = req.headers.get("authorization")
+  if (!authHeader?.startsWith("Bearer ")) throw new Error("UNAUTHORIZED")
+
+  const supabase = serviceRoleClient()
   const token = authHeader.slice(7)
   const { data: { user }, error } = await supabase.auth.getUser(token)
-  if (error || !user) {
-    throw new Error("UNAUTHORIZED")
-  }
+  if (error || !user) throw new Error("UNAUTHORIZED")
 
-  return user.id
+  // Look up the account the user belongs to. One row: account_members is
+  // one-per-user currently. Returns null if the user hasn't finished
+  // onboarding yet (in which case we still allow the chat — the UI routes
+  // them to /onboarding anyway; this just means no logging).
+  const { data: memberRow } = await supabase
+    .from("account_members")
+    .select("account_id, accounts(plan, ai_model_tier, max_monthly_sends)")
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  const account = memberRow?.accounts as
+    | { plan?: string; ai_model_tier?: string; max_monthly_sends?: number }
+    | undefined
+
+  const tier = (account?.ai_model_tier ?? "sonnet") as "haiku" | "sonnet" | "opus"
+  return {
+    userId: user.id,
+    accountId: memberRow?.account_id ?? null,
+    plan: account?.plan ?? "friends_family",
+    aiModelTier: tier,
+    maxMonthlySends: account?.max_monthly_sends ?? 10,
+  }
+}
+
+// Keep the old single-ID helper around as a thin wrapper so any callers
+// that only need the user id (rate limiter below) don't change shape.
+async function verifyAuth(req: Request): Promise<string> {
+  const ctx = await verifyAuthWithAccount(req)
+  return ctx.userId
+}
+
+// Map tier → concrete Anthropic model id. Source of truth for what each
+// plan actually runs against. Default to sonnet if something unexpected
+// lands in the column (belt-and-braces vs the CHECK constraint).
+const MODEL_BY_TIER: Record<string, string> = {
+  haiku: "claude-3-5-haiku-latest",
+  sonnet: "claude-sonnet-4-6",
+  opus: "claude-opus-4-latest",
+}
+function modelForTier(tier: string): string {
+  return MODEL_BY_TIER[tier] ?? MODEL_BY_TIER.sonnet
 }
 
 // --- Handler ---
@@ -444,15 +496,16 @@ export default async function handler(req: Request) {
     })
   }
 
-  let userId: string
+  let authCtx: AccountSecurityContext
   try {
-    userId = await verifyAuth(req)
+    authCtx = await verifyAuthWithAccount(req)
   } catch {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
     })
   }
+  const userId = authCtx.userId
 
   // Rate limit
   if (!checkRateLimit(userId)) {
@@ -541,8 +594,19 @@ export default async function handler(req: Request) {
 
     const modelMessages = await convertToModelMessages(sanitizedMessages)
 
+    // Model tier comes from the DB via service role (authCtx), NOT from
+    // the client-sent accountContext. Users cannot bump themselves to a
+    // higher model by editing the payload.
+    const modelName = modelForTier(authCtx.aiModelTier)
+
+    // Extract the proposal id (if present) so ai_usage rows can be joined
+    // back to a specific proposal. Safe-guarded because proposal might be
+    // partial/unknown during early intake.
+    const proposalId = (proposal as { id?: unknown })?.id
+    const proposalIdSafe = typeof proposalId === "string" ? proposalId : null
+
     const result = streamText({
-      model: anthropic("claude-sonnet-4-6"),
+      model: anthropic(modelName),
       system: buildSystemPrompt({
         ...accountContext,
         isEmpty,
@@ -550,6 +614,23 @@ export default async function handler(req: Request) {
       }),
       messages: [proposalContext, assistantAck, ...modelMessages],
       maxTokens: 8000,
+      onFinish: async ({ usage }) => {
+        // Fire-and-forget usage logging. Never block the response on it.
+        try {
+          if (authCtx.accountId) {
+            await serviceRoleClient().from("ai_usage").insert({
+              account_id: authCtx.accountId,
+              user_id: authCtx.userId,
+              proposal_id: proposalIdSafe,
+              model: modelName,
+              input_tokens: usage.promptTokens ?? 0,
+              output_tokens: usage.completionTokens ?? 0,
+            })
+          }
+        } catch (e) {
+          console.error("ai_usage log error:", e)
+        }
+      },
     })
 
     return result.toUIMessageStreamResponse()

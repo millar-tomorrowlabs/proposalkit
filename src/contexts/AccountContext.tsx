@@ -44,6 +44,11 @@ function toAccount(row: Record<string, unknown>): Account {
     // Default: allow AI to tailor bio. Column is non-null in DB with default
     // true, but we tolerate undefined rows for forward-compat.
     aiTailorAgencyBio: row.ai_tailor_agency_bio === undefined ? true : !!row.ai_tailor_agency_bio,
+    // Plan metadata. Defaults match Friends & Family values so pre-migration
+    // rows read sensibly until they're migrated.
+    plan: (row.plan as string | undefined) ?? "friends_family",
+    maxTeamSeats: (row.max_team_seats as number | undefined) ?? 3,
+    maxMonthlySends: (row.max_monthly_sends as number | undefined) ?? 10,
   }
 }
 
