@@ -12,14 +12,15 @@ import WizardPage from "@/pages/WizardPage"
 import LoginPage from "@/pages/LoginPage"
 import LandingPage from "@/pages/LandingPage"
 import NotFound from "@/pages/NotFound"
+import SettingsShell from "@/pages/SettingsShell"
 
 // Lazy-load pages that are not needed on initial load
 const SignupPage = lazy(() => import("@/pages/SignupPage"))
 const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"))
 const InviteAcceptPage = lazy(() => import("@/pages/InviteAcceptPage"))
-const AccountSettingsPage = lazy(() => import("@/pages/AccountSettingsPage"))
-const TeamMembersPage = lazy(() => import("@/pages/TeamMembersPage"))
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"))
+const AccountTab = lazy(() => import("@/pages/settings/AccountTab"))
+const TeamTab = lazy(() => import("@/pages/settings/TeamTab"))
 
 function App() {
   return (
@@ -52,8 +53,10 @@ function App() {
               <Route path="/new" element={<WizardPage />} />
               <Route path="/builder" element={<BuilderHome />} />
               <Route path="/builder/:id" element={<BuilderHome />} />
-              <Route path="/settings" element={<AccountSettingsPage />} />
-              <Route path="/settings/team" element={<TeamMembersPage />} />
+              <Route path="/settings" element={<SettingsShell />}>
+                <Route index element={<AccountTab />} />
+                <Route path="team" element={<TeamTab />} />
+              </Route>
             </Route>
           </Route>
 
