@@ -60,7 +60,8 @@ The builder is a single full-width surface:
 
 - **Background:** `--color-paper` (#F4F1E8)
 - **Top bar:** Fixed at top, cream bg, full width
-- **Document:** Centered, max-width ~680px, white bg, rule border, rounded corners. Rendered proposal sections scroll vertically. This is the actual proposal content (HeroSection, SummarySection, ScopeSection, etc.) rendered exactly as a client would see it, but with inline editing enabled.
+- **Document:** Full-width WYSIWYG rendering. The proposal sections (HeroSection, SummarySection, etc.) render at their natural full-bleed dimensions, exactly as a client would see them. The hero fills the viewport width with its background image, sections span edge to edge. This is true WYSIWYG -- the editing experience matches the final output. Inline editing is enabled on all text. The paper background shows through as page margins when sections don't fill the full width.
+- **Viewport switcher:** Desktop / Tablet / Mobile toggle in the top bar. Tablet constrains the document to ~768px centered. Mobile constrains to ~375px centered. Desktop is full-width (default). Uses CSS container queries on a wrapper div (the existing pattern from the current builder) so responsive breakpoints work correctly at each size.
 - **Floating composer:** Fixed at bottom center, ~520px wide, cream bg, rule border, rounded-xl, drop shadow. Contains a single-line input that expands to show conversation history when active.
 
 ### 3.2 Top bar
@@ -74,6 +75,7 @@ Left to right:
 | Status badge | DRAFT / SENT / etc. Mono, uppercase, 9px, colored dot |
 | Context button | Opens context dialog (same layout as intake Step 1) to view/add/remove context sources |
 | Settings button | Opens settings popover (see 3.4) |
+| Viewport switcher | Desktop / Tablet / Mobile icons. Default: Desktop (full-width). Tablet: ~768px centered. Mobile: ~375px centered |
 | Preview toggle | Hides the floating composer for a clean document preview. Label: "Preview" / "Edit" toggle |
 | Send button | Primary pill (forest bg), opens SendProposalDialog |
 
@@ -105,6 +107,13 @@ The primary AI interaction surface. Inspired by Cursor's command bar.
 - File/URL attachment (same as intake -- adds to persistent context)
 - Section-aware: if the user has clicked into a section (via inline editing), the composer is contextually aware of which section is active
 - Streaming responses with real-time document updates
+- Chat history persists to the database (see 7.2) so conversations survive across sessions
+
+**Undo / revert:**
+Before each AI edit, a snapshot of the proposal `data` JSONB is saved (see 7.3). If an AI edit goes wrong:
+- A "Revert" button appears in the composer after each AI change, restoring the previous snapshot
+- The user can also say "undo that" in chat and the AI restores the snapshot
+- Snapshots are lightweight (just the `data` column) and capped at ~50 per proposal, oldest pruned
 
 ### 3.4 Settings popover
 
@@ -127,7 +136,16 @@ The existing `InlineEditable` component continues to work. When the user clicks 
 
 Inline editing and the floating composer coexist naturally: click to fix a typo, use the composer to rewrite a whole section.
 
-### 3.6 Section management
+### 3.6 AskAI ghost buttons
+
+The existing `AskAIGhost` buttons evolve into composer entry points. When hovering over a section, a small "Ask AI" ghost button appears. Clicking it:
+1. Focuses the floating composer
+2. Pre-fills a section-specific prompt (e.g., "Rewrite this deliverable to be more specific about...")
+3. Sets the composer's section context so the AI knows which section to target
+
+This bridges inline editing and the composer -- the ghost buttons are quick-action shortcuts into the AI conversation.
+
+### 3.7 Section management
 
 Sections in the document get hover-triggered toolbars (the existing `SectionToolbar` pattern):
 
@@ -137,7 +155,7 @@ Sections in the document get hover-triggered toolbars (the existing `SectionTool
 
 This is the primary section management surface. The settings popover section list is a secondary fallback.
 
-### 3.7 What gets deleted
+### 3.8 What gets deleted
 
 The following components are replaced and can be removed:
 
@@ -244,6 +262,41 @@ CREATE INDEX idx_proposal_context_proposal ON proposal_context(proposal_id);
 - `extracted_text` is the parsed content (not the original binary) so the AI can reference it throughout editing
 - RLS scoped by account_id via the parent proposal
 - The UI shows these as a clear list: name, type badge, size, added date, remove button
+
+### 7.2 New table: `proposal_messages`
+
+Chat history persists so conversations survive across sessions and serve as an audit trail.
+
+```sql
+CREATE TABLE proposal_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  content TEXT NOT NULL,
+  section_context TEXT,         -- which section was active, if any (e.g. 'scope')
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_proposal_messages_proposal ON proposal_messages(proposal_id);
+```
+
+### 7.3 New table: `proposal_snapshots`
+
+Lightweight snapshots of proposal data before each AI edit, enabling revert.
+
+```sql
+CREATE TABLE proposal_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+  data JSONB NOT NULL,          -- copy of proposals.data at snapshot time
+  trigger TEXT NOT NULL,        -- what caused the snapshot (e.g. 'ai_edit', 'section_delete')
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_proposal_snapshots_proposal ON proposal_snapshots(proposal_id);
+```
+
+Capped at ~50 snapshots per proposal. Oldest pruned when limit exceeded.
 
 ## 8. Out of Scope
 
