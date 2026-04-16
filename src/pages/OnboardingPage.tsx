@@ -75,7 +75,21 @@ export default function OnboardingPage() {
     )
 
     if (fnError) {
-      setError(friendlyError(fnError.message))
+      // supabase-js wraps non-2xx responses with a generic message. The
+      // real, user-facing error is inside fnError.context as an HTTP
+      // Response; dig it out so users get "This invite was already used"
+      // instead of "Edge Function returned a non-2xx status code".
+      let message = fnError.message
+      const ctx = (fnError as { context?: Response }).context
+      if (ctx && typeof ctx.json === "function") {
+        try {
+          const body = await ctx.json()
+          if (body?.error) message = body.error
+        } catch {
+          // fall through to the friendlyError fallback
+        }
+      }
+      setError(friendlyError(message))
       setLoading(false)
       return
     }
@@ -168,9 +182,10 @@ export default function OnboardingPage() {
             </p>
           </div>
 
-          <AuthField label="Website (optional)">
+          <AuthField label="Website">
             <AuthInput
               type="text"
+              required
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
               placeholder="acmedesign.co"
@@ -180,7 +195,10 @@ export default function OnboardingPage() {
           <AuthButton
             type="submit"
             disabled={
-              !inviteCode.trim() || !studioName.trim() || !displayName.trim()
+              !inviteCode.trim() ||
+              !studioName.trim() ||
+              !displayName.trim() ||
+              !website.trim()
             }
           >
             Continue →

@@ -29,6 +29,12 @@ const ERROR_PATTERNS: [RegExp, string][] = [
   [/ANTHROPIC_API_KEY/i, "AI service is not configured. Please contact support."],
   [/Failed to send email/i, "Email couldn't be sent. Please try again."],
   [/Incorrect email or password/i, "Incorrect email or password."],
+  // Supabase client wraps any non-2xx function response with this generic
+  // string. It's a leaky abstraction — users shouldn't see "edge function"
+  // anywhere. Callers extract the real error body; this is the fallback.
+  [/Edge Function returned/i, "Something didn't save. Please try again."],
+  [/non-2xx status/i, "Something didn't save. Please try again."],
+  [/FunctionsHttpError/i, "Something didn't save. Please try again."],
 
   // Rate limiting
   [/rate.limit/i, "Too many requests. Please wait a moment and try again."],

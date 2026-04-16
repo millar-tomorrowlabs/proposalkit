@@ -105,10 +105,12 @@ Deno.serve(async (req) => {
   const studioName = (body.studioName ?? "").trim()
   const displayName = (body.displayName ?? "").trim()
   const notifyEmail = (body.notifyEmail ?? "").trim()
+  const website = (body.website ?? "").trim()
 
   if (!code) return jsonError(400, "Invite code is required.")
   if (!studioName) return jsonError(400, "Studio name is required.")
   if (!displayName) return jsonError(400, "Your name is required.")
+  if (!website) return jsonError(400, "Website is required.")
   if (!notifyEmail) return jsonError(400, "Notification email is required.")
 
   // Look up the invite code. Case-insensitive on both code and email.
@@ -153,7 +155,7 @@ Deno.serve(async (req) => {
     id: accountId,
     studio_name: studioName,
     legal_entity: body.legalEntity || null,
-    website: body.website || null,
+    website,
     notify_email: notifyEmail,
     cc_email: body.ccEmail || null,
     sender_name: studioName,
