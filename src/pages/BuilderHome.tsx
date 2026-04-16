@@ -17,6 +17,7 @@ import SettingsPopover from "@/components/builder/SettingsPopover"
 import ContextDialog from "@/components/builder/ContextDialog"
 import { VIEWPORT_WIDTHS } from "@/components/builder/ViewportSwitcher"
 import { stripStreamingEditsBlock } from "@/lib/proposalEdits"
+import { fetchHeroImage } from "@/lib/heroImage"
 import type { ProposalData, SectionKey } from "@/types/proposal"
 
 const DEBOUNCE_PREVIEW_MS = 300
@@ -225,6 +226,20 @@ const BuilderHome = () => {
           useBuilderStore.getState().applyChatEdits(m.id)
         }
         setCanRevert(true)
+        // After applying edits, if the AI just populated a previously-empty
+        // proposal but didn't set a hero image (it can't generate images),
+        // source one from Unsplash using the client name + tagline as a
+        // keyword query. Silent fail is fine — we just leave the hero
+        // empty and the user can set one manually.
+        const after = useBuilderStore.getState().proposal
+        const hasContent = !!(after.tagline && after.tagline.trim())
+        const missingHero = !after.heroImageUrl
+        if (hasContent && missingHero) {
+          const query = `${after.clientName ?? ""} ${after.tagline ?? ""}`.trim()
+          fetchHeroImage(query).then((url) => {
+            if (url) useBuilderStore.getState().updateField("heroImageUrl", url)
+          })
+        }
       })
     }
   }, [uiMessages, chatStatus, saveSnapshot])
