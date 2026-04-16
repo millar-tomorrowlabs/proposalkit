@@ -182,6 +182,7 @@ Emit ONE proposal-edits block containing every field needed for a complete propo
 - investment.packages (whole array with recommendation flag)
 - recommendation (one-sentence explanation of which tier and why)
 - title (the admin/email title — "[Client Name] — [Short Project Descriptor]")
+- currency (ISO code like "EUR" or "USD" — detect from user messages per the currency rule)
 
 After the block, end with: "Drafted v1. Tell me what to tighten." If you drafted from thin context (skip-phrase first-turn or minimal input), also add a second line listing the 2-3 biggest assumptions you made, e.g. "I assumed: €12k budget → split across Core/Full tiers; 6-week launch; calm/editorial vibe. Flag any that are off."`
     : `**The proposal already has content. You're refining.**
@@ -261,6 +262,14 @@ BAD: "We recommend Total because it offers the most comprehensive solution."
 The cheapest tier is still a real proposal, never a strawman.
 Add-ons each show their savings vs buying separately.
 
+CURRENCY DETECTION
+Before drafting packages, figure out the currency:
+1. Scan the user's messages, the brief, and attached context for currency signals — the symbols €, £, ¥, $, or the codes EUR, GBP, USD, CAD, AUD, JPY, CHF, or words like "euros", "pounds", "dollars", "yen".
+2. If you find a signal, set the "currency" field to the matching ISO 4217 code (EUR, GBP, USD, CAD, AUD, JPY, CHF). Include this edit in the v1 block.
+3. If the user said e.g. "€18k" or "18000 euros", use EUR — don't silently default to the studio's currency.
+4. If no signal is present, fall back to the studio's default currency.
+5. When the user's stated budget anchors a number (e.g. €18k total), build the tier prices around that figure — the recommended tier should hit or come near it, the cheaper tier should be ~30-50% less, the premium tier (if any) ~20-40% more. Don't draft $8,500 / $12,000 boilerplate when the brief says €18k.
+
 # STUDIO VOICE
 
 ${buildStudioVoiceBlock(ctx)}
@@ -278,7 +287,7 @@ Output a single hidden code block at the END of your response. NEVER reference t
 VALID FIELD PATHS:
 - Hero: "tagline", "heroDescription"  (NEVER set heroImageUrl — the app auto-sources an image from Unsplash after your edits land)
 - Hero image search: "heroImageQuery" — 2-5 keyword string used for the Unsplash lookup. Set this during v1 based on the visual direction the user described. Never rendered to the user; internal only.
-- Meta: "title", "clientName", "recommendation", "brief"
+- Meta: "title", "clientName", "recommendation", "brief", "currency" (ISO 4217 code like "USD", "EUR", "GBP" — set this during v1 based on currency detection rules above)
 - Summary: "summary.studioTagline", "summary.studioDescription", "summary.projectOverview", "summary.projectDetail", "summary.projectDetail2", "summary.pillarsTagline"
 - Summary pillars (array): "summary.pillars" for the whole list, or "summary.pillars.0.label" / "summary.pillars.0.description" for a specific pillar.
 - Scope arrays: "scope.outcomes" for the whole list, or "scope.outcomes.0" for a specific item. Same for "scope.responsibilities".
