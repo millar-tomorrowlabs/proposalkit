@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid"
 import type { UIMessage } from "ai"
 import type { ProposalData, AISuggestions, ContextBlob, ChatMessage, ProposedEdit } from "@/types/proposal"
 import { setAtPath } from "@/lib/fieldPath"
+import { extractEditsFromText } from "@/lib/proposalEdits"
 
 const DEFAULT_PROPOSAL: ProposalData = {
   id: uuidv4(),
@@ -296,6 +297,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
             edits.push(...(toolPart.args.edits as ProposedEdit[]))
           }
         }
+      }
+
+      // Also extract edits from `proposal-edits` code blocks the AI emits
+      // in the message text (current /api/chat format — text-streamed,
+      // not tool-call-based).
+      if (msg.role === "assistant") {
+        edits.push(...extractEditsFromText(content))
       }
 
       return {

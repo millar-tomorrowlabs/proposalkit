@@ -16,6 +16,7 @@ import FloatingComposer from "@/components/builder/FloatingComposer"
 import SettingsPopover from "@/components/builder/SettingsPopover"
 import ContextDialog from "@/components/builder/ContextDialog"
 import { VIEWPORT_WIDTHS } from "@/components/builder/ViewportSwitcher"
+import { stripStreamingEditsBlock } from "@/lib/proposalEdits"
 import type { ProposalData, SectionKey } from "@/types/proposal"
 
 const DEBOUNCE_PREVIEW_MS = 300
@@ -55,6 +56,44 @@ const BuilderHome = () => {
   // Loading state for existing proposals
   const [isLoading, setIsLoading] = useState(!!id)
 
+  // Context sources attached to this proposal. The AI system prompt
+  // receives name + excerpt for each source so it can reference them
+  // when drafting or refining.
+  const [contextSources, setContextSources] = useState<
+    Array<{ name: string; sourceType: "file" | "url" | "paste"; excerpt: string }>
+  >([])
+
+  const loadContextSources = useCallback(async () => {
+    if (!proposal.id) return
+    const { data } = await supabase
+      .from("proposal_context")
+      .select("name, source_type, extracted_text")
+      .eq("proposal_id", proposal.id)
+      .order("created_at", { ascending: true })
+    if (!data) return
+    // Truncate each source's excerpt so the full prompt stays well under
+    // the model's context window. 4,000 chars ≈ 1,000 tokens per source,
+    // and we expect <5 sources per proposal typically.
+    const EXCERPT_LIMIT = 4000
+    setContextSources(
+      data.map((r) => ({
+        name: r.name,
+        sourceType: r.source_type as "file" | "url" | "paste",
+        excerpt:
+          r.extracted_text.length > EXCERPT_LIMIT
+            ? r.extracted_text.slice(0, EXCERPT_LIMIT) + "\n\n[...truncated...]"
+            : r.extracted_text,
+      })),
+    )
+  }, [proposal.id])
+
+  // Reload context sources whenever the proposal id changes (i.e. loaded)
+  // and once more when the ContextDialog closes (so fresh adds land in
+  // the next AI call).
+  useEffect(() => {
+    loadContextSources()
+  }, [loadContextSources])
+
   // ── AI chat (replaces deleted ChatPanel) ────────────────────────────────
   const transport = useMemo(
     () =>
@@ -71,11 +110,17 @@ const BuilderHome = () => {
             studioName: account.studioName,
             studioDescription: account.aiStudioDescription,
             studioTagline: account.aiStudioTagline,
+            voiceDescription: account.voiceDescription,
+            voiceExamples: account.voiceExamples,
+            bannedPhrases: account.bannedPhrases,
+            defaultHourlyRate: account.defaultHourlyRate,
+            defaultCurrency: account.defaultCurrency,
             brief: proposal.brief,
           },
+          contextSources,
         },
       }),
-    [proposal, account, session],
+    [proposal, account, session, contextSources],
   )
 
   const {
@@ -92,13 +137,6 @@ const BuilderHome = () => {
   })
 
   const isStreaming = chatStatus === "streaming" || chatStatus === "submitted"
-
-  // Sync UIMessages back to the store so they persist via the autosave path
-  useEffect(() => {
-    if (uiMessages.length > 0 && chatStatus === "ready") {
-      useBuilderStore.getState().syncChatFromUIMessages(uiMessages)
-    }
-  }, [uiMessages, chatStatus])
 
   // Auto-send pending chat prompt (triggered by AskAIGhost buttons)
   useEffect(() => {
@@ -157,6 +195,35 @@ const BuilderHome = () => {
     }
   }, [proposal.id])
 
+  // Sync UIMessages back to the store + auto-apply any new AI edits.
+  // The store extracts edits both from tool parts AND from `proposal-edits`
+  // code blocks the AI streams in text. When a fresh assistant message
+  // arrives with edits, we save a snapshot first (so revert works), then
+  // apply the edits to the live proposal so the document updates instantly.
+  useEffect(() => {
+    if (uiMessages.length === 0 || chatStatus !== "ready") return
+
+    const store = useBuilderStore.getState()
+    store.syncChatFromUIMessages(uiMessages)
+
+    // Apply any unapplied edits on assistant messages
+    const refreshed = useBuilderStore.getState()
+    const applied = refreshed.appliedEditIds
+    const unapplied = uiMessages.filter(
+      (m) => m.role === "assistant" && !applied.has(m.id) && refreshed._uiChatEdits[m.id]?.length,
+    )
+    if (unapplied.length > 0) {
+      // Snapshot once before the batch applies, so revert restores the
+      // pre-AI state in one click.
+      saveSnapshot("ai-edit").then(() => {
+        for (const m of unapplied) {
+          useBuilderStore.getState().applyChatEdits(m.id)
+        }
+        setCanRevert(true)
+      })
+    }
+  }, [uiMessages, chatStatus, saveSnapshot])
+
   // Init on mount
   useEffect(() => {
     if (id) {
@@ -204,21 +271,9 @@ const BuilderHome = () => {
     }
   }, [id])
 
-  // Track when AI produces a NEW response from the live chat (not initial load)
-  // and save a snapshot before, so revert is available for that change.
-  // We only set canRevert true when uiMessages grows from a real user→AI roundtrip
-  // in this session — never just because the loaded chat history ends with an
-  // assistant message.
-  const prevUIMessageCount = useRef(0)
-  useEffect(() => {
-    if (uiMessages.length > prevUIMessageCount.current && prevUIMessageCount.current > 0) {
-      const latest = uiMessages[uiMessages.length - 1]
-      if (latest.role === "assistant" && chatStatus === "ready") {
-        saveSnapshot("ai-edit").then(() => setCanRevert(true))
-      }
-    }
-    prevUIMessageCount.current = uiMessages.length
-  }, [uiMessages.length, chatStatus, saveSnapshot])
+  // (The sync/auto-apply effect higher up also handles snapshots + canRevert
+  // when an assistant response actually contains edits. We don't snapshot for
+  // pure-text assistant replies because there's nothing to revert.)
 
   // Debounce preview flush
   useEffect(() => {
@@ -387,10 +442,16 @@ const BuilderHome = () => {
           <FloatingComposer
             messages={uiMessages.map((m) => {
               const textParts = m.parts.filter((p) => p.type === "text") as Array<{ type: "text"; text: string }>
+              const raw = textParts.map((p) => p.text).join("")
+              // Hide the `proposal-edits` JSON block from the user — they
+              // see the document update instead. While streaming, the
+              // closing fence may not have arrived yet, so strip the
+              // unterminated block too.
+              const visible = m.role === "assistant" ? stripStreamingEditsBlock(raw) : raw
               return {
                 id: m.id,
                 role: m.role as "user" | "assistant",
-                content: textParts.map((p) => p.text).join(""),
+                content: visible,
                 createdAt: new Date().toISOString(),
               }
             })}
@@ -406,10 +467,14 @@ const BuilderHome = () => {
           />
         )}
 
-        {/* Context dialog */}
+        {/* Context dialog. Refetches sources on close so the next AI turn
+            sees freshly-added briefs/transcripts in the system prompt. */}
         <ContextDialog
           open={showContext}
-          onClose={() => setShowContext(false)}
+          onClose={() => {
+            setShowContext(false)
+            loadContextSources()
+          }}
           proposalId={proposal.id}
         />
 

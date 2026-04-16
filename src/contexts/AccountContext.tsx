@@ -38,6 +38,11 @@ function toAccount(row: Record<string, unknown>): Account {
     defaultStudioTagline: row.default_studio_tagline as string | undefined,
     defaultStudioDescription: row.default_studio_description as string | undefined,
     defaultStudioDescription2: row.default_studio_description_2 as string | undefined,
+    voiceDescription: row.voice_description as string | undefined,
+    voiceExamples: row.voice_examples as string | undefined,
+    bannedPhrases: row.banned_phrases as string | undefined,
+    defaultHourlyRate: row.default_hourly_rate as number | undefined,
+    defaultCurrency: row.default_currency as string | undefined,
   }
 }
 

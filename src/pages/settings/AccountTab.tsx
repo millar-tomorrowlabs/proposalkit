@@ -36,6 +36,14 @@ export default function AccountTab() {
   const [studioTagline, setStudioTagline] = useState(account.defaultStudioTagline || "")
   const [studioDescription, setStudioDescription] = useState(account.defaultStudioDescription || "")
   const [studioDescription2, setStudioDescription2] = useState(account.defaultStudioDescription2 || "")
+  // AI voice & pricing defaults — passed into the chat system prompt
+  const [voiceDescription, setVoiceDescription] = useState(account.voiceDescription || "")
+  const [voiceExamples, setVoiceExamples] = useState(account.voiceExamples || "")
+  const [bannedPhrases, setBannedPhrases] = useState(account.bannedPhrases || "")
+  const [defaultHourlyRate, setDefaultHourlyRate] = useState<string>(
+    account.defaultHourlyRate != null ? String(account.defaultHourlyRate) : "",
+  )
+  const [defaultCurrency, setDefaultCurrency] = useState(account.defaultCurrency || "")
 
   // Delete account state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -63,6 +71,11 @@ export default function AccountTab() {
         default_studio_tagline: studioTagline || null,
         default_studio_description: studioDescription || null,
         default_studio_description_2: studioDescription2 || null,
+        voice_description: voiceDescription || null,
+        voice_examples: voiceExamples || null,
+        banned_phrases: bannedPhrases || null,
+        default_hourly_rate: defaultHourlyRate.trim() === "" ? null : Number(defaultHourlyRate),
+        default_currency: defaultCurrency.trim() === "" ? null : defaultCurrency.trim().toUpperCase(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", account.id)
@@ -283,6 +296,122 @@ export default function AccountTab() {
             className={inputClass + " resize-none"}
             style={inputStyle}
           />
+        </div>
+      </section>
+
+      {/* ── AI voice & pricing defaults ─────────────────────────────── */}
+      <section className="space-y-5">
+        <div>
+          <p
+            className="text-[11px] uppercase tracking-[0.14em]"
+            style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+          >
+            AI Voice & Pricing
+          </p>
+          <p
+            className="mt-1.5 text-[13px]"
+            style={{ color: "var(--color-ink-soft)" }}
+          >
+            Grounds the in-app AI so drafts sound like you, not like a generic assistant. The AI sees these on every turn.
+          </p>
+        </div>
+
+        <div>
+          <label className={labelClass} style={labelStyle}>
+            Voice description
+          </label>
+          <textarea
+            value={voiceDescription}
+            onChange={(e) => setVoiceDescription(e.target.value)}
+            rows={3}
+            placeholder="Direct, opinionated, plainspoken. Use active voice. Avoid agency jargon. Short sentences mixed with long ones."
+            className={inputClass + " resize-none"}
+            style={inputStyle}
+          />
+          <p
+            className="mt-1.5 text-[11px] uppercase tracking-[0.12em]"
+            style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+          >
+            Tell the AI how you write
+          </p>
+        </div>
+
+        <div>
+          <label className={labelClass} style={labelStyle}>
+            Writing samples
+          </label>
+          <textarea
+            value={voiceExamples}
+            onChange={(e) => setVoiceExamples(e.target.value)}
+            rows={6}
+            placeholder="Paste 1-3 paragraphs from proposals you're proud of. The AI matches their rhythm and word choice."
+            className={inputClass + " resize-none"}
+            style={inputStyle}
+          />
+          <p
+            className="mt-1.5 text-[11px] uppercase tracking-[0.12em]"
+            style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+          >
+            Show, don't tell. Paste real examples.
+          </p>
+        </div>
+
+        <div>
+          <label className={labelClass} style={labelStyle}>
+            Banned phrases
+          </label>
+          <input
+            type="text"
+            value={bannedPhrases}
+            onChange={(e) => setBannedPhrases(e.target.value)}
+            placeholder="partner, ecosystem, solutions (comma-separated)"
+            className={inputClass}
+            style={inputStyle}
+          />
+          <p
+            className="mt-1.5 text-[11px] uppercase tracking-[0.12em]"
+            style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+          >
+            Studio-specific additions to the universal banned list
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass} style={labelStyle}>
+              Default hourly rate
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={defaultHourlyRate}
+              onChange={(e) => setDefaultHourlyRate(e.target.value)}
+              placeholder="150"
+              className={inputClass}
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className={labelClass} style={labelStyle}>
+              Default currency
+            </label>
+            <input
+              type="text"
+              maxLength={3}
+              value={defaultCurrency}
+              onChange={(e) => setDefaultCurrency(e.target.value.toUpperCase())}
+              placeholder="USD"
+              className={inputClass}
+              style={inputStyle}
+            />
+            <p
+              className="mt-1.5 text-[11px] uppercase tracking-[0.12em]"
+              style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+            >
+              ISO 4217 (USD, EUR, GBP...)
+            </p>
+          </div>
         </div>
       </section>
 
