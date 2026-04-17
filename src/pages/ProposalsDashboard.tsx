@@ -328,7 +328,10 @@ const ProposalsDashboard = () => {
         </h1>
 
         {!loading && rows.length > 0 && (
-          <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <nav
+            className="mt-8 flex gap-1 overflow-x-auto border-b"
+            style={{ borderColor: "var(--color-rule)" }}
+          >
             {FILTERS.map((f) => {
               const active = filter === f.key
               const count = counts[f.key]
@@ -336,33 +339,26 @@ const ProposalsDashboard = () => {
                 <button
                   key={f.key}
                   onClick={() => setFilter(f.key)}
-                  className="rounded-2xl border p-4 text-left transition-colors md:p-5"
+                  className={`relative whitespace-nowrap px-4 py-2.5 text-[13px] font-medium transition-colors ${
+                    active ? "" : "hover:opacity-70"
+                  }`}
                   style={{
-                    background: active ? "var(--color-forest)" : "var(--color-paper)",
-                    borderColor: active ? "var(--color-forest)" : "var(--color-rule)",
-                    color: active ? "var(--color-cream)" : "var(--color-ink)",
+                    color: active ? "var(--color-forest)" : "var(--color-ink-mute)",
+                    fontFamily: "var(--font-sans)",
                   }}
                 >
-                  <p
-                    className="text-[10px] uppercase tracking-[0.14em]"
-                    style={{
-                      fontFamily: "var(--font-mono)",
-                      color: active ? "var(--color-cream)" : "var(--color-ink-mute)",
-                      opacity: active ? 0.8 : 1,
-                    }}
-                  >
-                    {f.label}
-                  </p>
-                  <p
-                    className="mt-1 text-[28px] leading-none tracking-[-0.01em] md:text-[32px]"
-                    style={{ fontFamily: "var(--font-merchant-display)", fontWeight: 500 }}
-                  >
-                    {count}
-                  </p>
+                  {f.label}{" "}
+                  <span style={{ opacity: 0.5 }}>({count})</span>
+                  {active && (
+                    <span
+                      className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full"
+                      style={{ background: "var(--color-forest)" }}
+                    />
+                  )}
                 </button>
               )
             })}
-          </div>
+          </nav>
         )}
       </section>
 
