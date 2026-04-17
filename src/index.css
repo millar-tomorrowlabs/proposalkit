@@ -519,3 +519,105 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- Intake screen ---------- */
+
+/* Hero container reserves fixed vertical space at each state; the text
+   inside uses transform so content doesn't reflow during the shrink. */
+.intake-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  transition: min-height 420ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.intake-hero--active {
+  min-height: 80px;
+}
+.intake-hero__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: top center;
+  transition:
+    transform 420ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 420ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.intake-hero--active .intake-hero__text {
+  transform: scale(0.55);
+  opacity: 0.45;
+}
+
+/* Panel surface. Always full-width on mobile, capped on desktop. */
+.intake-panel {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: min(55vh, 520px);
+}
+
+@media (max-width: 640px) {
+  .intake-panel {
+    max-height: min(60vh, 420px);
+  }
+}
+
+/* Scrollable message area with top-fade to indicate hidden content. */
+.intake-panel__messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+.intake-panel__messages::before {
+  content: "";
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  margin-bottom: -24px;
+  background: linear-gradient(180deg, var(--color-paper), rgba(255,255,255,0));
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Message entry animation. Fade plus a small upward lift. */
+.intake-message--enter {
+  animation: intake-message-enter 240ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes intake-message-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Draft-ready button fades in once the marker has been fully parsed. */
+.intake-draft-ready-btn {
+  animation: intake-draft-ready-enter 180ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes intake-draft-ready-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Reduced motion. Instant state changes for accessibility. */
+@media (prefers-reduced-motion: reduce) {
+  .intake-hero,
+  .intake-hero__text,
+  .intake-message--enter,
+  .intake-draft-ready-btn {
+    transition: none !important;
+    animation: none !important;
+  }
+}
