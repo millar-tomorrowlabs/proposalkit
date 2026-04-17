@@ -12,8 +12,35 @@ import { Link, useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { useAccount } from "@/contexts/AccountContext"
 import { useIsAdmin } from "@/lib/useIsAdmin"
-import { Plus, Copy, Check, LogOut, Settings, Shield, Users } from "lucide-react"
+import { Check, Copy, LogOut, Plus, Search, Settings, Shield, Users } from "lucide-react"
 import ProposlMark from "@/components/brand/ProposlMark"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Filter + sort state
+// ─────────────────────────────────────────────────────────────────────────────
+
+type Filter = "all" | "drafts" | "sent" | "submitted"
+type SortOrder = "edited" | "newest" | "oldest"
+
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "drafts", label: "Drafts" },
+  { key: "sent", label: "Sent" },
+  { key: "submitted", label: "Submitted" },
+]
+
+const SORT_OPTIONS: { key: SortOrder; label: string }[] = [
+  { key: "edited", label: "Last edited" },
+  { key: "newest", label: "Newest" },
+  { key: "oldest", label: "Oldest" },
+]
+
+/** Mutually exclusive buckets — every proposal falls into exactly one. */
+function bucketOf(row: DashboardRow): Exclude<Filter, "all"> {
+  if (row.summary.submissionCount > 0) return "submitted"
+  if (row.summary.sendCount > 0) return "sent"
+  return "drafts"
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -75,6 +102,9 @@ const ProposalsDashboard = () => {
   const [rows, setRows] = useState<DashboardRow[]>([])
   const [loading, setLoading] = useState(true)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<Filter>("all")
+  const [query, setQuery] = useState("")
+  const [sort, setSort] = useState<SortOrder>("edited")
   const navigate = useNavigate()
 
   const handleSignOut = useCallback(async () => {
@@ -164,14 +194,35 @@ const ProposalsDashboard = () => {
     setTimeout(() => setCopiedId(null), 2000)
   }, [])
 
-  // Top summary strip: total, sent, opened, replied
-  const summary = useMemo(() => {
-    const total = rows.length
-    const sent = rows.filter((r) => r.summary.sendCount > 0).length
-    const viewed = rows.filter((r) => r.summary.openCount > 0).length
-    const replied = rows.filter((r) => r.summary.submissionCount > 0).length
-    return { total, sent, viewed, replied }
+  // Mutually exclusive bucket counts for the filter cards.
+  const counts = useMemo(() => {
+    const c = { all: rows.length, drafts: 0, sent: 0, submitted: 0 }
+    for (const row of rows) c[bucketOf(row)]++
+    return c
   }, [rows])
+
+  // Apply filter + search + sort to produce what the user actually sees.
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const filtered = rows.filter((row) => {
+      if (filter !== "all" && bucketOf(row) !== filter) return false
+      if (q) {
+        const title = (row.title ?? "").toLowerCase()
+        const client = (row.client_name ?? "").toLowerCase()
+        if (!title.includes(q) && !client.includes(q)) return false
+      }
+      return true
+    })
+    const sorted = [...filtered].sort((a, b) => {
+      if (sort === "edited") {
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      }
+      const at = new Date(a.created_at).getTime()
+      const bt = new Date(b.created_at).getTime()
+      return sort === "newest" ? bt - at : at - bt
+    })
+    return sorted
+  }, [rows, filter, query, sort])
 
   return (
     <div
@@ -277,40 +328,85 @@ const ProposalsDashboard = () => {
         </h1>
 
         {!loading && rows.length > 0 && (
-          <p
-            className="mt-6 text-[11px] uppercase tracking-[0.14em]"
-            style={{
-              fontFamily: "var(--font-mono)",
-              color: "var(--color-ink-soft)",
-            }}
-          >
-            <span style={{ color: "var(--color-forest)" }}>{summary.total}</span>{" "}
-            {summary.total === 1 ? "PROPOSAL" : "PROPOSALS"}
-            {summary.sent > 0 && (
-              <>
-                {" · "}
-                <span style={{ color: "var(--color-forest)" }}>{summary.sent}</span> SENT
-              </>
-            )}
-            {summary.viewed > 0 && (
-              <>
-                {" · "}
-                <span style={{ color: "var(--color-forest)" }}>{summary.viewed}</span> VIEWED
-              </>
-            )}
-            {summary.replied > 0 && (
-              <>
-                {" · "}
-                <span style={{ color: "var(--color-forest)" }}>{summary.replied}</span>{" "}
-                {summary.replied === 1 ? "REPLY" : "REPLIES"}
-              </>
-            )}
-          </p>
+          <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {FILTERS.map((f) => {
+              const active = filter === f.key
+              const count = counts[f.key]
+              return (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className="rounded-2xl border p-4 text-left transition-colors md:p-5"
+                  style={{
+                    background: active ? "var(--color-forest)" : "var(--color-paper)",
+                    borderColor: active ? "var(--color-forest)" : "var(--color-rule)",
+                    color: active ? "var(--color-cream)" : "var(--color-ink)",
+                  }}
+                >
+                  <p
+                    className="text-[10px] uppercase tracking-[0.14em]"
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      color: active ? "var(--color-cream)" : "var(--color-ink-mute)",
+                      opacity: active ? 0.8 : 1,
+                    }}
+                  >
+                    {f.label}
+                  </p>
+                  <p
+                    className="mt-1 text-[28px] leading-none tracking-[-0.01em] md:text-[32px]"
+                    style={{ fontFamily: "var(--font-merchant-display)", fontWeight: 500 }}
+                  >
+                    {count}
+                  </p>
+                </button>
+              )
+            })}
+          </div>
         )}
       </section>
 
+      {/* ── Search + sort controls ───────────────────────────────────── */}
+      {!loading && rows.length > 0 && (
+        <section className="mx-auto max-w-[1200px] px-6 pt-8 md:px-10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div
+              className="flex flex-1 items-center gap-2 rounded-full border px-4 py-2.5"
+              style={{ background: "var(--color-paper)", borderColor: "var(--color-rule)" }}
+            >
+              <Search className="h-4 w-4" style={{ color: "var(--color-ink-mute)" }} />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by title or client…"
+                className="flex-1 bg-transparent text-[14px] outline-none"
+                style={{ color: "var(--color-ink)" }}
+              />
+            </div>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortOrder)}
+              className="rounded-full border px-4 py-2.5 text-[13px] outline-none transition-colors"
+              style={{
+                background: "var(--color-paper)",
+                borderColor: "var(--color-rule)",
+                color: "var(--color-ink)",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+      )}
+
       {/* ── Proposal list ────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-[1200px] px-6 pb-28 md:px-10">
+      <section className="mx-auto max-w-[1200px] px-6 pt-6 pb-28 md:px-10">
         {loading ? (
           <p
             className="text-[13px] uppercase tracking-[0.14em]"
@@ -320,9 +416,11 @@ const ProposalsDashboard = () => {
           </p>
         ) : rows.length === 0 ? (
           <EmptyState />
+        ) : visibleRows.length === 0 ? (
+          <NoMatchesState filter={filter} query={query} onClear={() => { setFilter("all"); setQuery("") }} />
         ) : (
           <div className="space-y-5">
-            {rows.map((row) => (
+            {visibleRows.map((row) => (
               <ProposalCard
                 key={row.id}
                 row={row}
@@ -544,6 +642,63 @@ function StatusPill({ status }: { status: string }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // EmptyState
 // ─────────────────────────────────────────────────────────────────────────────
+
+function NoMatchesState({
+  filter,
+  query,
+  onClear,
+}: {
+  filter: Filter
+  query: string
+  onClear: () => void
+}) {
+  const filterLabel = FILTERS.find((f) => f.key === filter)?.label
+  const eyebrow = query ? "No matches" : "Nothing here"
+  const title = query
+    ? `Nothing matches "${query}"`
+    : filter === "drafts"
+      ? "No drafts right now."
+      : filter === "sent"
+        ? "Nothing sent that hasn't come back yet."
+        : filter === "submitted"
+          ? "No submissions yet."
+          : "Nothing here."
+  const subtitle =
+    filter !== "all" && !query && filterLabel
+      ? `Try another filter or clear the current one.`
+      : null
+  return (
+    <div
+      className="flex flex-col items-start gap-5 rounded-2xl border px-8 py-12 md:px-10 md:py-14"
+      style={{ background: "var(--color-paper)", borderColor: "var(--color-rule)" }}
+    >
+      <p
+        className="text-[11px] uppercase tracking-[0.14em]"
+        style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
+      >
+        {eyebrow}
+      </p>
+      <h2
+        className="max-w-[20ch] text-[26px] leading-[1.2] tracking-[-0.01em] md:text-[30px]"
+        style={{ fontFamily: "var(--font-merchant-display)", fontWeight: 500 }}
+      >
+        {title}
+      </h2>
+      {subtitle && (
+        <p className="text-[14px]" style={{ color: "var(--color-ink-soft)" }}>
+          {subtitle}
+        </p>
+      )}
+      <button
+        onClick={onClear}
+        className="rounded-full border px-4 py-2 text-[12px] font-medium transition-colors hover:opacity-80"
+        style={{ borderColor: "var(--color-forest)", color: "var(--color-forest)" }}
+      >
+        Clear filters
+      </button>
+    </div>
+  )
+}
 
 function EmptyState() {
   return (
