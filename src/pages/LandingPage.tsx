@@ -64,6 +64,23 @@ export default function LandingPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Nav() {
+  // Anchor-scroll to #request-access lands the div at the top of the
+  // viewport, which leaves the hero's big bottom padding as an awkward
+  // blank strip below the form. Center the form vertically and focus
+  // the input so the user can immediately type.
+  const handleRequestAccess = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    const target = document.getElementById("request-access")
+    if (!target) return
+    target.scrollIntoView({ behavior: "smooth", block: "center" })
+    const input = target.querySelector<HTMLInputElement>('input[type="email"]')
+    if (input) {
+      // Delay focus until after the smooth scroll completes, so the
+      // browser doesn't cancel the animation by snapping to the input.
+      window.setTimeout(() => input.focus({ preventScroll: true }), 500)
+    }
+  }
+
   return (
     <header className="mx-auto flex max-w-[1200px] items-center justify-between px-6 pt-8 pb-6 md:px-10">
       <Link to="/" className="flex items-center gap-2.5" style={{ color: "var(--color-forest)" }}>
@@ -85,6 +102,7 @@ function Nav() {
         </Link>
         <a
           href="#request-access"
+          onClick={handleRequestAccess}
           className="rounded-full px-5 py-2.5 text-[13px] font-medium transition-transform hover:scale-[1.02]"
           style={{
             background: "var(--color-forest)",
@@ -105,13 +123,6 @@ function Nav() {
 function Hero() {
   return (
     <section className="mx-auto max-w-[1000px] px-6 pt-20 pb-28 text-center md:px-10 md:pt-28 md:pb-40">
-      <p
-        className="mb-8 text-[11px] uppercase tracking-[0.18em]"
-        style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
-      >
-        INVITE-ONLY BETA · REQUEST ACCESS
-      </p>
-
       <h1
         className="mx-auto max-w-[18ch] text-[44px] leading-[1.08] tracking-[-0.015em] md:text-[64px] lg:text-[76px]"
         style={{ fontFamily: "var(--font-merchant-display)", fontWeight: 500, color: "var(--color-ink)" }}
