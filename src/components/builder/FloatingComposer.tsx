@@ -22,6 +22,14 @@ interface FloatingComposerProps {
   onClearPendingPrompt?: () => void
   /** Override the default input placeholder. Useful for intake mode. */
   placeholder?: string
+  /**
+   * Vertical placement of the composer panel.
+   * - "bottom" (default): pinned near the bottom, matches the editor layout
+   *   where the document occupies the rest of the viewport.
+   * - "center": raised into the lower-middle of the viewport — used during
+   *   intake so the input doesn't feel buried under the hero copy.
+   */
+  position?: "bottom" | "center"
 }
 
 export default function FloatingComposer({
@@ -37,6 +45,7 @@ export default function FloatingComposer({
   pendingPrompt,
   onClearPendingPrompt,
   placeholder,
+  position = "bottom",
 }: FloatingComposerProps) {
   const [input, setInput] = useState("")
   const [expanded, setExpanded] = useState(false)
@@ -93,6 +102,17 @@ export default function FloatingComposer({
     }
   }, [pendingPrompt])
 
+  // Auto-grow the textarea as the user types a multi-line message. Without
+  // this, `rows={1}` keeps the visible area at one line and earlier lines
+  // scroll out of view when content wraps. Capped at 80px to match the
+  // inline maxHeight — past that the textarea scrolls internally.
+  useEffect(() => {
+    const ta = inputRef.current
+    if (!ta) return
+    ta.style.height = "auto"
+    ta.style.height = `${Math.min(ta.scrollHeight, 80)}px`
+  }, [input])
+
   const handleSubmit = () => {
     const trimmed = input.trim()
     if (!trimmed || loading) return
@@ -138,9 +158,15 @@ export default function FloatingComposer({
 
   const showHistory = expanded && messages.length > 0
 
+  // When anchored in "center" mode the composer sits roughly a third from
+  // the bottom — the history expands upward, keeping the input near the
+  // optical centerline as the conversation grows.
+  const positionClasses =
+    position === "center" ? "bottom-[30vh]" : "bottom-4"
+
   return (
     <div
-      className="fixed bottom-4 left-1/2 z-50 w-[520px] max-w-[90vw] -translate-x-1/2 rounded-2xl border"
+      className={`fixed left-1/2 z-50 w-[520px] max-w-[90vw] -translate-x-1/2 rounded-2xl border ${positionClasses}`}
       style={{
         background: "var(--color-cream)",
         borderColor: "var(--color-rule)",

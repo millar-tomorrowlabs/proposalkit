@@ -622,6 +622,7 @@ const BuilderHome = () => {
                 ? "Describe the project, paste a brief, or ask a question\u2026"
                 : undefined
             }
+            position={isProposalEmpty ? "center" : "bottom"}
           />
         )}
 
