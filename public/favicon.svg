@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Proposl seal favicon. Forest on cream. -->
+  <rect width="200" height="200" fill="#FAF8F3" rx="28" ry="28"/>
+  <g stroke="#2C4A3F" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 108 28.5 C 146 30, 171 61, 172 99 C 173 141, 139 171, 100 171 C 59 172, 29 139, 28.5 100 C 28 59, 61 30, 99 28" stroke-width="5"/>
+    <line x1="92" y1="42" x2="92" y2="158" stroke-width="8"/>
+    <line x1="93.5" y1="44" x2="93" y2="158" stroke-width="6"/>
+    <line x1="86.5" y1="42.5" x2="99.5" y2="42" stroke-width="4"/>
+    <line x1="85" y1="158.5" x2="100" y2="158" stroke-width="4"/>
+    <path d="M 93 85 Q 134 82, 131 107 Q 130 131, 92 130" stroke-width="7"/>
+  </g>
+</svg>

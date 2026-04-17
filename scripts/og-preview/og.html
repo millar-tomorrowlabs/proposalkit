@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<!--
+  OG preview image source.
+  Rendered at 1200x630 via Playwright, saved to public/og-image.png.
+  Keep this file around so the image can be regenerated later if the
+  tagline or branding changes — see scripts/og-preview/README.md.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; background: #FAF8F3; }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #141814;
+    overflow: hidden;
+  }
+  .container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 72px 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  /* Top strip: wordmark + eyebrow */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .seal { width: 52px; height: 52px; }
+  .wordmark {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-weight: 500;
+    font-size: 32px;
+    letter-spacing: -0.01em;
+    color: #2C4A3F;
+    line-height: 1;
+  }
+
+  /* Main headline */
+  .hero {
+    max-width: 1000px;
+  }
+  .headline {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-weight: 500;
+    font-size: 92px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: #141814;
+  }
+  .enjoy { color: #2C4A3F; position: relative; display: inline-block; }
+  .enjoy::after {
+    content: "";
+    position: absolute;
+    left: -4%;
+    right: -4%;
+    bottom: -6%;
+    height: 8px;
+    background: #2C4A3F;
+    border-radius: 6px;
+    transform: skewY(-1.5deg);
+    opacity: 0.85;
+  }
+  .subtitle {
+    margin-top: 28px;
+    font-size: 24px;
+    line-height: 1.5;
+    color: #4A5249;
+    max-width: 760px;
+  }
+
+  /* Bottom footer strip */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #6C7568;
+  }
+  .domain { color: #2C4A3F; font-weight: 500; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <svg class="seal" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <g stroke="#2C4A3F" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M 108 28.5 C 146 30, 171 61, 172 99 C 173 141, 139 171, 100 171 C 59 172, 29 139, 28.5 100 C 28 59, 61 30, 99 28" stroke-width="4"/>
+          <line x1="92" y1="42" x2="92" y2="158" stroke-width="7"/>
+          <line x1="93.5" y1="44" x2="93" y2="158" stroke-width="5"/>
+          <line x1="86.5" y1="42.5" x2="99.5" y2="42" stroke-width="3.5"/>
+          <line x1="85" y1="158.5" x2="100" y2="158" stroke-width="3.5"/>
+          <path d="M 93 85 Q 134 82, 131 107 Q 130 131, 92 130" stroke-width="6.5"/>
+        </g>
+      </svg>
+      <span class="wordmark">proposl</span>
+    </div>
+
+    <div class="hero">
+      <h1 class="headline">The first proposal you'll actually <span class="enjoy">enjoy</span> making.</h1>
+      <p class="subtitle">A proposal tool for freelancers and small studios who want to spend less time writing and more time making.</p>
+    </div>
+
+    <div class="footer">
+      <span class="domain">proposl.app</span>
+      <span>Invite-only beta</span>
+    </div>
+  </div>
+</body>
+</html>
