@@ -463,10 +463,14 @@ async function verifyAuth(req: Request): Promise<string> {
 // Map tier → concrete Anthropic model id. Source of truth for what each
 // plan actually runs against. Default to sonnet if something unexpected
 // lands in the column (belt-and-braces vs the CHECK constraint).
+//
+// Anthropic aliases are the bare ID without a `-latest` suffix; that
+// suffix form doesn't resolve. Keep these up to date as new models
+// release — stale IDs surface as cryptic "model: <id>" errors at runtime.
 const MODEL_BY_TIER: Record<string, string> = {
-  haiku: "claude-3-5-haiku-latest",
+  haiku: "claude-haiku-4-5",
   sonnet: "claude-sonnet-4-6",
-  opus: "claude-opus-4-latest",
+  opus: "claude-opus-4-7",
 }
 function modelForTier(tier: string): string {
   return MODEL_BY_TIER[tier] ?? MODEL_BY_TIER.sonnet
