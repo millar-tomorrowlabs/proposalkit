@@ -12,7 +12,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Ban, Check, Copy, Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { friendlyError } from "@/lib/errors"
+import { extractEdgeFunctionError } from "@/lib/errors"
+import { EmptyState, Pill, type PillTone, Td, Th } from "@/components/admin/TablePrimitives"
 
 type Tab = "all" | "active" | "used" | "revoked" | "expired"
 
@@ -28,11 +29,20 @@ interface InviteRow {
   revoked_at: string | null
 }
 
-function statusOf(r: InviteRow): "active" | "used" | "revoked" | "expired" {
+type InviteStatus = "active" | "used" | "revoked" | "expired"
+
+function statusOf(r: InviteRow): InviteStatus {
   if (r.used_at) return "used"
   if (r.revoked_at) return "revoked"
   if (new Date(r.expires_at).getTime() < Date.now()) return "expired"
   return "active"
+}
+
+const STATUS_PILL: Record<InviteStatus, { tone: PillTone; label: string }> = {
+  active: { tone: "forest", label: "Active" },
+  used: { tone: "neutral", label: "Used" },
+  revoked: { tone: "warn", label: "Revoked" },
+  expired: { tone: "muted", label: "Expired" },
 }
 
 export default function AdminInvites() {
@@ -83,15 +93,7 @@ export default function AdminInvites() {
     })
     setRevokingId(null)
     if (fnError) {
-      let message = fnError.message
-      const ctx = (fnError as { context?: Response }).context
-      if (ctx && typeof ctx.json === "function") {
-        try {
-          const body = await ctx.json()
-          if (body?.error) message = body.error
-        } catch { /* swallow */ }
-      }
-      setError(friendlyError(message))
+      setError(await extractEdgeFunctionError(fnError))
       return
     }
     load()
@@ -162,7 +164,16 @@ export default function AdminInvites() {
           LOADING…
         </p>
       ) : filtered.length === 0 ? (
-        <EmptyState tab={tab} query={query} />
+        <EmptyState
+          eyebrow={query ? "No matches" : "Nothing here"}
+          title={
+            query
+              ? `Nothing matches "${query}"`
+              : tab === "all"
+                ? "No invites"
+                : `No ${tab} invites`
+          }
+        />
       ) : (
         <div
           className="overflow-hidden rounded-2xl border"
@@ -202,7 +213,7 @@ export default function AdminInvites() {
                       <span className="capitalize">{r.plan.replace("_", " ")}</span>
                     </Td>
                     <Td>
-                      <StatusPill status={status} />
+                      <Pill tone={STATUS_PILL[status].tone}>{STATUS_PILL[status].label}</Pill>
                     </Td>
                     <Td muted>{r.notes ?? "—"}</Td>
                     <Td align="right">
@@ -239,80 +250,3 @@ export default function AdminInvites() {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Primitives
-// ─────────────────────────────────────────────────────────────────────────────
-
-function Th({ children, align }: { children: React.ReactNode; align?: "right" }) {
-  return (
-    <th
-      className={`px-4 py-3 text-[10px] uppercase tracking-[0.14em] ${
-        align === "right" ? "text-right" : "text-left"
-      }`}
-      style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)", fontWeight: 500 }}
-    >
-      {children}
-    </th>
-  )
-}
-
-function Td({
-  children,
-  muted,
-  align,
-}: {
-  children: React.ReactNode
-  muted?: boolean
-  align?: "right"
-}) {
-  return (
-    <td
-      className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"}`}
-      style={{ color: muted ? "var(--color-ink-mute)" : "var(--color-ink)" }}
-    >
-      {children}
-    </td>
-  )
-}
-
-function StatusPill({ status }: { status: "active" | "used" | "revoked" | "expired" }) {
-  const config = {
-    active: { bg: "var(--color-forest)", fg: "var(--color-cream)", label: "Active" },
-    used: { bg: "var(--color-rule)", fg: "var(--color-ink-soft)", label: "Used" },
-    revoked: { bg: "#A33B2820", fg: "#A33B28", label: "Revoked" },
-    expired: { bg: "var(--color-rule)", fg: "var(--color-ink-mute)", label: "Expired" },
-  }[status]
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-[0.12em]"
-      style={{ background: config.bg, color: config.fg, fontFamily: "var(--font-mono)" }}
-    >
-      {config.label}
-    </span>
-  )
-}
-
-function EmptyState({ tab, query }: { tab: Tab; query: string }) {
-  let title = "No invites"
-  if (query) title = `Nothing matches "${query}"`
-  else if (tab !== "all") title = `No ${tab} invites`
-  return (
-    <div
-      className="rounded-2xl border px-8 py-16"
-      style={{ background: "var(--color-paper)", borderColor: "var(--color-rule)" }}
-    >
-      <p
-        className="text-[11px] uppercase tracking-[0.14em]"
-        style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
-      >
-        {query ? "NO MATCHES" : "NOTHING HERE"}
-      </p>
-      <h2
-        className="mt-3 text-[22px] leading-[1.2] tracking-[-0.01em]"
-        style={{ fontFamily: "var(--font-merchant-display)", fontWeight: 500 }}
-      >
-        {title}
-      </h2>
-    </div>
-  )
-}

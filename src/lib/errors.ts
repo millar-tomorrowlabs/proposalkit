@@ -68,3 +68,29 @@ export function friendlyError(raw: string | undefined | null): string {
 
   return "Something went wrong. Please try again."
 }
+
+/**
+ * Extract the real error message from a Supabase `functions.invoke()`
+ * error. supabase-js wraps any non-2xx edge-function response in a
+ * generic `FunctionsHttpError` with a useless `Edge Function returned
+ * a non-2xx status code` message. The actual `{ error: "..." }` body
+ * from the function lives on `.context` (a Fetch `Response`).
+ *
+ * Returns a message already run through `friendlyError()`.
+ */
+export async function extractEdgeFunctionError(
+  fnError: { message?: string } | null | undefined,
+): Promise<string> {
+  if (!fnError) return friendlyError(null)
+  let message = fnError.message
+  const ctx = (fnError as { context?: Response }).context
+  if (ctx && typeof ctx.json === "function") {
+    try {
+      const body = await ctx.json()
+      if (body?.error) message = body.error
+    } catch {
+      /* fall through with the generic message */
+    }
+  }
+  return friendlyError(message)
+}

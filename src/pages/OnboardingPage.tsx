@@ -15,7 +15,7 @@ import { useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
-import { friendlyError } from "@/lib/errors"
+import { extractEdgeFunctionError, friendlyError } from "@/lib/errors"
 import AuthLayout, {
   AuthField,
   AuthInput,
@@ -75,21 +75,7 @@ export default function OnboardingPage() {
     )
 
     if (fnError) {
-      // supabase-js wraps non-2xx responses with a generic message. The
-      // real, user-facing error is inside fnError.context as an HTTP
-      // Response; dig it out so users get "This invite was already used"
-      // instead of "Edge Function returned a non-2xx status code".
-      let message = fnError.message
-      const ctx = (fnError as { context?: Response }).context
-      if (ctx && typeof ctx.json === "function") {
-        try {
-          const body = await ctx.json()
-          if (body?.error) message = body.error
-        } catch {
-          // fall through to the friendlyError fallback
-        }
-      }
-      setError(friendlyError(message))
+      setError(await extractEdgeFunctionError(fnError))
       setLoading(false)
       return
     }

@@ -7,12 +7,10 @@
  */
 
 import { useEffect, useState } from "react"
-import { X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { friendlyError } from "@/lib/errors"
-
-type Plan = "friends_family" | "studio" | "agency" | "enterprise"
-type Tier = "haiku" | "sonnet" | "opus"
+import { extractEdgeFunctionError } from "@/lib/errors"
+import type { AiModelTier, Plan } from "@/types/account"
+import ModalShell from "@/components/admin/ModalShell"
 
 export interface EditableAccount {
   id: string
@@ -34,7 +32,7 @@ export default function EditAccountModal({ open, account, onClose, onSaved }: Pr
   const [plan, setPlan] = useState<Plan>("friends_family")
   const [maxTeamSeats, setMaxTeamSeats] = useState(3)
   const [maxMonthlySends, setMaxMonthlySends] = useState(10)
-  const [aiModelTier, setAiModelTier] = useState<Tier>("sonnet")
+  const [aiModelAiModelTier, setAiModelAiModelTier] = useState<AiModelTier>("sonnet")
   const [resetCaps, setResetCaps] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -45,7 +43,7 @@ export default function EditAccountModal({ open, account, onClose, onSaved }: Pr
       setPlan((account.plan as Plan) ?? "friends_family")
       setMaxTeamSeats(account.max_team_seats ?? 3)
       setMaxMonthlySends(account.max_monthly_sends ?? 10)
-      setAiModelTier((account.ai_model_tier as Tier) ?? "sonnet")
+      setAiModelAiModelTier((account.ai_model_tier as AiModelTier) ?? "sonnet")
       setResetCaps(false)
       setError("")
     }
@@ -64,22 +62,14 @@ export default function EditAccountModal({ open, account, onClose, onSaved }: Pr
     if (!resetCaps) {
       body.maxTeamSeats = maxTeamSeats
       body.maxMonthlySends = maxMonthlySends
-      body.aiModelTier = aiModelTier
+      body.aiModelAiModelTier = aiModelAiModelTier
     }
 
     const { error: fnError } = await supabase.functions.invoke("admin-update-account", { body })
     setLoading(false)
 
     if (fnError) {
-      let message = fnError.message
-      const ctx = (fnError as { context?: Response }).context
-      if (ctx && typeof ctx.json === "function") {
-        try {
-          const parsed = await ctx.json()
-          if (parsed?.error) message = parsed.error
-        } catch { /* swallow */ }
-      }
-      setError(friendlyError(message))
+      setError(await extractEdgeFunctionError(fnError))
       return
     }
 
@@ -87,44 +77,16 @@ export default function EditAccountModal({ open, account, onClose, onSaved }: Pr
     onClose()
   }
 
-  if (!open || !account) return null
+  if (!account) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(17, 24, 17, 0.4)" }}
-      onClick={onClose}
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Edit account"
+      title={account.studio_name}
     >
-      <div
-        className="w-full max-w-md rounded-2xl border p-6 md:p-7"
-        style={{ background: "var(--color-paper)", borderColor: "var(--color-rule)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between">
-          <div>
-            <p
-              className="text-[11px] uppercase tracking-[0.14em]"
-              style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
-            >
-              EDIT ACCOUNT
-            </p>
-            <h2
-              className="mt-1 text-[22px] leading-[1.2] tracking-[-0.01em]"
-              style={{ fontFamily: "var(--font-merchant-display)", fontWeight: 500 }}
-            >
-              {account.studio_name}
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-full p-1.5 transition-colors hover:opacity-70"
-            style={{ color: "var(--color-ink-mute)" }}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="mt-5 space-y-4">
+        <div className="space-y-4">
           <div>
             <label
               className="text-[11px] uppercase tracking-[0.12em]"
@@ -200,8 +162,8 @@ export default function EditAccountModal({ open, account, onClose, onSaved }: Pr
                   AI MODEL
                 </label>
                 <select
-                  value={aiModelTier}
-                  onChange={(e) => setAiModelTier(e.target.value as Tier)}
+                  value={aiModelAiModelTier}
+                  onChange={(e) => setAiModelAiModelTier(e.target.value as AiModelTier)}
                   className="mt-1.5 w-full rounded-lg border px-3 py-2.5 text-[14px] outline-none"
                   style={{ background: "var(--color-cream)", borderColor: "var(--color-rule)", color: "var(--color-ink)" }}
                 >
@@ -238,7 +200,6 @@ export default function EditAccountModal({ open, account, onClose, onSaved }: Pr
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

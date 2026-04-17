@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Search, UserPlus } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import IssueInviteModal from "@/components/admin/IssueInviteModal"
+import { EmptyState, Pill, Td, Th } from "@/components/admin/TablePrimitives"
 
 interface WaitlistRow {
   id: string
@@ -82,7 +83,10 @@ export default function AdminWaitlist() {
           LOADING…
         </p>
       ) : filtered.length === 0 ? (
-        <EmptyState query={query} />
+        <EmptyState
+          eyebrow={query ? "No matches" : "No signups"}
+          title={query ? `Nothing matches "${query}"` : "Waitlist is empty"}
+        />
       ) : (
         <div
           className="overflow-hidden rounded-2xl border"
@@ -145,84 +149,6 @@ export default function AdminWaitlist() {
         onIssued={load}
         prefillEmail={modalEmail ?? ""}
       />
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Table primitives & pills
-// ─────────────────────────────────────────────────────────────────────────────
-
-function Th({ children, align }: { children: React.ReactNode; align?: "right" }) {
-  return (
-    <th
-      className={`px-4 py-3 text-[10px] uppercase tracking-[0.14em] ${
-        align === "right" ? "text-right" : "text-left"
-      }`}
-      style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)", fontWeight: 500 }}
-    >
-      {children}
-    </th>
-  )
-}
-
-function Td({
-  children,
-  muted,
-  align,
-}: {
-  children: React.ReactNode
-  muted?: boolean
-  align?: "right"
-}) {
-  return (
-    <td
-      className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"}`}
-      style={{ color: muted ? "var(--color-ink-mute)" : "var(--color-ink)" }}
-    >
-      {children}
-    </td>
-  )
-}
-
-function Pill({ tone, children }: { tone: "forest" | "neutral" | "warn"; children: React.ReactNode }) {
-  const palette = {
-    forest: { bg: "var(--color-forest)", fg: "var(--color-cream)" },
-    neutral: { bg: "var(--color-rule)", fg: "var(--color-ink-soft)" },
-    warn: { bg: "#A33B2820", fg: "#A33B28" },
-  }[tone]
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-[0.12em]"
-      style={{
-        background: palette.bg,
-        color: palette.fg,
-        fontFamily: "var(--font-mono)",
-      }}
-    >
-      {children}
-    </span>
-  )
-}
-
-function EmptyState({ query }: { query: string }) {
-  return (
-    <div
-      className="rounded-2xl border px-8 py-16"
-      style={{ background: "var(--color-paper)", borderColor: "var(--color-rule)" }}
-    >
-      <p
-        className="text-[11px] uppercase tracking-[0.14em]"
-        style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
-      >
-        {query ? "NO MATCHES" : "NO SIGNUPS"}
-      </p>
-      <h2
-        className="mt-3 text-[22px] leading-[1.2] tracking-[-0.01em]"
-        style={{ fontFamily: "var(--font-merchant-display)", fontWeight: 500 }}
-      >
-        {query ? `Nothing matches "${query}"` : "Waitlist is empty"}
-      </h2>
     </div>
   )
 }

@@ -10,11 +10,11 @@
  */
 
 import { useEffect, useState } from "react"
-import { Check, Copy, X } from "lucide-react"
+import { Check, Copy } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { friendlyError } from "@/lib/errors"
-
-type Plan = "friends_family" | "studio" | "agency" | "enterprise"
+import { extractEdgeFunctionError } from "@/lib/errors"
+import type { Plan } from "@/types/account"
+import ModalShell from "@/components/admin/ModalShell"
 
 interface Props {
   open: boolean
@@ -70,15 +70,7 @@ export default function IssueInviteModal({ open, onClose, onIssued, prefillEmail
     )
 
     if (fnError) {
-      let message = fnError.message
-      const ctx = (fnError as { context?: Response }).context
-      if (ctx && typeof ctx.json === "function") {
-        try {
-          const body = await ctx.json()
-          if (body?.error) message = body.error
-        } catch { /* swallow */ }
-      }
-      setError(friendlyError(message))
+      setError(await extractEdgeFunctionError(fnError))
       setLoading(false)
       return
     }
@@ -102,52 +94,15 @@ export default function IssueInviteModal({ open, onClose, onIssued, prefillEmail
     })
   }
 
-  if (!open) return null
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(17, 24, 17, 0.4)" }}
-      onClick={onClose}
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow={result ? "Invite ready" : "New invite"}
+      title={result ? "Invite code minted" : "Issue an invite"}
     >
-      <div
-        className="w-full max-w-md rounded-2xl border p-6 md:p-7"
-        style={{
-          background: "var(--color-paper)",
-          borderColor: "var(--color-rule)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between">
-          <div>
-            <p
-              className="text-[11px] uppercase tracking-[0.14em]"
-              style={{
-                fontFamily: "var(--font-mono)",
-                color: "var(--color-ink-mute)",
-              }}
-            >
-              {result ? "INVITE READY" : "NEW INVITE"}
-            </p>
-            <h2
-              className="mt-1 text-[22px] leading-[1.2] tracking-[-0.01em]"
-              style={{ fontFamily: "var(--font-merchant-display)", fontWeight: 500 }}
-            >
-              {result ? "Invite code minted" : "Issue an invite"}
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-full p-1.5 transition-colors hover:opacity-70"
-            style={{ color: "var(--color-ink-mute)" }}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        {result ? (
-          /* ─── Success state ─── */
-          <div className="mt-5 space-y-4">
+      {result ? (
+          <div className="space-y-4">
             <div
               className="rounded-xl border p-4"
               style={{
@@ -205,8 +160,7 @@ export default function IssueInviteModal({ open, onClose, onIssued, prefillEmail
             </button>
           </div>
         ) : (
-          /* ─── Form state ─── */
-          <div className="mt-5 space-y-4">
+          <div className="space-y-4">
             <div>
               <label
                 className="text-[11px] uppercase tracking-[0.12em]"
@@ -310,7 +264,6 @@ export default function IssueInviteModal({ open, onClose, onIssued, prefillEmail
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </ModalShell>
   )
 }

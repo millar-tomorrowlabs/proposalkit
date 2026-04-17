@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Pencil, Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import EditAccountModal, { type EditableAccount } from "@/components/admin/EditAccountModal"
+import { EmptyState, Td, Th } from "@/components/admin/TablePrimitives"
 
 interface AccountRow extends EditableAccount {
   created_at: string
@@ -125,7 +126,10 @@ export default function AdminAccounts() {
           LOADING…
         </p>
       ) : filtered.length === 0 ? (
-        <EmptyState query={query} />
+        <EmptyState
+          eyebrow={query ? "No matches" : "No accounts"}
+          title={query ? `Nothing matches "${query}"` : "No accounts yet"}
+        />
       ) : (
         <div
           className="overflow-hidden rounded-2xl border"
@@ -201,42 +205,6 @@ export default function AdminAccounts() {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Primitives
-// ─────────────────────────────────────────────────────────────────────────────
-
-function Th({ children, align }: { children: React.ReactNode; align?: "right" }) {
-  return (
-    <th
-      className={`px-4 py-3 text-[10px] uppercase tracking-[0.14em] ${
-        align === "right" ? "text-right" : "text-left"
-      }`}
-      style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)", fontWeight: 500 }}
-    >
-      {children}
-    </th>
-  )
-}
-
-function Td({
-  children,
-  muted,
-  align,
-}: {
-  children: React.ReactNode
-  muted?: boolean
-  align?: "right"
-}) {
-  return (
-    <td
-      className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"}`}
-      style={{ color: muted ? "var(--color-ink-mute)" : "var(--color-ink)" }}
-    >
-      {children}
-    </td>
-  )
-}
-
 function Usage({ used, max }: { used: number; max: number }) {
   const pct = max === 0 ? 0 : Math.min(1, used / max)
   const warn = pct >= 0.8
@@ -253,24 +221,3 @@ function Usage({ used, max }: { used: number; max: number }) {
   )
 }
 
-function EmptyState({ query }: { query: string }) {
-  return (
-    <div
-      className="rounded-2xl border px-8 py-16"
-      style={{ background: "var(--color-paper)", borderColor: "var(--color-rule)" }}
-    >
-      <p
-        className="text-[11px] uppercase tracking-[0.14em]"
-        style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
-      >
-        {query ? "NO MATCHES" : "NO ACCOUNTS"}
-      </p>
-      <h2
-        className="mt-3 text-[22px] leading-[1.2] tracking-[-0.01em]"
-        style={{ fontFamily: "var(--font-merchant-display)", fontWeight: 500 }}
-      >
-        {query ? `Nothing matches "${query}"` : "No accounts yet"}
-      </h2>
-    </div>
-  )
-}
