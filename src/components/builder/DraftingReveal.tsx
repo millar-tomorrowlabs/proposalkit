@@ -51,8 +51,10 @@ export default function DraftingReveal({ active }: DraftingRevealProps) {
       setCaptionIndex(0)
       setShowLongWait(false)
       startedAtRef.current = Date.now()
-      // Move to hold after the enter animation finishes (~300ms).
-      const t = setTimeout(() => setPhase("hold"), 320)
+      // Move to hold a beat after the enter animation finishes so the
+      // breathing animation doesn't stomp on the mid-enter transform.
+      // Enter animation is 420ms (see index.css); give it a small buffer.
+      const t = setTimeout(() => setPhase("hold"), 460)
       return () => clearTimeout(t)
     }
     // Only trigger exit if we were actually showing. Avoids the first-render

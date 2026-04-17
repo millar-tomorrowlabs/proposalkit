@@ -329,7 +329,8 @@
   gap: 2.5rem;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 300ms ease-out;
+  /* Gentle, near-linear ease so the backdrop doesn't "pop" at the end. */
+  transition: opacity 420ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 .drafting-reveal--in {
   opacity: 1;
@@ -351,19 +352,25 @@
   position: fixed;
   top: 50%;
   left: 50%;
-  /* The centered position: translate(-50%, -50%). We change this on
-     exit to move the mark to the top-bar mark position. */
+  /* Base state: centered, scale 1. Per-phase modifiers override for
+     entry/hold/exit. The transform transition only takes effect on
+     the exit migration — during enter/hold the transform is owned by
+     the keyframe animation, so the two never fight over the property. */
   transform: translate(-50%, -50%) scale(1);
   transition:
     top 800ms cubic-bezier(0.77, 0, 0.175, 1),
     left 800ms cubic-bezier(0.77, 0, 0.175, 1),
     transform 800ms cubic-bezier(0.77, 0, 0.175, 1);
-  /* Subtle breathing pulse during hold. */
-  animation: drafting-mark-breathe 2400ms ease-in-out infinite;
 }
-.drafting-reveal__mark--in,
+.drafting-reveal__mark--in {
+  /* Entry: scale up from 0.94 in sync with the backdrop fade. Ends
+     on scale 1 so the hold phase picks up seamlessly. Runs once. */
+  animation: drafting-mark-enter 420ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
 .drafting-reveal__mark--hold {
-  /* Default in/hold position (centered). */
+  /* Subtle breathing pulse — only during hold, never while entering
+     or exiting. Prevents the swell from fighting the fade-in. */
+  animation: drafting-mark-breathe 2400ms ease-in-out infinite;
 }
 .drafting-reveal__mark--out {
   /* Top-bar position: header has px-4 (16px left) and items-center in
@@ -386,10 +393,15 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-ink-mute);
+  /* Delay the caption a beat behind the mark so the eye registers
+     the mark first. Falls back to opacity-only for reduced motion. */
+  opacity: 0;
+  animation: drafting-caption-intro 500ms cubic-bezier(0.32, 0.72, 0, 1) 180ms both;
   transition: opacity 400ms ease-out;
 }
 .drafting-reveal--out .drafting-reveal__caption {
   opacity: 0;
+  animation: none;
   transition: opacity 250ms ease-out;
 }
 .drafting-reveal__caption-text {
@@ -397,6 +409,16 @@
   animation: drafting-caption-fade 400ms ease-out;
 }
 
+@keyframes drafting-mark-enter {
+  from {
+    transform: translate(-50%, -50%) scale(0.94);
+    opacity: 0.4;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
 @keyframes drafting-mark-breathe {
   0%, 100% {
     transform: translate(-50%, -50%) scale(1);
@@ -404,6 +426,10 @@
   50% {
     transform: translate(-50%, -50%) scale(1.05);
   }
+}
+@keyframes drafting-caption-intro {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 @keyframes drafting-caption-fade {
   from { opacity: 0; transform: translateY(4px); }
