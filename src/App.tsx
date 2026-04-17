@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react"
 import { Toaster } from "sonner"
 import AuthProvider from "@/contexts/AuthContext"
 import AccountProvider from "@/contexts/AccountContext"
+import AdminProvider from "@/contexts/AdminContext"
 import LandingPage from "@/pages/LandingPage"
 import LoginPage from "@/pages/LoginPage"
 import NotFound from "@/pages/NotFound"
@@ -23,6 +24,11 @@ const InviteAcceptPage = lazy(() => import("@/pages/InviteAcceptPage"))
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"))
 const AccountTab = lazy(() => import("@/pages/settings/AccountTab"))
 const TeamTab = lazy(() => import("@/pages/settings/TeamTab"))
+const AdminShell = lazy(() => import("@/pages/admin/AdminShell"))
+const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"))
+const AdminWaitlist = lazy(() => import("@/pages/admin/AdminWaitlist"))
+const AdminInvites = lazy(() => import("@/pages/admin/AdminInvites"))
+const AdminAccounts = lazy(() => import("@/pages/admin/AdminAccounts"))
 
 function App() {
   return (
@@ -58,6 +64,17 @@ function App() {
               <Route path="/settings" element={<SettingsShell />}>
                 <Route index element={<AccountTab />} />
                 <Route path="team" element={<TeamTab />} />
+              </Route>
+            </Route>
+
+            {/* Admin — gated by AdminProvider, not AccountProvider.
+                Admins don't have to belong to an account. */}
+            <Route element={<AdminProvider />}>
+              <Route path="/admin" element={<AdminShell />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="waitlist" element={<AdminWaitlist />} />
+                <Route path="invites" element={<AdminInvites />} />
+                <Route path="accounts" element={<AdminAccounts />} />
               </Route>
             </Route>
           </Route>

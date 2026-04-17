@@ -11,7 +11,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { useAccount } from "@/contexts/AccountContext"
-import { Plus, Copy, Check, LogOut, Settings, Users } from "lucide-react"
+import { useIsAdmin } from "@/lib/useIsAdmin"
+import { Plus, Copy, Check, LogOut, Settings, Shield, Users } from "lucide-react"
 import ProposlMark from "@/components/brand/ProposlMark"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ function timeSince(iso: string | null): string {
 
 const ProposalsDashboard = () => {
   const { account, isOwner } = useAccount()
+  const { isAdmin } = useIsAdmin()
   const [rows, setRows] = useState<DashboardRow[]>([])
   const [loading, setLoading] = useState(true)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -196,6 +198,17 @@ const ProposalsDashboard = () => {
           </span>
         </Link>
         <div className="flex items-center gap-5">
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-1.5 text-[13px] transition-colors hover:opacity-70"
+              style={{ color: "var(--color-forest)" }}
+              title="Proposl admin console"
+            >
+              <Shield className="h-3.5 w-3.5" />
+              Admin
+            </Link>
+          )}
           {isOwner && (
             <>
               <Link
