@@ -21,6 +21,12 @@ import { VIEWPORT_WIDTHS } from "@/components/builder/ViewportSwitcher"
 import { stripStreamingEditsBlock } from "@/lib/proposalEdits"
 import { fetchHeroImage } from "@/lib/heroImage"
 import type { ProposalData, SectionKey } from "@/types/proposal"
+import IntakeScreen from "@/components/builder/IntakeScreen"
+import {
+  loadIntake,
+  saveIntake,
+  clearIntake,
+} from "@/lib/intakePersistence"
 
 const DEBOUNCE_PREVIEW_MS = 300
 const DEBOUNCE_SAVE_MS = 2000
@@ -132,6 +138,13 @@ const BuilderHome = () => {
     [proposal, account, session, contextSources],
   )
 
+  const initialIntakeMessages = useMemo(
+    () => loadIntake(proposal.id) ?? undefined,
+    // Only load at mount. We don't want to reset the conversation mid-session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+
   const {
     messages: uiMessages,
     sendMessage,
@@ -139,6 +152,7 @@ const BuilderHome = () => {
   } = useChat({
     id: `chat-${proposal.id}`,
     transport,
+    messages: initialIntakeMessages,
     onError: (err) => {
       console.error("Chat error:", err)
       toast.error("AI request failed. Please try again.")
@@ -175,6 +189,16 @@ const BuilderHome = () => {
   // and the first edits landing. Only triggers on the empty → populated
   // transition (first draft); refinement edits don't get the ceremony.
   const [isDrafting, setIsDrafting] = useState(false)
+
+  // A proposal is "empty" when the user hasn't drafted anything yet --
+  // no tagline, no scope outcomes, no investment packages. In that state
+  // we render the intake screen over the builder instead of the empty
+  // proposal template, so the experience feels like Lovable's first-run
+  // (one screen, one chat, no separate wizard).
+  const isProposalEmpty =
+    (!proposal.tagline || proposal.tagline.trim() === "") &&
+    (proposal.scope?.outcomes?.length ?? 0) === 0 &&
+    (proposal.investment?.packages?.length ?? 0) === 0
 
   const saveSnapshot = useCallback(async (trigger: string) => {
     if (!proposal.id) return
@@ -268,6 +292,21 @@ const BuilderHome = () => {
     const t = setTimeout(() => setIsDrafting(false), 90_000)
     return () => clearTimeout(t)
   }, [isDrafting])
+
+  // Persist intake conversation to localStorage (debounced) while the
+  // proposal is empty. Clear once drafting starts or the proposal gets
+  // populated. The transcript is no longer useful post-draft.
+  useEffect(() => {
+    if (!proposal.id) return
+    if (!isProposalEmpty || isDrafting) {
+      clearIntake(proposal.id)
+      return
+    }
+    const t = setTimeout(() => {
+      saveIntake(proposal.id, uiMessages)
+    }, 200)
+    return () => clearTimeout(t)
+  }, [proposal.id, uiMessages, isProposalEmpty, isDrafting])
 
   // Sync UIMessages back to the store + auto-apply any new AI edits.
   // The store extracts edits both from tool parts AND from `proposal-edits`
@@ -482,16 +521,6 @@ const BuilderHome = () => {
     setShowSendDialog(false)
   }, [proposal.status])
 
-  // A proposal is "empty" when the user hasn't drafted anything yet —
-  // no tagline, no scope outcomes, no investment packages. In that state
-  // we render an intake hero over the builder instead of the empty
-  // proposal template, so the experience feels like Lovable's first-run
-  // (one screen, one chat, no separate wizard).
-  const isProposalEmpty =
-    (!proposal.tagline || proposal.tagline.trim() === "") &&
-    (proposal.scope?.outcomes?.length ?? 0) === 0 &&
-    (proposal.investment?.packages?.length ?? 0) === 0
-
   // Show nothing while loading existing proposal
   if (isLoading) return null
 
@@ -563,20 +592,43 @@ const BuilderHome = () => {
             and this view will swap to the full document in the same frame. */}
         <div className="pt-11">
           {isProposalEmpty ? (
-            <IntakeHero
-              onAddContext={() => setShowContext(true)}
-              contextCount={contextSources.length}
-              onSkip={() => {
-                setComposerVisible(true)
-                // Open the ceremonial reveal immediately — no wait for the
-                // AI to echo "Drafting now." since the user already told us
-                // what they want. They'll see the reveal instead of a blank
-                // textarea while the first v1 generates.
+            <IntakeScreen
+              messages={uiMessages.map((m) => {
+                const textParts = m.parts.filter((p) => p.type === "text") as Array<{
+                  type: "text"
+                  text: string
+                }>
+                const raw = textParts.map((p) => p.text).join("")
+                const visible =
+                  m.role === "assistant" ? stripStreamingEditsBlock(raw) : raw
+                return {
+                  id: m.id,
+                  role: m.role as "user" | "assistant",
+                  content: visible,
+                }
+              })}
+              loading={isStreaming}
+              onSend={(text) => sendMessage({ text })}
+              onAttach={() => setShowContext(true)}
+              onDraftReady={() => {
+                // Path B: user clicked the AI-emitted "Draft v1" button.
+                // Mirrors Path A. Send the affirmation as a real message so
+                // the AI's next turn emits the proposal-edits block, and
+                // fire the reveal overlay.
+                setIsDrafting(true)
+                sendMessage({ text: "Go ahead with the draft." })
+              }}
+              onDraftNow={() => {
+                // Path C: escape hatch. Force draft regardless of AI state.
                 setIsDrafting(true)
                 setAutoSendChatPrompt(
                   "Skip the questions and draft v1 with whatever you have.",
                 )
               }}
+              contextChips={contextSources.map((c) => ({
+                id: c.name,
+                label: c.name,
+              }))}
             />
           ) : (
             <div
@@ -591,7 +643,7 @@ const BuilderHome = () => {
         </div>
 
         {/* Floating composer */}
-        {!previewMode && (
+        {!previewMode && !isProposalEmpty && (
           <FloatingComposer
             messages={uiMessages.map((m) => {
               const textParts = m.parts.filter((p) => p.type === "text") as Array<{ type: "text"; text: string }>
@@ -617,12 +669,6 @@ const BuilderHome = () => {
             onToggle={() => setComposerVisible(!composerVisible)}
             pendingPrompt={pendingChatPrompt}
             onClearPendingPrompt={() => setPendingChatPrompt(null)}
-            placeholder={
-              isProposalEmpty
-                ? "Describe the project, paste a brief, or ask a question\u2026"
-                : undefined
-            }
-            position={isProposalEmpty ? "center" : "bottom"}
           />
         )}
 
@@ -660,70 +706,3 @@ const BuilderHome = () => {
 
 export default BuilderHome
 
-// ─────────────────────────────────────────────────────────────────────────────
-// IntakeHero — the empty-state rendered over the builder for a fresh
-// proposal. Replaces the old /builder/new wizard. One screen, one chat,
-// no hand-off: as soon as the AI produces a v1, the document renders in
-// the same frame and this hero disappears.
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface IntakeHeroProps {
-  onAddContext: () => void
-  contextCount: number
-  onSkip: () => void
-}
-
-function IntakeHero({ onAddContext, contextCount, onSkip }: IntakeHeroProps) {
-  return (
-    <div
-      className="flex min-h-[calc(100vh-11rem)] flex-col items-center justify-center px-6 pb-36 text-center"
-    >
-      <p
-        className="mb-5 text-[11px] uppercase tracking-[0.14em]"
-        style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
-      >
-        NEW PROPOSAL
-      </p>
-      <h1
-        className="max-w-2xl text-[44px] leading-[1.05] tracking-[-0.01em] md:text-[56px]"
-        style={{ fontFamily: "var(--font-merchant-display)", fontWeight: 500, color: "var(--color-ink)" }}
-      >
-        What are we proposing?
-      </h1>
-      <p
-        className="mt-5 max-w-lg text-[14px] leading-[1.55]"
-        style={{ color: "var(--color-ink-soft)" }}
-      >
-        Describe the project in the chat below, or attach a brief, call
-        transcript, or Notion page first. I&apos;ll ask a few quick
-        questions, then draft a full v1 once you say go.
-      </p>
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-        <button
-          onClick={onAddContext}
-          className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[12px] font-medium transition-colors hover:opacity-80"
-          style={{
-            borderColor: "var(--color-rule)",
-            color: "var(--color-ink-soft)",
-            background: "var(--color-cream)",
-          }}
-        >
-          {contextCount > 0
-            ? `${contextCount} context ${contextCount === 1 ? "source" : "sources"} attached — manage`
-            : "Attach context first"}
-        </button>
-        <button
-          onClick={onSkip}
-          className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12px] font-medium transition-colors hover:opacity-80"
-          style={{
-            color: "var(--color-ink-mute)",
-            background: "transparent",
-          }}
-          title="Skip the intake questions and jump straight to an editable draft"
-        >
-          Skip intake, draft v1 now →
-        </button>
-      </div>
-    </div>
-  )
-}
