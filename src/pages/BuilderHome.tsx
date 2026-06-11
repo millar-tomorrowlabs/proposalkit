@@ -138,11 +138,15 @@ const BuilderHome = () => {
     [proposal, account, session, contextSources],
   )
 
+  // Hydrate the intake conversation from localStorage once the proposal id
+  // is known. The proposal loads async, so at first render the id is empty
+  // and there is nothing to hydrate; when the real id lands, useChat gets a
+  // new `id` (chat-<uuid>) which recreates the chat instance, and that new
+  // instance seeds from this value. Mid-session renders never reset the
+  // conversation because the id (and so this memo) stays stable.
   const initialIntakeMessages = useMemo(
-    () => loadIntake(proposal.id) ?? undefined,
-    // Only load at mount. We don't want to reset the conversation mid-session.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    () => (proposal.id ? (loadIntake(proposal.id) ?? undefined) : undefined),
+    [proposal.id],
   )
 
   const {
@@ -302,6 +306,10 @@ const BuilderHome = () => {
       clearIntake(proposal.id)
       return
     }
+    // Never write an empty conversation: at mount uiMessages is [] until
+    // hydration lands, and saving that would clobber the stored transcript
+    // we are about to restore. Removal is handled by the clear branch.
+    if (uiMessages.length === 0) return
     const t = setTimeout(() => {
       saveIntake(proposal.id, uiMessages)
     }, 200)
