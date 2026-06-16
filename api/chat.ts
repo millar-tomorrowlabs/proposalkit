@@ -204,6 +204,7 @@ Emit ONE proposal-edits block containing every field needed for a complete propo
 - investment.packages (whole array with recommendation flag)
 - investment.addOnCategories (2-3 category buckets)
 - investment.addOns (3-5 project-specific add-ons, each with per-package pricing)
+- investment.retainer (OPTIONAL — include only when the engagement has ongoing hourly post-launch support; it renders as a monthly-hours slider, see RETAINER VS ADD-ON below)
 - recommendation (one-sentence explanation of which tier and why)
 - title (the admin/email title — "[Client Name] — [Short Project Descriptor]")
 - currency (ISO code like "EUR" or "USD" — detect from user messages per the currency rule)
@@ -329,6 +330,7 @@ VALID FIELD PATHS:
 - Investment packages (array): "investment.packages" for the whole list, or "investment.packages.0.label" / "investment.packages.0.basePrice" / "investment.packages.0.highlights" / "investment.packages.0.isRecommended".
 - Investment add-on categories (array): "investment.addOnCategories" — groups for add-ons. Each item: {"id": "content", "label": "Content & Design"}.
 - Investment add-ons (array): "investment.addOns" — each item: {"id": "launch-shoot", "label": "Launch photoshoot", "description": "Half-day product shoot with retouching", "category": "content", "packages": {"total": {"price": 2500}, "light": {"price": 2500}}}. The "packages" field maps each package id to either {"price": number} (offered at this price) or {"included": true} (bundled free into that tier).
+- Investment retainer (OPTIONAL object): "investment.retainer" — {"hourlyRate": number (the studio's standard hourly rate), "minHours": number, "maxHours": number, "requiredMonths": number, "title"?: string, "description"?: string, "rateNote"?: string, "features"?: string[]}. Setting this renders a native monthly-hours SLIDER the client drags to choose their commitment. Include it ONLY for ongoing hourly support; omit the field entirely otherwise.
 
 EMPTY-ARRAY RULE (IMPORTANT):
 You CANNOT write to an indexed path inside an empty array. If "scope.outcomes" is [], "scope.outcomes.0" silently fails. For v1 generation (empty proposal), use the WHOLE-ARRAY path with the full array as the value.
@@ -353,8 +355,11 @@ Generate 3-5 add-ons grouped into 2-3 categories. Each add-on must be a natural 
 - Brand/web projects: photography direction, copy polish pass, extra revision rounds, brand guidelines doc, accessibility audit.
 - Ecommerce projects: product import, SEO foundations, email flows setup, loyalty integration, post-launch CRO sprint.
 - Booking/service projects: booking system migration, staff training, reminder email flows, review-gathering setup.
-- Retainer-style add-ons: monthly SEO, monthly content updates, quarterly design refresh.
+- Recurring-service SETUPS can be add-ons (e.g. configure monthly SEO, stand up content-update workflows), but ongoing hourly support is a retainer, not an add-on — see below.
 Include each add-on in each package with a realistic price. Optionally flag items as "included" in the premium tier to strengthen its value — e.g. a launch photoshoot included in the "Full" tier but priced as an add-on for "Light".
+
+RETAINER VS ADD-ON:
+When the engagement includes ONGOING post-launch support billed by the hour with a monthly commitment (e.g. "post-launch support retainer", "monthly maintenance hours", "ongoing support"), populate "investment.retainer" instead of adding it as an add-on. It renders as a slider the client drags to pick monthly hours. A sensible default is {"hourlyRate": <the studio's standard hourly rate>, "minHours": 2, "maxHours": 10, "requiredMonths": 1}, tuned to the project. Reserve add-ons for one-time, discrete services. Never model an hourly support retainer as a flat-price add-on.
 
 For refinement (populated proposal), use indexed paths: "scope.outcomes.2" to edit the third outcome.
 
