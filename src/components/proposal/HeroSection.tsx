@@ -22,15 +22,37 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, t
   const showLargeLogo = heroLogoLarge && clientLogoUrl
   const showClientName = !showLargeLogo
 
+  // Hero image load resilience. The sourced image (often a freshly-minted
+  // Unsplash URL set right after v1 generation) can fail its first network
+  // load under render/network contention even though the URL is valid, and
+  // the branch below keys on whether the URL is *set*, not whether it
+  // *loaded*. Without this, a single failed first load leaves a permanently
+  // blank hero with no retry and no fallback. Retry a couple of times with a
+  // cache-busting param, then fall back to the branded gradient.
+  const [heroRetry, setHeroRetry] = React.useState(0)
+  const [heroFailed, setHeroFailed] = React.useState(false)
+  React.useEffect(() => {
+    setHeroRetry(0)
+    setHeroFailed(false)
+  }, [heroImageUrl])
+  const heroSrc =
+    heroRetry === 0
+      ? heroImageUrl
+      : `${heroImageUrl}${heroImageUrl?.includes("?") ? "&" : "?"}retry=${heroRetry}`
+
   return (
     <section className="relative min-h-screen overflow-hidden">
       <div className="absolute inset-0">
-        {heroImageUrl ? (
+        {heroImageUrl && !heroFailed ? (
           <>
             <img
-              src={heroImageUrl}
+              key={`${heroImageUrl}#${heroRetry}`}
+              src={heroSrc}
               alt={clientName}
               className="h-full w-full object-cover"
+              onError={() =>
+                heroRetry < 2 ? setHeroRetry((r) => r + 1) : setHeroFailed(true)
+              }
             />
             <div className="absolute inset-0 bg-black/40" />
           </>
@@ -58,6 +80,7 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, t
             src={clientLogoUrl}
             alt={clientName}
             className="mb-12 h-16 w-auto object-contain opacity-90 md:h-24"
+            onError={(e) => { e.currentTarget.style.display = "none" }}
           />
         )}
 
@@ -67,6 +90,7 @@ const HeroSection = ({ clientName, heroImageUrl, clientLogoUrl, heroLogoLarge, t
             src={clientLogoUrl}
             alt={clientName}
             className="mb-6 h-10 w-auto object-contain opacity-90 md:h-12"
+            onError={(e) => { e.currentTarget.style.display = "none" }}
           />
         )}
 
