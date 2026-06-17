@@ -37,8 +37,11 @@ async function verifyAuth(req: Request): Promise<string> {
   const authHeader = req.headers.get("authorization")
   if (!authHeader?.startsWith("Bearer ")) throw new Error("UNAUTHORIZED")
 
+  // Fall back to the VITE_-prefixed URL (scoped to all environments) so
+  // previews and other non-prod environments can validate auth too. The
+  // bare SUPABASE_URL only exists in Production.
   const supabase = createClient(
-    process.env.SUPABASE_URL!,
+    (process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL)!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 

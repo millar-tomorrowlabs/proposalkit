@@ -19,6 +19,7 @@ import HistoryPopover from "@/components/builder/HistoryPopover"
 import DraftingReveal from "@/components/builder/DraftingReveal"
 import { VIEWPORT_WIDTHS } from "@/components/builder/ViewportSwitcher"
 import { stripStreamingEditsBlock } from "@/lib/proposalEdits"
+import { parseDraftReadyMarker } from "@/lib/parseDraftReadyMarker"
 import { fetchHeroImage } from "@/lib/heroImage"
 import type { ProposalData, SectionKey } from "@/types/proposal"
 import IntakeScreen from "@/components/builder/IntakeScreen"
@@ -659,8 +660,13 @@ const BuilderHome = () => {
               // Hide the `proposal-edits` JSON block from the user — they
               // see the document update instead. While streaming, the
               // closing fence may not have arrived yet, so strip the
-              // unterminated block too.
-              const visible = m.role === "assistant" ? stripStreamingEditsBlock(raw) : raw
+              // unterminated block too. Also strip the [[DRAFT_READY]]
+              // marker, which can land mid-message when the user gave the
+              // go-ahead and the AI drafted in the same turn.
+              const visible =
+                m.role === "assistant"
+                  ? parseDraftReadyMarker(stripStreamingEditsBlock(raw)).displayText
+                  : raw
               return {
                 id: m.id,
                 role: m.role as "user" | "assistant",

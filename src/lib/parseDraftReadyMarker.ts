@@ -1,26 +1,33 @@
 // src/lib/parseDraftReadyMarker.ts
 
-const MARKER_PATTERN = /\s*\[\[DRAFT_READY\]\]\s*$/
+// Matches the marker anywhere in the message, with any surrounding
+// whitespace, all occurrences. The model is told to emit it as the final
+// line, but when the user has already given the go-ahead it may emit the
+// marker AND keep drafting in the same turn, leaving the marker mid-text.
+// Stripping globally keeps it out of the visible bubble regardless.
+const MARKER_PATTERN = /\s*\[\[DRAFT_READY\]\]\s*/g
 
 /**
- * Inspect an assistant message for the [[DRAFT_READY]] trailer marker.
+ * Inspect an assistant message for the [[DRAFT_READY]] signal.
  *
  * The marker is emitted by the intake AI when it judges it has enough
  * context to begin drafting. The UI strips the marker from the visible
  * text and uses the `isReady` flag to render a "Draft v1" button
  * attached to that assistant message bubble.
  *
- * Tolerant of trailing whitespace and partial streams. Returns
- * `isReady: false` when the marker isn't fully present, so a streaming
- * assistant message only flips the button on once the marker has
- * fully arrived.
+ * Strips every occurrence wherever it appears (not just a trailing one),
+ * and collapses the surrounding whitespace so the cleaned text reads
+ * naturally. `isReady` is true whenever the marker is present at all.
  */
 export function parseDraftReadyMarker(content: string): {
   displayText: string
   isReady: boolean
 } {
   if (!content) return { displayText: "", isReady: false }
+  // Reset lastIndex defensively — a global regex is stateful across .test().
+  MARKER_PATTERN.lastIndex = 0
   const isReady = MARKER_PATTERN.test(content)
-  const displayText = isReady ? content.replace(MARKER_PATTERN, "") : content
-  return { displayText, isReady }
+  if (!isReady) return { displayText: content, isReady: false }
+  const displayText = content.replace(MARKER_PATTERN, " ").trim()
+  return { displayText, isReady: true }
 }
