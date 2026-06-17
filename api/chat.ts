@@ -435,8 +435,13 @@ type AccountSecurityContext = {
 }
 
 function serviceRoleClient() {
+  // The project standardizes on the VITE_-prefixed URL (scoped to all
+  // environments), but older server code read the bare SUPABASE_URL which
+  // only exists in Production. Fall back to the VITE_ name so previews and
+  // any non-prod environment can validate auth too.
+  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL
   return createClient(
-    process.env.SUPABASE_URL!,
+    url!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 }
