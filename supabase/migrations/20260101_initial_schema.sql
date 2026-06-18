@@ -29,8 +29,6 @@
 -- PostgreSQL database dump
 --
 
-\restrict nBguVJhStBnIS7p9lvXtSijBtsYvJnfp9kSMGFMP0f1lLu4kVIRBUmedwc9hgff
-
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.3
 
@@ -1229,6 +1227,4 @@ ALTER TABLE public.waitlist_signups ENABLE ROW LEVEL SECURITY;
 --
 -- PostgreSQL database dump complete
 --
-
-\unrestrict nBguVJhStBnIS7p9lvXtSijBtsYvJnfp9kSMGFMP0f1lLu4kVIRBUmedwc9hgff
 
