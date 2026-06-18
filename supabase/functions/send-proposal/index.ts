@@ -91,6 +91,38 @@ function buildReminderEmailHtml(body: SendBody): string {
 </html>`
 }
 
+// Plain-text alternatives. Every send is multipart/alternative: an email
+// with no text part is a long-standing spam signal, and some corporate
+// gateways penalize HTML-only mail outright. The text mirrors the HTML so
+// the two say the same thing, and the proposal URL appears as a bare link.
+function buildSendEmailText(body: SendBody): string {
+  const studio = body.studioName ?? ""
+  const website = body.website ?? "proposl.app"
+  const firstName = body.recipientName.split(" ")[0]
+  const lines = [
+    `Hi ${firstName},`,
+    "",
+    `Your proposal for ${body.clientName ?? body.proposalTitle} is ready to review.`,
+  ]
+  if (body.personalMessage) lines.push("", body.personalMessage)
+  lines.push("", "View it here:", body.proposalUrl, "", `${studio} · ${website}`)
+  return lines.join("\n")
+}
+
+function buildReminderEmailText(body: SendBody): string {
+  const studio = body.studioName ?? ""
+  const website = body.website ?? "proposl.app"
+  const firstName = body.recipientName.split(" ")[0]
+  const lines = [
+    `Hi ${firstName},`,
+    "",
+    `Just following up on the proposal for ${body.clientName ?? body.proposalTitle}. Wanted to make sure you had a chance to take a look.`,
+  ]
+  if (body.personalMessage) lines.push("", body.personalMessage)
+  lines.push("", "View it here:", body.proposalUrl, "", `${studio} · ${website}`)
+  return lines.join("\n")
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
@@ -219,6 +251,7 @@ Deno.serve(async (req) => {
         ...(senderEmail ? { cc: [senderEmail], reply_to: senderEmail } : {}),
         subject: emailSubject,
         html: isReminder ? buildReminderEmailHtml(body) : buildSendEmailHtml(body),
+        text: isReminder ? buildReminderEmailText(body) : buildSendEmailText(body),
       }),
     })
 
