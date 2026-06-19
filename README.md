@@ -1,4 +1,27 @@
-# React + TypeScript + Vite
+# Proposl
+
+AI proposal builder. React + Vite + Supabase, deployed on Vercel.
+
+## Environments
+
+| Environment | Branch | URL | Supabase project |
+| --- | --- | --- | --- |
+| Production | `main` | proposl.app | `nkygheptubvogevezpap` (ProposalKit) |
+| Staging | `develop` | staging.proposl.app | `gpeeosckqysietgryovm` (proposl-staging) |
+| Preview | feature branches | per-deploy Vercel URL | `gpeeosckqysietgryovm` (staging) |
+
+- `main` deploys to production. Never push to it directly — open a PR.
+- `develop` and all feature-branch previews run against the **staging** Supabase, so schema changes, RLS tweaks, and migrations can be tested without touching production data.
+- Vercel env vars are scoped per target: Production vars point at the prod Supabase, Preview vars at staging. The server reads `SUPABASE_URL` (falls back to `VITE_SUPABASE_URL`).
+
+### Working with Supabase
+
+- The CLI is linked to prod by default. `supabase link --project-ref <ref>` to switch.
+- Apply migrations: `supabase db push` (after `link`-ing the target project).
+- Deploy all edge functions: `scripts/deploy-functions.sh <project-ref>`.
+- Staging email: Resend is intentionally **not** configured on staging so test sends never affect production sending reputation.
+
+## React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
