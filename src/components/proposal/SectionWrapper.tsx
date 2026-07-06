@@ -2,19 +2,16 @@ import { useState, useCallback, useRef } from "react"
 import { useBuilderPreview } from "@/contexts/BuilderPreviewContext"
 import { useBuilderStore } from "@/store/builderStore"
 import SectionToolbar from "./SectionToolbar"
-import type { SectionKey } from "@/types/proposal"
-
-const ALL_SECTIONS: SectionKey[] = ["summary", "scope", "timeline", "investment", "cta"]
+import { sectionLabel, type SectionId } from "@/types/proposal"
 
 interface SectionWrapperProps {
-  sectionKey: SectionKey
+  sectionKey: SectionId
   children: React.ReactNode
 }
 
 const SectionWrapper = ({ sectionKey, children }: SectionWrapperProps) => {
   const { isEditable, addSection, removeSection } = useBuilderPreview()
-  const currentSections = useBuilderStore((s) => s.previewProposal.sections)
-  const canAdd = ALL_SECTIONS.some((s) => !currentSections.includes(s))
+  const customSections = useBuilderStore((s) => s.previewProposal.customSections)
   const [isHovered, setIsHovered] = useState(false)
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -34,6 +31,8 @@ const SectionWrapper = ({ sectionKey, children }: SectionWrapperProps) => {
   if (!isEditable) return <>{children}</>
 
   const canRemove = sectionKey !== "cta"
+  // A custom section can always be added, so the add buttons never disappear.
+  const canAdd = true
 
   return (
     <div
@@ -44,7 +43,7 @@ const SectionWrapper = ({ sectionKey, children }: SectionWrapperProps) => {
     >
       {isHovered && (
         <SectionToolbar
-          sectionKey={sectionKey}
+          label={sectionLabel(sectionKey, customSections)}
           onAddAbove={() => addSection(sectionKey, "above")}
           onAddBelow={() => addSection(sectionKey, "below")}
           onRemove={() => removeSection(sectionKey)}

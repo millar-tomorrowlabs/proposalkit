@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Check, Star } from "lucide-react"
 import type { InvestmentConfig, ConfirmedSelection } from "@/types/proposal"
-import { formatPrice as formatCurrency } from "@/lib/currency"
+import { formatPrice as formatCurrency, formatPriceDelta } from "@/lib/currency"
 import InlineEditable from "./InlineEditable"
 import AskAIGhost from "./AskAIGhost"
 
@@ -19,6 +19,9 @@ const InvestmentSection = ({
   onConfirm,
 }: InvestmentSectionProps) => {
   const formatPrice = (n: number) => formatCurrency(n, currency)
+  // Sign-aware variant for add-on rows: negative amounts (credits) render
+  // as "-CA$1,800", not "+-CA$1,800".
+  const formatDelta = (n: number) => formatPriceDelta(n, currency)
 
   const [activePackageId, setActivePackageId] = useState(data.packages[0]?.id ?? "")
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(new Set())
@@ -58,6 +61,7 @@ const InvestmentSection = ({
   }
 
   const currentPackage = data.packages.find((p) => p.id === resolvedPackageId) ?? data.packages[0]!
+  const currentPackageIndex = Math.max(0, data.packages.findIndex((p) => p.id === currentPackage.id))
 
   // Assemble highlights: custom highlights + descriptions of included add-ons
   const assembledHighlights = [
@@ -233,6 +237,25 @@ const InvestmentSection = ({
                     Saving {formatPrice(totalSavings)}{comparisonPackageLabel ? ` vs. ${comparisonPackageLabel}` : ''}
                   </p>
                 )}
+                {/* Price lock / validity (INT-23). Lock note wins over date. */}
+                {currentPackage.priceLockNote ? (
+                  <InlineEditable
+                    fieldPath={`investment.packages.${currentPackageIndex}.priceLockNote`}
+                    value={currentPackage.priceLockNote}
+                    tag="p"
+                    className="mt-1 text-xs text-muted-foreground"
+                  />
+                ) : currentPackage.validUntil ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Pricing valid until{" "}
+                    <InlineEditable
+                      fieldPath={`investment.packages.${currentPackageIndex}.validUntil`}
+                      value={currentPackage.validUntil}
+                      tag="span"
+                      className="text-xs text-muted-foreground"
+                    />
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -288,8 +311,10 @@ const InvestmentSection = ({
                   if (!config) return null
                   const isSelected = selectedAddOnIds.has(addOn.id)
                   const maxPrice = getMaxPrice(addOn.id)
+                  // Only positively-priced items get the strikethrough/save
+                  // treatment; credits (negative prices) are not "discounted".
                   const hasDiscount =
-                    config.price !== undefined && config.price < maxPrice
+                    config.price !== undefined && config.price >= 0 && config.price < maxPrice
 
                   if (config.included) {
                     return (
@@ -312,6 +337,8 @@ const InvestmentSection = ({
                     )
                   }
 
+                  const isCredit = config.price !== undefined && config.price < 0
+
                   return (
                     <button
                       key={addOn.id}
@@ -323,22 +350,34 @@ const InvestmentSection = ({
                       }`}
                     >
                       <div>
-                        <p className="text-sm font-medium text-foreground">
-                          {addOn.label}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium text-foreground">
+                            {addOn.label}
+                          </p>
+                          {isCredit && (
+                            <span className="rounded-full border border-brand-1/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-brand-1">
+                              Credit
+                            </span>
+                          )}
+                        </div>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {addOn.description}
                         </p>
+                        {addOn.note && (
+                          <p className="mt-1 text-[11px] italic text-muted-foreground">
+                            {addOn.note}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           {hasDiscount && (
                             <p className="text-xs line-through text-muted-foreground">
-                              +{formatPrice(maxPrice)}
+                              {formatDelta(maxPrice)}
                             </p>
                           )}
                           <span className="text-sm font-semibold text-foreground">
-                            +{formatPrice(config.price!)}
+                            {formatDelta(config.price!)}
                           </span>
                           {hasDiscount && (
                             <p className="text-xs font-medium text-brand-1">
@@ -376,7 +415,7 @@ const InvestmentSection = ({
             {selectedAddOns.map((addon) => (
               <div key={addon.label} className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{addon.label}</span>
-                <span className="font-medium text-foreground">+{formatPrice(addon.price)}</span>
+                <span className="font-medium text-foreground">{formatDelta(addon.price)}</span>
               </div>
             ))}
             <div className="mt-2 border-t border-border pt-2 flex items-center justify-between">
@@ -442,7 +481,7 @@ const InvestmentSection = ({
               </p>
               <div className="flex items-center gap-3">
                 <span className="text-sm font-semibold text-foreground">
-                  +{formatPrice(data.postLaunch.monthlyPrice)}/mo
+                  {formatDelta(data.postLaunch.monthlyPrice)}/mo
                 </span>
                 <div
                   className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${

@@ -2,7 +2,15 @@ import { useState, useCallback, useMemo } from "react"
 import { useScrollRevealAll } from "@/hooks/useScrollReveal"
 import BuilderPreviewContext from "@/contexts/BuilderPreviewContext"
 import { useBuilderStore } from "@/store/builderStore"
-import type { ProposalData, SectionKey, ConfirmedSelection } from "@/types/proposal"
+import {
+  isTypedSection,
+  TYPED_SECTION_KEYS,
+  SECTION_LABELS,
+  type ProposalData,
+  type SectionKey,
+  type SectionId,
+  type ConfirmedSelection,
+} from "@/types/proposal"
 import ProposalNav from "./ProposalNav"
 import HeroSection from "./HeroSection"
 import SummarySection from "./SummarySection"
@@ -10,6 +18,7 @@ import ScopeSection from "./ScopeSection"
 import TimelineSection from "./TimelineSection"
 import InvestmentSection from "./InvestmentSection"
 import CTASection from "./CTASection"
+import CustomSectionBlock from "./CustomSectionBlock"
 import SectionWrapper from "./SectionWrapper"
 
 interface ProposalWrapperProps {
@@ -18,45 +27,29 @@ interface ProposalWrapperProps {
   viewportWidth?: number
 }
 
-const ALL_SECTIONS: SectionKey[] = ["summary", "scope", "timeline", "investment", "cta"]
-
-const SECTION_LABELS: Record<SectionKey, string> = {
-  summary: "Summary",
-  scope: "Scope",
-  timeline: "Timeline",
-  investment: "Investment",
-  cta: "Next Steps",
-}
-
 const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: ProposalWrapperProps) => {
   const studioName = proposal.studioName || ""
   const studioLogoUrl = proposal.studioLogoUrl
   const heroImageLoading = useBuilderStore((s) => s.heroImageLoading)
   const [confirmedSelection, setConfirmedSelection] = useState<ConfirmedSelection | null>(null)
-  const [addMenuTarget, setAddMenuTarget] = useState<{ relativeTo: SectionKey; position: "above" | "below" } | null>(null)
+  const [addMenuTarget, setAddMenuTarget] = useState<{ relativeTo: SectionId; position: "above" | "below" } | null>(null)
   useScrollRevealAll({ disabled: isPreview })
 
-  // Section management: add a section relative to another
-  const addSection = useCallback((relativeTo: SectionKey, position: "above" | "below") => {
+  // Section management: add a section relative to another. A custom section
+  // is always available, so this always shows the picker unless every typed
+  // section is already placed (then it adds a custom section directly).
+  const addSection = useCallback((relativeTo: SectionId, position: "above" | "below") => {
     const store = useBuilderStore.getState()
     const sections = store.proposal.sections
-    const available = ALL_SECTIONS.filter((s) => !sections.includes(s))
-    if (available.length === 0) return
+    const availableTyped = TYPED_SECTION_KEYS.filter((s) => !sections.includes(s))
 
-    // If only one option, insert it directly
-    if (available.length === 1) {
-      const idx = sections.indexOf(relativeTo)
-      if (idx === -1) return
-      const insertAt = position === "below" ? idx + 1 : idx
-      const next = [...sections]
-      next.splice(insertAt, 0, available[0])
-      store.updateField("sections", next)
+    if (availableTyped.length === 0) {
+      store.addCustomSection({ relativeTo, position })
       // Flush immediately so preview updates without waiting for debounce
       setTimeout(() => useBuilderStore.getState().flushToPreview(), 0)
       return
     }
 
-    // Multiple options — show picker menu
     setAddMenuTarget({ relativeTo, position })
   }, [])
 
@@ -75,12 +68,17 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
     setTimeout(() => useBuilderStore.getState().flushToPreview(), 0)
   }, [addMenuTarget])
 
-  // Section management: remove a section
-  const removeSection = useCallback((key: SectionKey) => {
+  const insertCustomSection = useCallback(() => {
+    if (!addMenuTarget) return
+    useBuilderStore.getState().addCustomSection(addMenuTarget)
+    setAddMenuTarget(null)
+    setTimeout(() => useBuilderStore.getState().flushToPreview(), 0)
+  }, [addMenuTarget])
+
+  // Section management: remove a section (typed or custom)
+  const removeSection = useCallback((key: SectionId) => {
     if (key === "cta") return // CTA cannot be removed
-    const store = useBuilderStore.getState()
-    const sections = store.proposal.sections
-    store.updateField("sections", sections.filter((s) => s !== key))
+    useBuilderStore.getState().removeSectionById(key)
     // Flush immediately so preview updates without waiting for debounce
     setTimeout(() => useBuilderStore.getState().flushToPreview(), 0)
   }, [])
@@ -119,6 +117,7 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
         currency={proposal.currency}
         confirmedSelection={confirmedSelection}
         isPreview={isPreview}
+        steps={proposal.cta?.steps}
       />
     ),
   }
@@ -135,6 +134,7 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
       >
         <ProposalNav
           sections={proposal.sections}
+          customSections={proposal.customSections}
           studioName={studioName}
           studioLogoUrl={studioLogoUrl}
           isPreview={isPreview}
@@ -149,11 +149,25 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
           description={proposal.heroDescription}
           imageLoading={heroImageLoading}
         />
-        {proposal.sections.map((key) => (
-          <SectionWrapper key={key} sectionKey={key}>
-            {sectionMap[key]}
-          </SectionWrapper>
-        ))}
+        {proposal.sections.map((key) => {
+          if (isTypedSection(key)) {
+            return (
+              <SectionWrapper key={key} sectionKey={key}>
+                {sectionMap[key]}
+              </SectionWrapper>
+            )
+          }
+          const customIndex = (proposal.customSections ?? []).findIndex((s) => s.id === key)
+          if (customIndex === -1) return null // stale id with no content — skip
+          return (
+            <SectionWrapper key={key} sectionKey={key}>
+              <CustomSectionBlock
+                section={proposal.customSections![customIndex]}
+                index={customIndex}
+              />
+            </SectionWrapper>
+          )
+        })}
 
         {/* Section picker menu — shown when adding a section with multiple options */}
         {addMenuTarget && (
@@ -167,7 +181,7 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
             >
               <p className="mb-2 text-xs font-medium text-muted-foreground">Add section</p>
               <div className="flex flex-col gap-1">
-                {ALL_SECTIONS.filter((s) => !proposal.sections.includes(s)).map((key) => (
+                {TYPED_SECTION_KEYS.filter((s) => !proposal.sections.includes(s)).map((key) => (
                   <button
                     key={key}
                     onClick={() => insertSection(key)}
@@ -176,6 +190,12 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
                     {SECTION_LABELS[key]}
                   </button>
                 ))}
+                <button
+                  onClick={insertCustomSection}
+                  className="rounded-md border-t border-border px-3 py-1.5 text-left text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  Custom section
+                </button>
               </div>
             </div>
           </div>

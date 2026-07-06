@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase"
 import { friendlyError } from "@/lib/errors"
 import { useAccount } from "@/contexts/AccountContext"
 import ImageUpload from "@/components/builder/ImageUpload"
+import ApiTokensCard from "./ApiTokensCard"
 
 const labelClass = "mb-1.5 block text-[10px] uppercase tracking-[0.12em]"
 const labelStyle = { fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }
@@ -39,6 +40,9 @@ export default function AccountTab() {
   const [voiceDescription, setVoiceDescription] = useState(account.voiceDescription || "")
   const [voiceExamples, setVoiceExamples] = useState(account.voiceExamples || "")
   const [bannedPhrases, setBannedPhrases] = useState(account.bannedPhrases || "")
+  const [writingRules, setWritingRules] = useState(account.writingRules || "")
+  // Workspace default next steps, edited one per line
+  const [defaultCtaSteps, setDefaultCtaSteps] = useState((account.defaultCtaSteps ?? []).join("\n"))
   const [defaultHourlyRate, setDefaultHourlyRate] = useState<string>(
     account.defaultHourlyRate != null ? String(account.defaultHourlyRate) : "",
   )
@@ -75,6 +79,11 @@ export default function AccountTab() {
         voice_description: voiceDescription || null,
         voice_examples: voiceExamples || null,
         banned_phrases: bannedPhrases || null,
+        writing_rules: writingRules.trim() || null,
+        default_cta_steps: (() => {
+          const steps = defaultCtaSteps.split("\n").map((s) => s.trim()).filter(Boolean)
+          return steps.length > 0 ? steps : null
+        })(),
         default_hourly_rate: defaultHourlyRate.trim() === "" ? null : Number(defaultHourlyRate),
         default_currency: defaultCurrency.trim() === "" ? null : defaultCurrency.trim().toUpperCase(),
         ai_tailor_agency_bio: aiTailorAgencyBio,
@@ -323,6 +332,23 @@ export default function AccountTab() {
             style={inputStyle}
           />
         </div>
+
+        <div>
+          <label className={labelClass} style={labelStyle}>
+            Default next steps
+          </label>
+          <textarea
+            value={defaultCtaSteps}
+            onChange={(e) => setDefaultCtaSteps(e.target.value)}
+            rows={3}
+            placeholder={"Confirm package selection and any add-ons\nCountersign the build agreement in PandaSign\nSchedule kickoff"}
+            className={inputClass + " resize-none"}
+            style={inputStyle}
+          />
+          <p className={helperClass} style={helperStyle}>
+            One step per line. New proposals start with these; leave empty for the stock copy.
+          </p>
+        </div>
       </section>
 
       {/* ── AI voice & pricing defaults ─────────────────────────────── */}
@@ -379,6 +405,23 @@ export default function AccountTab() {
             style={{ fontFamily: "var(--font-mono)", color: "var(--color-ink-mute)" }}
           >
             Show, don't tell. Paste real examples.
+          </p>
+        </div>
+
+        <div>
+          <label className={labelClass} style={labelStyle}>
+            Writing rules
+          </label>
+          <textarea
+            value={writingRules}
+            onChange={(e) => setWritingRules(e.target.value)}
+            rows={4}
+            placeholder={"No em dashes anywhere. Professional register, no slang. Full forms in commitments (do not, will not). Numerals for all prices."}
+            className={inputClass + " resize-none"}
+            style={inputStyle}
+          />
+          <p className={helperClass} style={helperStyle}>
+            Hard rules the AI must follow in proposals and chat replies
           </p>
         </div>
 
@@ -481,6 +524,11 @@ export default function AccountTab() {
           </span>
         )}
       </div>
+
+      <hr style={{ borderColor: "var(--color-rule)" }} />
+
+      {/* API tokens for the Proposl MCP server (INT-26) */}
+      <ApiTokensCard />
 
       <hr style={{ borderColor: "var(--color-rule)" }} />
 

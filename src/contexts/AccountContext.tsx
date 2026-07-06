@@ -39,8 +39,10 @@ function toAccount(row: Record<string, unknown>): Account {
     voiceDescription: row.voice_description as string | undefined,
     voiceExamples: row.voice_examples as string | undefined,
     bannedPhrases: row.banned_phrases as string | undefined,
+    writingRules: row.writing_rules as string | undefined,
     defaultHourlyRate: row.default_hourly_rate as number | undefined,
     defaultCurrency: row.default_currency as string | undefined,
+    defaultCtaSteps: (row.default_cta_steps as string[] | null | undefined) ?? undefined,
     // Default: allow AI to tailor bio. Column is non-null in DB with default
     // true, but we tolerate undefined rows for forward-compat.
     aiTailorAgencyBio: row.ai_tailor_agency_bio === undefined ? true : !!row.ai_tailor_agency_bio,

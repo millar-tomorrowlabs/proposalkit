@@ -54,6 +54,11 @@ export interface ProposalPackage {
   baseDiscount?: number // deprecated — auto-calculated from included add-ons in renderer
   isRecommended?: boolean
   highlights: string[]
+  /** Date this price holds until (e.g. "July 31, 2026"). Rendered on the card. */
+  validUntil?: string
+  /** Free-text price lock condition (e.g. "Retail price held through the
+   * wholesale build"). Takes precedence over validUntil when both are set. */
+  priceLockNote?: string
 }
 
 export interface AddOnPackageConfig {
@@ -68,6 +73,12 @@ export interface AddOn {
   category: string
   packages: { [packageId: string]: AddOnPackageConfig }
   highlightInPackage?: string[]
+  /**
+   * Small-print annotation under the description. Used mainly on credits
+   * (negative-price add-ons) to explain a carve-out, e.g. "We keep
+   * migration, code, and QA".
+   */
+  note?: string
 }
 
 export interface AddOnCategory {
@@ -115,12 +126,63 @@ export interface ScopeConfig {
   responsibilities: string[]
 }
 
+export interface CTAConfig {
+  /** The numbered "Next Steps" list. Editable per proposal. */
+  steps: string[]
+}
+
+/**
+ * Fallback next steps for proposals created before cta.steps existed (and
+ * the seed for new ones). Rendered verbatim when a proposal has no cta
+ * data, so legacy proposals keep looking exactly as they did.
+ */
+export const DEFAULT_CTA_STEPS: string[] = [
+  "Confirm package selection and any add-ons",
+  "Review and sign the Master Services Agreement",
+  "Schedule kickoff to align on workflows, timelines, and responsibilities",
+]
+
 export type SectionKey =
   | "summary"
   | "scope"
   | "timeline"
   | "investment"
   | "cta"
+
+/**
+ * Entry in proposal.sections. Either a typed SectionKey or a custom section
+ * id ("custom-..."), which points into proposal.customSections. Stored in
+ * the proposals.sections text[] column either way, so no schema change.
+ */
+export type SectionId = string
+
+export interface CustomSection {
+  /** "custom-" + 8 hex chars. Doubles as the DOM anchor and nav href. */
+  id: string
+  title: string
+  /** Plain text, rendered whitespace-pre-wrap. Import paths write it verbatim. */
+  body: string
+}
+
+export const TYPED_SECTION_KEYS: SectionKey[] = ["summary", "scope", "timeline", "investment", "cta"]
+
+export const SECTION_LABELS: Record<SectionKey, string> = {
+  summary: "Summary",
+  scope: "Scope",
+  timeline: "Timeline",
+  investment: "Investment",
+  cta: "Next Steps",
+}
+
+export function isTypedSection(id: string): id is SectionKey {
+  return (TYPED_SECTION_KEYS as string[]).includes(id)
+}
+
+/** Display label for any section id: the typed label, or the custom section's title. */
+export function sectionLabel(id: string, customSections?: CustomSection[]): string {
+  if (isTypedSection(id)) return SECTION_LABELS[id]
+  return customSections?.find((s) => s.id === id)?.title.trim() || "Untitled section"
+}
 
 export interface ProposalMeta {
   id: string
@@ -150,7 +212,10 @@ export interface ProposalMeta {
   status?: "draft" | "sent" | "viewed" // proposal lifecycle status
   brief?: string // AI-synthesised working understanding of the client and project
   contextBlobs?: ContextBlob[] // persisted deal context
-  sections: SectionKey[]
+  sections: SectionId[]
+  /** Free-form sections referenced by id from `sections`. Optional for
+   * proposals saved before custom sections existed. */
+  customSections?: CustomSection[]
   createdAt: string
   updatedAt: string
 }
@@ -188,6 +253,9 @@ export interface ProposalData extends ProposalMeta {
     phases: TimelinePhase[]
   }
   investment: InvestmentConfig
+  /** Optional for proposals saved before this field existed; the CTA
+   * section falls back to DEFAULT_CTA_STEPS when absent. */
+  cta?: CTAConfig
 }
 
 export interface ProposalContextSource {

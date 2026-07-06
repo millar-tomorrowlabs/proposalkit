@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { Sparkles, Paperclip, X, RotateCcw, ChevronDown } from "lucide-react"
+import { MAX_CHAT_MESSAGE_LENGTH, formatCharCount } from "@/lib/chatLimits"
 
 interface ComposerMessage {
   id: string
@@ -104,9 +105,12 @@ export default function FloatingComposer({
     ta.style.height = `${Math.min(ta.scrollHeight, 80)}px`
   }, [input])
 
+  // Block over-limit sends instead of letting the server cut them silently.
+  const overLimit = input.length > MAX_CHAT_MESSAGE_LENGTH
+
   const handleSubmit = () => {
     const trimmed = input.trim()
-    if (!trimmed || loading) return
+    if (!trimmed || loading || overLimit) return
     onSend(trimmed)
     setInput("")
     setExpanded(true)
@@ -235,6 +239,22 @@ export default function FloatingComposer({
         </div>
       )}
 
+      {/* Over-limit warning */}
+      {overLimit && (
+        <div
+          className="border-b px-4 py-2 text-[11px] leading-[1.5]"
+          style={{
+            borderColor: "var(--color-rule)",
+            color: "var(--color-ink-soft)",
+          }}
+          role="alert"
+        >
+          This message is {formatCharCount(input.length)} characters. The chat
+          takes up to {formatCharCount(MAX_CHAT_MESSAGE_LENGTH)}. Attach the
+          full text as context with the paperclip instead, so nothing gets cut.
+        </div>
+      )}
+
       {/* Input row */}
       <div className="flex items-end gap-2 px-4 py-3">
         <Sparkles className="mb-1 h-4 w-4 shrink-0" style={{ color: "var(--color-forest)" }} />
@@ -266,7 +286,7 @@ export default function FloatingComposer({
         )}
         <button
           onClick={handleSubmit}
-          disabled={!input.trim() || loading}
+          disabled={!input.trim() || loading || overLimit}
           className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] transition-transform hover:scale-[1.05] disabled:opacity-40"
           style={{ background: "var(--color-forest)", color: "var(--color-cream)" }}
         >
