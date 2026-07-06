@@ -255,6 +255,8 @@ function buildServer(ctx: TokenContext): McpServer {
       const { data: account } = await supa.from("accounts").select("*").eq("id", ctx.accountId).maybeSingle()
       const id = randomUUID()
       const data = defaultProposalData(id, title, clientName, account)
+      // Mirrors the builder's auto-save column shape; cta_email and the
+      // brand colors are NOT NULL in the proposals table.
       const { error } = await supa.from("proposals").insert({
         id,
         account_id: ctx.accountId,
@@ -262,6 +264,9 @@ function buildServer(ctx: TokenContext): McpServer {
         slug: id,
         title,
         client_name: clientName,
+        brand_color_1: data.brandColor1,
+        brand_color_2: data.brandColor2,
+        cta_email: data.ctaEmail ?? "",
         status: "draft",
         sections: data.sections,
         data,
