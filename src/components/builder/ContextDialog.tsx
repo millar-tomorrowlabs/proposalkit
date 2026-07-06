@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Plus, X, Link as LinkIcon, FileText, Type } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { friendlyError } from "@/lib/errors"
 import type { ProposalContextSource } from "@/types/proposal"
 
 interface ContextDialogProps {
@@ -17,6 +18,7 @@ export default function ContextDialog({ open, onClose, proposalId, brief }: Cont
   const [name, setName] = useState("")
   const [content, setContent] = useState("")
   const [saving, setSaving] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
   const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -58,17 +60,30 @@ export default function ContextDialog({ open, onClose, proposalId, brief }: Cont
   const handleAdd = async () => {
     if (!name.trim() || !content.trim()) return
     setSaving(true)
-    await supabase.from("proposal_context").insert({
+    setAddError(null)
+    const { error } = await supabase.from("proposal_context").insert({
       proposal_id: proposalId,
       source_type: adding === "url" ? "url" : "paste",
       name: name.trim(),
       url: adding === "url" ? content.trim() : null,
       extracted_text: content.trim(),
+      // Legacy columns from the pre-rename schema. They are still NOT NULL
+      // in databases that haven't run the 20260705 relaxing migration, and
+      // omitting them made every insert here fail. Keep writing them until
+      // the columns are dropped everywhere.
+      label: name.trim(),
+      content: content.trim(),
     })
+    setSaving(false)
+    if (error) {
+      // Keep the user's input so they can retry; a failed add used to wipe
+      // the form and report nothing.
+      setAddError(friendlyError(error.message))
+      return
+    }
     setName("")
     setContent("")
     setAdding(null)
-    setSaving(false)
     await load()
   }
 
@@ -258,9 +273,14 @@ export default function ContextDialog({ open, onClose, proposalId, brief }: Cont
                 style={{ borderColor: "var(--color-rule)", color: "var(--color-ink)" }}
               />
             )}
+            {addError && (
+              <p className="text-[12px]" style={{ color: "#b91c1c" }} role="alert">
+                {addError}
+              </p>
+            )}
             <div className="flex gap-2">
               <button
-                onClick={() => { setAdding(null); setName(""); setContent("") }}
+                onClick={() => { setAdding(null); setName(""); setContent(""); setAddError(null) }}
                 className="text-[12px] font-medium transition-colors hover:opacity-70"
                 style={{ color: "var(--color-ink-mute)" }}
               >

@@ -1,16 +1,8 @@
 import { Plus, Trash2 } from "lucide-react"
-import type { SectionKey } from "@/types/proposal"
-
-const SECTION_LABELS: Record<SectionKey, string> = {
-  summary: "Summary",
-  scope: "Scope",
-  timeline: "Timeline",
-  investment: "Investment",
-  cta: "Next Steps",
-}
 
 interface SectionToolbarProps {
-  sectionKey: SectionKey
+  /** Display label — a typed section's fixed label or a custom section's title. */
+  label: string
   onAddAbove: () => void
   onAddBelow: () => void
   onRemove: () => void
@@ -19,7 +11,7 @@ interface SectionToolbarProps {
 }
 
 const SectionToolbar = ({
-  sectionKey,
+  label,
   onAddAbove,
   onAddBelow,
   onRemove,
@@ -29,7 +21,7 @@ const SectionToolbar = ({
   return (
     <div className="section-toolbar" contentEditable={false}>
       <div className="section-toolbar-inner">
-        <span className="section-toolbar-label">{SECTION_LABELS[sectionKey]}</span>
+        <span className="section-toolbar-label">{label}</span>
         {canAdd && (
           <>
             <div className="section-toolbar-divider" />

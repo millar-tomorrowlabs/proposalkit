@@ -1,24 +1,18 @@
 import { useState, useEffect } from "react"
 import { Lock, Menu, X } from "lucide-react"
-import type { SectionKey } from "@/types/proposal"
-
-const sectionLabels: Record<SectionKey, string> = {
-  summary: "Summary",
-  scope: "Scope",
-  timeline: "Timeline",
-  investment: "Investment",
-  cta: "Next Steps",
-}
+import { sectionLabel, type SectionId, type CustomSection } from "@/types/proposal"
 
 interface ProposalNavProps {
-  sections: SectionKey[]
+  sections: SectionId[]
+  /** Needed to resolve custom section titles for nav labels. */
+  customSections?: CustomSection[]
   studioName: string
   studioLogoUrl?: string
   isPreview?: boolean
   viewportWidth?: number
 }
 
-const ProposalNav = ({ sections, studioName, studioLogoUrl, isPreview = false, viewportWidth }: ProposalNavProps) => {
+const ProposalNav = ({ sections, customSections, studioName, studioLogoUrl, isPreview = false, viewportWidth }: ProposalNavProps) => {
   const [scrolled, setScrolled] = useState(isPreview)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -37,7 +31,7 @@ const ProposalNav = ({ sections, studioName, studioLogoUrl, isPreview = false, v
   }, [isPreview])
 
   const navItems = sections.map((key) => ({
-    label: sectionLabels[key],
+    label: sectionLabel(key, customSections),
     href: `#${key}`,
   }))
 

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { Settings, FileText, Eye, Edit2, Send, History } from "lucide-react"
+import { Settings, FileText, Eye, Edit2, Send, History, Upload } from "lucide-react"
 import ProposlMark from "@/components/brand/ProposlMark"
 import ViewportSwitcher, { type Viewport } from "./ViewportSwitcher"
 
@@ -13,6 +13,7 @@ interface BuilderTopBarProps {
   onTogglePreview: () => void
   onOpenSettings: () => void
   onOpenContext: () => void
+  onOpenImport: () => void
   onOpenHistory: () => void
   onSend: () => void
   saveStatus: string
@@ -30,6 +31,7 @@ export default function BuilderTopBar({
   onTogglePreview,
   onOpenSettings,
   onOpenContext,
+  onOpenImport,
   onOpenHistory,
   onSend,
   saveStatus,
@@ -88,6 +90,16 @@ export default function BuilderTopBar({
         >
           <FileText className="h-3 w-3" />
           Context
+        </button>
+
+        <button
+          onClick={onOpenImport}
+          className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors hover:opacity-70"
+          style={{ borderColor: "var(--color-rule)", color: "var(--color-ink-soft)" }}
+          title="Import a document verbatim"
+        >
+          <Upload className="h-3 w-3" />
+          Import
         </button>
 
         <button

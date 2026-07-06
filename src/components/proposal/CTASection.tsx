@@ -2,6 +2,8 @@ import { useState } from "react"
 import { ArrowRight, X } from "lucide-react"
 import { formatPrice as formatCurrency } from "@/lib/currency"
 import type { ConfirmedSelection } from "@/types/proposal"
+import { DEFAULT_CTA_STEPS } from "@/types/proposal"
+import InlineEditable from "./InlineEditable"
 
 interface CTASectionProps {
   proposalId: string
@@ -14,7 +16,18 @@ interface CTASectionProps {
   currency?: string
   confirmedSelection: ConfirmedSelection | null
   isPreview?: boolean
+  /** Editable next-steps list; falls back to DEFAULT_CTA_STEPS when unset
+   * (proposals saved before this field existed). */
+  steps?: string[]
 }
+
+// Numbered badge styling cycles through the brand palette, matching the
+// original fixed three-step design at any step count.
+const STEP_BADGE_CLASSES = [
+  "bg-brand-1 text-white",
+  "bg-brand-2 text-white",
+  "bg-foreground text-background",
+]
 
 const CTASection = ({
   proposalId,
@@ -27,8 +40,10 @@ const CTASection = ({
   currency = "USD",
   confirmedSelection,
   isPreview = false,
+  steps,
 }: CTASectionProps) => {
   const formatPrice = (n: number) => formatCurrency(n, currency)
+  const nextSteps = steps && steps.length > 0 ? steps : DEFAULT_CTA_STEPS
 
   const [showModal, setShowModal] = useState(false)
   const [name, setName] = useState("")
@@ -98,24 +113,23 @@ const CTASection = ({
 
           <div className="scroll-reveal delay-100 mx-auto mt-12 max-w-xl text-left">
             <ol className="space-y-4">
-              <li className="flex items-start gap-3 text-base text-foreground">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-1 text-xs font-semibold text-white">
-                  1
-                </span>
-                Confirm package selection and any add-ons
-              </li>
-              <li className="flex items-start gap-3 text-base text-foreground">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-2 text-xs font-semibold text-white">
-                  2
-                </span>
-                Review and sign the Master Services Agreement
-              </li>
-              <li className="flex items-start gap-3 text-base text-foreground">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">
-                  3
-                </span>
-                Schedule kickoff to align on workflows, timelines, and responsibilities
-              </li>
+              {nextSteps.map((step, i) => (
+                <li key={i} className="flex items-start gap-3 text-base text-foreground">
+                  <span
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                      STEP_BADGE_CLASSES[i % STEP_BADGE_CLASSES.length]
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  <InlineEditable
+                    fieldPath={`cta.steps.${i}`}
+                    value={step}
+                    tag="span"
+                    className="flex-1"
+                  />
+                </li>
+              ))}
             </ol>
           </div>
 

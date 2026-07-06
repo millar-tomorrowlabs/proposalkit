@@ -18,19 +18,23 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Trash2, Plus } from "lucide-react"
 import { useBuilderStore } from "@/store/builderStore"
-import type { SectionKey } from "@/types/proposal"
+import {
+  sectionLabel,
+  SECTION_LABELS,
+  TYPED_SECTION_KEYS,
+  type SectionId,
+  type SectionKey,
+} from "@/types/proposal"
 
-const SECTION_LABELS: Record<SectionKey, string> = {
-  summary: "Summary",
-  scope: "Scope",
-  timeline: "Timeline",
-  investment: "Investment",
-  cta: "Next Steps",
-}
-
-const ALL_SECTIONS: SectionKey[] = ["summary", "scope", "timeline", "investment", "cta"]
-
-const SortableItem = ({ id, onRemove }: { id: SectionKey; onRemove: (id: SectionKey) => void }) => {
+const SortableItem = ({
+  id,
+  label,
+  onRemove,
+}: {
+  id: SectionId
+  label: string
+  onRemove: (id: SectionId) => void
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
 
   const style = {
@@ -52,7 +56,7 @@ const SortableItem = ({ id, onRemove }: { id: SectionKey; onRemove: (id: Section
       >
         <GripVertical className="h-3.5 w-3.5" />
       </button>
-      <span className="flex-1 text-xs font-medium">{SECTION_LABELS[id]}</span>
+      <span className="flex-1 text-xs font-medium">{label}</span>
       {id !== "cta" && (
         <button
           onClick={() => onRemove(id)}
@@ -66,7 +70,7 @@ const SortableItem = ({ id, onRemove }: { id: SectionKey; onRemove: (id: Section
 }
 
 const SectionOrder = () => {
-  const { proposal, updateField } = useBuilderStore()
+  const { proposal, updateField, addCustomSection, removeSectionById } = useBuilderStore()
   const sections = proposal.sections
 
   const sensors = useSensors(
@@ -78,17 +82,10 @@ const SectionOrder = () => {
     (event: DragEndEvent) => {
       const { active, over } = event
       if (!over || active.id === over.id) return
-      const oldIndex = sections.indexOf(active.id as SectionKey)
-      const newIndex = sections.indexOf(over.id as SectionKey)
+      const oldIndex = sections.indexOf(active.id as SectionId)
+      const newIndex = sections.indexOf(over.id as SectionId)
       if (oldIndex === -1 || newIndex === -1) return
       updateField("sections", arrayMove(sections, oldIndex, newIndex))
-    },
-    [sections, updateField]
-  )
-
-  const handleRemove = useCallback(
-    (id: SectionKey) => {
-      updateField("sections", sections.filter((s) => s !== id))
     },
     [sections, updateField]
   )
@@ -108,7 +105,7 @@ const SectionOrder = () => {
     [sections, updateField]
   )
 
-  const available = ALL_SECTIONS.filter((s) => !sections.includes(s))
+  const availableTyped = TYPED_SECTION_KEYS.filter((s) => !sections.includes(s))
 
   return (
     <div className="space-y-2">
@@ -116,25 +113,34 @@ const SectionOrder = () => {
         <SortableContext items={sections} strategy={verticalListSortingStrategy}>
           <div className="space-y-1">
             {sections.map((id) => (
-              <SortableItem key={id} id={id} onRemove={handleRemove} />
+              <SortableItem
+                key={id}
+                id={id}
+                label={sectionLabel(id, proposal.customSections)}
+                onRemove={removeSectionById}
+              />
             ))}
           </div>
         </SortableContext>
       </DndContext>
 
-      {available.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {available.map((id) => (
-            <button
-              key={id}
-              onClick={() => handleAdd(id)}
-              className="flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-            >
-              <Plus className="h-3 w-3" /> {SECTION_LABELS[id]}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-1.5 pt-1">
+        {availableTyped.map((id) => (
+          <button
+            key={id}
+            onClick={() => handleAdd(id)}
+            className="flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+          >
+            <Plus className="h-3 w-3" /> {SECTION_LABELS[id]}
+          </button>
+        ))}
+        <button
+          onClick={() => addCustomSection()}
+          className="flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+        >
+          <Plus className="h-3 w-3" /> Custom section
+        </button>
+      </div>
     </div>
   )
 }

@@ -2,8 +2,10 @@ import { create } from "zustand"
 import { v4 as uuidv4 } from "uuid"
 import type { UIMessage } from "ai"
 import type { ProposalData, AISuggestions, ContextBlob, ChatMessage, ProposedEdit } from "@/types/proposal"
+import { DEFAULT_CTA_STEPS } from "@/types/proposal"
 import { setAtPath } from "@/lib/fieldPath"
 import { extractEditsFromText } from "@/lib/proposalEdits"
+import { applyImportToProposal, type ImportSection } from "@/lib/proposalImport"
 
 const DEFAULT_PROPOSAL: ProposalData = {
   id: uuidv4(),
@@ -43,6 +45,10 @@ const DEFAULT_PROPOSAL: ProposalData = {
     addOnCategories: [],
     addOns: [],
   },
+  cta: {
+    steps: [...DEFAULT_CTA_STEPS],
+  },
+  customSections: [],
 }
 
 type SaveStatus = "idle" | "saving" | "saved" | "error"
@@ -99,6 +105,16 @@ interface BuilderState {
   setProposal: (proposal: ProposalData) => void
   updateField: <K extends keyof ProposalData>(key: K, value: ProposalData[K]) => void
   updateAtPath: (path: string, value: unknown) => void
+  /**
+   * Adds a free-form custom section (sections entry + customSections item in
+   * one undoable step) and returns its id. Without `relativeTo`, inserts
+   * before the CTA when present, else appends.
+   */
+  addCustomSection: (opts?: { relativeTo?: string; position?: "above" | "below" }) => string
+  /** Removes a section id from the ordering and, if custom, its content. */
+  removeSectionById: (id: string) => void
+  /** Lands a parsed verbatim import (INT-18) in one undoable step. */
+  applyImport: (sections: ImportSection[]) => void
   flushToPreview: () => void
   undo: () => void
   redo: () => void
@@ -106,7 +122,7 @@ interface BuilderState {
   canRedo: () => boolean
   setSaveStatus: (status: SaveStatus) => void
   setActiveSection: (section: string) => void
-  initNew: (accountDefaults?: { studioName?: string; studioLogoUrl?: string; ctaEmail?: string; brandColor1?: string; brandColor2?: string }) => void
+  initNew: (accountDefaults?: { studioName?: string; studioLogoUrl?: string; ctaEmail?: string; brandColor1?: string; brandColor2?: string; defaultCtaSteps?: string[] }) => void
   initExisting: (proposal: ProposalData, chatMessages?: ChatMessage[]) => void
   setContextBlobs: (blobs: ContextBlob[]) => void
   setSuggestions: (s: AISuggestions | null) => void
@@ -170,6 +186,64 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     }))
   },
 
+  addCustomSection: (opts) => {
+    const id = `custom-${uuidv4().slice(0, 8)}`
+    set((state) => {
+      const sections = [...state.proposal.sections]
+      let insertAt: number
+      const relIdx = opts?.relativeTo ? sections.indexOf(opts.relativeTo) : -1
+      if (relIdx !== -1) {
+        insertAt = opts?.position === "above" ? relIdx : relIdx + 1
+      } else {
+        const ctaIdx = sections.indexOf("cta")
+        insertAt = ctaIdx >= 0 ? ctaIdx : sections.length
+      }
+      sections.splice(insertAt, 0, id)
+      return {
+        undoStack: [...state.undoStack, state.proposal].slice(-MAX_UNDO_STACK),
+        redoStack: [],
+        proposal: {
+          ...state.proposal,
+          sections,
+          customSections: [
+            ...(state.proposal.customSections ?? []),
+            { id, title: "New section", body: "" },
+          ],
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      }
+    })
+    return id
+  },
+
+  removeSectionById: (id) => {
+    set((state) => ({
+      undoStack: [...state.undoStack, state.proposal].slice(-MAX_UNDO_STACK),
+      redoStack: [],
+      proposal: {
+        ...state.proposal,
+        sections: state.proposal.sections.filter((s) => s !== id),
+        customSections: (state.proposal.customSections ?? []).filter((s) => s.id !== id),
+        updatedAt: new Date().toISOString(),
+      },
+      isDirty: true,
+    }))
+  },
+
+  applyImport: (sections) => {
+    set((state) => {
+      const imported = applyImportToProposal(state.proposal, sections)
+      return {
+        undoStack: [...state.undoStack, state.proposal].slice(-MAX_UNDO_STACK),
+        redoStack: [],
+        proposal: { ...imported, updatedAt: new Date().toISOString() },
+        previewProposal: { ...imported, updatedAt: new Date().toISOString() },
+        isDirty: true,
+      }
+    })
+  },
+
   undo: () => {
     const { undoStack, proposal } = get()
     if (undoStack.length === 0) return
@@ -207,7 +281,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   setActiveSection: (activeSection) => set({ activeSection }),
 
-  initNew: (accountDefaults?: { studioName?: string; studioLogoUrl?: string; ctaEmail?: string; brandColor1?: string; brandColor2?: string }) => {
+  initNew: (accountDefaults?: { studioName?: string; studioLogoUrl?: string; ctaEmail?: string; brandColor1?: string; brandColor2?: string; defaultCtaSteps?: string[] }) => {
     const fresh = {
       ...DEFAULT_PROPOSAL,
       id: uuidv4(),
@@ -218,12 +292,25 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       ctaEmail: accountDefaults?.ctaEmail ?? "",
       brandColor1: accountDefaults?.brandColor1 ?? DEFAULT_PROPOSAL.brandColor1,
       brandColor2: accountDefaults?.brandColor2 ?? DEFAULT_PROPOSAL.brandColor2,
+      // Workspace default next steps (INT-20); stock copy when unset.
+      cta: {
+        steps: accountDefaults?.defaultCtaSteps?.length
+          ? [...accountDefaults.defaultCtaSteps]
+          : [...DEFAULT_CTA_STEPS],
+      },
     }
     set({ proposal: fresh, previewProposal: fresh, isNewProposal: true, isDirty: false, saveStatus: "idle", undoStack: [], redoStack: [] })
   },
 
   initExisting: (proposal, chatMessages) => {
-    set({ proposal, previewProposal: proposal, isNewProposal: false, isDirty: false, saveStatus: "idle", chatMessages: chatMessages ?? [], undoStack: [], redoStack: [] })
+    // Proposals saved before cta.steps existed have no cta object. Hydrate
+    // the defaults so inline edits at cta.steps.N have a real array to
+    // write into (setAtPath rejects out-of-bounds indices on an empty
+    // array). Doesn't mark dirty; it persists with the user's next edit.
+    const hydrated = proposal.cta?.steps?.length
+      ? proposal
+      : { ...proposal, cta: { steps: [...DEFAULT_CTA_STEPS] } }
+    set({ proposal: hydrated, previewProposal: hydrated, isNewProposal: false, isDirty: false, saveStatus: "idle", chatMessages: chatMessages ?? [], undoStack: [], redoStack: [] })
   },
 
   setContextBlobs: (contextBlobs) => set({ contextBlobs, isDirty: true }),

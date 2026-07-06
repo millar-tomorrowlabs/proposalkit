@@ -2,7 +2,7 @@ import { useRef, useEffect } from "react"
 import { X } from "lucide-react"
 import { useBuilderStore } from "@/store/builderStore"
 import ImageUpload from "./ImageUpload"
-import type { SectionKey } from "@/types/proposal"
+import { sectionLabel } from "@/types/proposal"
 
 interface SettingsPopoverProps {
   open: boolean
@@ -12,17 +12,9 @@ interface SettingsPopoverProps {
   anchorRef?: React.RefObject<HTMLElement | null>
 }
 
-const SECTION_LABELS: Record<SectionKey, string> = {
-  summary: "Summary",
-  scope: "Scope",
-  timeline: "Timeline",
-  investment: "Investment",
-  cta: "Call to Action",
-}
-
 export default function SettingsPopover({ open, onClose, anchorRef }: SettingsPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null)
-  const { proposal, updateField } = useBuilderStore()
+  const { proposal, updateField, removeSectionById } = useBuilderStore()
 
   // Close on click outside, and on Escape.
   useEffect(() => {
@@ -227,14 +219,9 @@ export default function SettingsPopover({ open, onClose, anchorRef }: SettingsPo
                 className="flex items-center justify-between rounded-lg border px-3 py-1.5 text-[12px]"
                 style={{ borderColor: "var(--color-rule)", color: "var(--color-ink-soft)" }}
               >
-                <span>{SECTION_LABELS[key] || key}</span>
+                <span>{sectionLabel(key, proposal.customSections)}</span>
                 <button
-                  onClick={() => {
-                    updateField(
-                      "sections",
-                      proposal.sections.filter((s) => s !== key),
-                    )
-                  }}
+                  onClick={() => removeSectionById(key)}
                   className="text-[10px] transition-colors hover:opacity-70"
                   style={{ color: "var(--color-ink-mute)" }}
                 >

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Paperclip, Sparkles } from "lucide-react"
 import { parseDraftReadyMarker } from "@/lib/parseDraftReadyMarker"
+import { MAX_CHAT_MESSAGE_LENGTH, formatCharCount } from "@/lib/chatLimits"
 
 export interface IntakePanelMessage {
   id: string
@@ -75,9 +76,12 @@ export default function IntakePanel({
     ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`
   }, [input])
 
+  // Block over-limit sends instead of letting the server cut them silently.
+  const overLimit = input.length > MAX_CHAT_MESSAGE_LENGTH
+
   const handleSubmit = () => {
     const trimmed = input.trim()
-    if (!trimmed || loading) return
+    if (!trimmed || loading || overLimit) return
     onSend(trimmed)
     setInput("")
   }
@@ -193,6 +197,21 @@ export default function IntakePanel({
         )}
       </div>
 
+      {overLimit && (
+        <div
+          className="border-t px-4 py-2 text-[11px] leading-[1.5]"
+          style={{
+            borderColor: "var(--color-rule)",
+            background: "var(--color-cream)",
+            color: "var(--color-ink-soft)",
+          }}
+          role="alert"
+        >
+          This message is {formatCharCount(input.length)} characters. The chat
+          takes up to {formatCharCount(MAX_CHAT_MESSAGE_LENGTH)}. Attach the
+          full text as context with the paperclip instead, so nothing gets cut.
+        </div>
+      )}
       <div
         className="flex items-end gap-2 border-t px-4 py-3"
         style={{ borderColor: "var(--color-rule)" }}
@@ -224,7 +243,7 @@ export default function IntakePanel({
         </button>
         <button
           onClick={handleSubmit}
-          disabled={!input.trim() || loading}
+          disabled={!input.trim() || loading || overLimit}
           className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] transition-transform hover:scale-[1.05] disabled:opacity-40"
           style={{ background: "var(--color-forest)", color: "var(--color-cream)" }}
           aria-label="Send message"

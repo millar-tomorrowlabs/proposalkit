@@ -15,6 +15,7 @@ import BuilderTopBar from "@/components/builder/BuilderTopBar"
 import FloatingComposer from "@/components/builder/FloatingComposer"
 import SettingsPopover from "@/components/builder/SettingsPopover"
 import ContextDialog from "@/components/builder/ContextDialog"
+import ImportDialog from "@/components/builder/ImportDialog"
 import HistoryPopover from "@/components/builder/HistoryPopover"
 import DraftingReveal from "@/components/builder/DraftingReveal"
 import { VIEWPORT_WIDTHS } from "@/components/builder/ViewportSwitcher"
@@ -84,9 +85,11 @@ const BuilderHome = () => {
       .order("created_at", { ascending: true })
     if (!data) return
     // Truncate each source's excerpt so the full prompt stays well under
-    // the model's context window. 4,000 chars ≈ 1,000 tokens per source,
-    // and we expect <5 sources per proposal typically.
-    const EXCERPT_LIMIT = 4000
+    // the model's context window. 20,000 chars ≈ 5,000 tokens per source,
+    // and we expect <5 sources per proposal typically. Sized so a full
+    // project brief or call transcript survives intact — 4K was cutting
+    // real briefs to a fifth of their length.
+    const EXCERPT_LIMIT = 20_000
     setContextSources(
       data.map((r) => ({
         name: r.name,
@@ -128,6 +131,7 @@ const BuilderHome = () => {
             voiceDescription: account.voiceDescription,
             voiceExamples: account.voiceExamples,
             bannedPhrases: account.bannedPhrases,
+            writingRules: account.writingRules,
             defaultHourlyRate: account.defaultHourlyRate,
             defaultCurrency: account.defaultCurrency,
             aiTailorAgencyBio: account.aiTailorAgencyBio !== false,
@@ -182,6 +186,7 @@ const BuilderHome = () => {
   const [previewMode, setPreviewMode] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showContext, setShowContext] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [showSendDialog, setShowSendDialog] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const settingsButtonRef = useRef<HTMLButtonElement>(null)
@@ -420,6 +425,7 @@ const BuilderHome = () => {
         ctaEmail: account.defaultCtaEmail,
         brandColor1: account.defaultBrandColor1,
         brandColor2: account.defaultBrandColor2,
+        defaultCtaSteps: account.defaultCtaSteps,
       })
       setIsLoading(false)
     }
@@ -501,25 +507,28 @@ const BuilderHome = () => {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
   }, [proposal, contextBlobs])
 
-  // Section management for BuilderPreviewContext
-  const addSection = useCallback((relativeTo: SectionKey, position: "above" | "below") => {
-    const current = useBuilderStore.getState().proposal.sections
+  // Section management for BuilderPreviewContext. (The document tree gets
+  // its own provider from ProposalWrapper; this copy backs anything outside
+  // it.) Adds the first unplaced typed section, else a custom one.
+  const addSection = useCallback((relativeTo: string, position: "above" | "below") => {
+    const store = useBuilderStore.getState()
+    const current = store.proposal.sections
     const available = ALL_SECTIONS.filter((s) => !current.includes(s))
-    if (available.length === 0) return
+    if (available.length === 0) {
+      store.addCustomSection({ relativeTo, position })
+      return
+    }
     const newSection = available[0]
     const idx = current.indexOf(relativeTo)
     if (idx === -1) return
     const updated = [...current]
     updated.splice(position === "above" ? idx : idx + 1, 0, newSection)
-    useBuilderStore.getState().updateField("sections", updated)
+    store.updateField("sections", updated)
   }, [])
 
-  const removeSection = useCallback((key: SectionKey) => {
-    const current = useBuilderStore.getState().proposal.sections
-    useBuilderStore.getState().updateField(
-      "sections",
-      current.filter((s) => s !== key),
-    )
+  const removeSection = useCallback((key: string) => {
+    if (key === "cta") return
+    useBuilderStore.getState().removeSectionById(key)
   }, [])
 
   // Reflect a successful send locally so the top bar status updates immediately
@@ -565,6 +574,7 @@ const BuilderHome = () => {
           }}
           onOpenSettings={() => setShowSettings(!showSettings)}
           onOpenContext={() => setShowContext(true)}
+          onOpenImport={() => setShowImport(true)}
           onOpenHistory={() => setShowHistory(!showHistory)}
           onSend={() => setShowSendDialog(true)}
           saveStatus={saveStatus}
@@ -685,6 +695,9 @@ const BuilderHome = () => {
             onClearPendingPrompt={() => setPendingChatPrompt(null)}
           />
         )}
+
+        {/* Verbatim document import (INT-18) */}
+        <ImportDialog open={showImport} onClose={() => setShowImport(false)} />
 
         {/* Context dialog. Refetches sources on close so the next AI turn
             sees freshly-added briefs/transcripts in the system prompt. */}

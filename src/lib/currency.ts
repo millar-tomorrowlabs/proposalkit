@@ -27,6 +27,17 @@ export const formatPrice = (amount: number, currency = "USD") =>
     minimumFractionDigits: 0,
   }).format(amount)
 
+/**
+ * Signed price for line items added on top of a base amount: "+CA$500" for
+ * charges, "-CA$1,800" for credits/discounts. Intl already renders the
+ * minus for negative amounts; prepending "+" unconditionally produced
+ * "+-CA$1,800" on credit line items.
+ */
+export const formatPriceDelta = (amount: number, currency = "USD") =>
+  amount < 0
+    ? formatPrice(amount, currency)
+    : `+${formatPrice(amount, currency)}`
+
 export const currencySymbol = (currency = "USD") =>
   new Intl.NumberFormat("en-US", {
     style: "currency",

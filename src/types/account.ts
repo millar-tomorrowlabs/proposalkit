@@ -33,8 +33,19 @@ export interface Account {
   voiceDescription?: string   // e.g. "Direct, opinionated, plainspoken. Avoid jargon."
   voiceExamples?: string      // 1-3 sample paragraphs the AI matches in tone
   bannedPhrases?: string      // comma-separated; appended to the universal banned list
+  /**
+   * Free-text workspace writing rules injected into the builder AI's system
+   * prompt as hard requirements (e.g. "No em dashes anywhere. Professional
+   * register, no slang. Full forms in commitments.").
+   */
+  writingRules?: string
   defaultHourlyRate?: number  // used in pricing recommendations
   defaultCurrency?: string    // ISO 4217, e.g. "USD"
+  /**
+   * Workspace default for the proposal "Next Steps" block. New proposals
+   * seed cta.steps from this; unset falls back to the stock three steps.
+   */
+  defaultCtaSteps?: string[]
   /**
    * When true (default), the AI is permitted to tailor the agency bio
    * (summary.studioDescription etc.) on a per-proposal basis — keeping the
