@@ -249,6 +249,7 @@ export const flushProposal: ProposalData = {
       hourlyRate: 150,
       minHours: 3,
       maxHours: 10,
+      recommendedHours: 4,
       requiredMonths: 6,
     },
   },
