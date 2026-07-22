@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Check, Star } from "lucide-react"
-import type { InvestmentConfig, ConfirmedSelection } from "@/types/proposal"
+import type { InvestmentConfig, ConfirmedSelection, RetainerConfig } from "@/types/proposal"
 import { formatPrice as formatCurrency } from "@/lib/currency"
 import InlineEditable from "./InlineEditable"
 import AskAIGhost from "./AskAIGhost"
@@ -11,6 +11,17 @@ interface InvestmentSectionProps {
   recommendation?: string
   onConfirm: (selection: ConfirmedSelection | null) => void
 }
+
+const clampHours = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max)
+
+// Slider preselect and "Recommended N hours" caption, kept inside the slider's range.
+const getRecommendedHours = (retainer: RetainerConfig) =>
+  clampHours(
+    retainer.recommendedHours ?? retainer.minHours + 2,
+    retainer.minHours,
+    retainer.maxHours
+  )
 
 const InvestmentSection = ({
   data,
@@ -23,7 +34,7 @@ const InvestmentSection = ({
   const [activePackageId, setActivePackageId] = useState(data.packages[0]?.id ?? "")
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(new Set())
   const [retainerHours, setRetainerHours] = useState(
-    data.retainer ? data.retainer.minHours + 2 : 0
+    data.retainer ? getRecommendedHours(data.retainer) : 0
   )
   const [confirmed, setConfirmed] = useState(false)
   const [postLaunchSelected, setPostLaunchSelected] = useState(false)
@@ -43,6 +54,21 @@ const InvestmentSection = ({
       setSelectedAddOnIds(new Set(Array.from(selectedAddOnIds).filter((id) => validIds.has(id))))
     }
   }, [data.addOns, selectedAddOnIds])
+
+  // Reconcile slider state when the retainer config changes (builder preview edits):
+  // follow the recommended value until the slider is dragged away from it, after
+  // which only clamp back into the new range.
+  const prevRecommended = useRef(data.retainer ? getRecommendedHours(data.retainer) : 0)
+  useEffect(() => {
+    if (!data.retainer || confirmed) return
+    const recommended = getRecommendedHours(data.retainer)
+    const next =
+      retainerHours === prevRecommended.current
+        ? recommended
+        : clampHours(retainerHours, data.retainer.minHours, data.retainer.maxHours)
+    prevRecommended.current = recommended
+    if (next !== retainerHours) setRetainerHours(next)
+  }, [data.retainer, retainerHours, confirmed])
 
   if (data.packages.length === 0) {
     return (
@@ -468,6 +494,7 @@ const InvestmentSection = ({
             : "with all packages"
           const defaultDescription = `First ${data.retainer.requiredMonths} months retainer is required ${packagePhrase}`
           const defaultRateNote = `Billed at our standard rate of ${formatPrice(data.retainer.hourlyRate)}/hour`
+          const recommendedHours = getRecommendedHours(data.retainer)
 
           return (
           <div className="scroll-reveal delay-600 mt-20 rounded-lg border-2 border-border bg-card p-8">
@@ -494,7 +521,7 @@ const InvestmentSection = ({
 
             <div
               className={`mt-6 rounded-lg border p-4 transition-all duration-200 ${
-                retainerHours === data.retainer.minHours + 2
+                retainerHours === recommendedHours
                   ? "border-brand-1/40 bg-brand-1-light"
                   : "border-border bg-muted/30"
               }`}
@@ -504,7 +531,7 @@ const InvestmentSection = ({
                   <p className="text-sm font-medium text-foreground">Monthly hours</p>
                   <p className="text-xs text-muted-foreground">
                     Minimum {data.retainer.minHours} hours · Recommended{" "}
-                    {data.retainer.minHours + 2} hours
+                    {recommendedHours} hours
                   </p>
                 </div>
                 <span className="font-display text-lg font-semibold text-foreground">

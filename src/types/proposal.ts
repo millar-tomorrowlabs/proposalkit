@@ -79,6 +79,9 @@ export interface RetainerConfig {
   hourlyRate: number
   minHours: number
   maxHours: number
+  // Preselected slider value and the "Recommended N hours" caption.
+  // Clamped to [minHours, maxHours] at render; defaults to minHours + 2 when unset.
+  recommendedHours?: number
   requiredMonths: number
   // Optional copy overrides. When any of these is blank, a sensible default is
   // generated based on the number of packages in the proposal.
