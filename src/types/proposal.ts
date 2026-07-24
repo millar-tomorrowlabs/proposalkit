@@ -5,7 +5,20 @@ export interface ConfirmedSelection {
   addOns: { id: string; label: string; price: number }[]
   retainerHours?: number
   retainerRate?: number
+  postLaunchSelected?: boolean
   grandTotal: number
+}
+
+/**
+ * What the client actually chose, as ids only. Labels and prices are display
+ * detail, so they stay on the client. The server re-derives every price from
+ * the proposal row, which means this is the only part of a selection it trusts.
+ */
+export interface SelectionChoice {
+  packageId: string
+  addOnIds: string[]
+  retainerHours?: number
+  postLaunchSelected?: boolean
 }
 
 export interface ContextBlob {

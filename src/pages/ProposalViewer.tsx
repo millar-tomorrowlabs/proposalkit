@@ -2,13 +2,58 @@ import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import ProposalWrapper from "@/components/proposal/ProposalWrapper"
-import type { ProposalData } from "@/types/proposal"
+import type { ProposalData, SectionKey } from "@/types/proposal"
 
 // Temporary: seed data fallback while builder UI isn't built yet
 import { flushProposal } from "@/data/seeds/flush"
 
 const SEEDS: Record<string, ProposalData> = {
   flush: flushProposal,
+}
+
+const DEFAULT_SECTIONS: SectionKey[] = ["summary", "scope", "timeline", "investment", "cta"]
+
+/**
+ * The public read shape. get_public_proposal is a security definer function that
+ * returns only what a client is allowed to see. No password hash, no brief, no
+ * chat history, no owner ids.
+ */
+interface PublicProposalRow {
+  id: string
+  slug: string
+  title: string
+  client_name: string
+  brand_color_1: string | null
+  brand_color_2: string | null
+  hero_image_url: string | null
+  sections: SectionKey[] | null
+  data: Partial<ProposalData> | null
+  status: string | null
+  has_password: boolean
+}
+
+/** Flatten the public row into the shape the renderer expects. */
+function toProposalData(row: PublicProposalRow): ProposalData {
+  return {
+    ...(row.data ?? {}),
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    clientName: row.client_name,
+    brandColor1: row.brand_color_1 ?? "#000000",
+    brandColor2: row.brand_color_2 ?? "#6b7280",
+    heroImageUrl: row.hero_image_url ?? undefined,
+    status: (row.status as ProposalData["status"]) ?? undefined,
+    sections: row.sections ?? DEFAULT_SECTIONS,
+  } as ProposalData
+}
+
+/** Fetch the public view of a proposal. Returns null when there is no match. */
+async function fetchPublicProposal(slug: string): Promise<PublicProposalRow | null> {
+  const { data, error } = await supabase.rpc("get_public_proposal", { p_slug: slug })
+  if (error || !data) return null
+  const rows = data as PublicProposalRow[]
+  return rows[0] ?? null
 }
 
 const ProposalViewer = () => {
@@ -40,18 +85,14 @@ const ProposalViewer = () => {
 
     const load = async () => {
       // Try Supabase first
-      const { data, error } = await supabase
-        .from("proposals")
-        .select("*")
-        .eq("slug", slug)
-        .single()
+      const row = await fetchPublicProposal(slug)
 
-      if (data && !error) {
-        setProposalId(data.id)
+      if (row) {
+        setProposalId(row.id)
 
         // Check password protection
-        if (data.password_hash) {
-          const pwKey = `pw_${data.id}`
+        if (row.has_password) {
+          const pwKey = `pw_${row.id}`
           if (sessionStorage.getItem(pwKey)) {
             setPasswordVerified(true)
           } else {
@@ -61,17 +102,17 @@ const ProposalViewer = () => {
           }
         }
 
-        setProposal({ ...data, ...data.data } as ProposalData)
+        setProposal(toProposalData(row))
 
         // Track view (fire-and-forget, once per session)
-        if (data.status === "sent") {
-          const viewKey = `viewed_${data.id}`
+        if (row.status === "sent") {
+          const viewKey = `viewed_${row.id}`
           if (!sessionStorage.getItem(viewKey)) {
             sessionStorage.setItem(viewKey, "1")
             fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-view`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ proposalId: data.id }),
+              body: JSON.stringify({ proposalId: row.id }),
             }).catch(() => {}) // swallow errors — fire and forget
           }
         }
@@ -90,7 +131,7 @@ const ProposalViewer = () => {
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!passwordInput.trim() || !proposalId) return
+    if (!passwordInput.trim() || !proposalId || !slug) return
     setVerifying(true)
     setPasswordError("")
 
@@ -112,24 +153,20 @@ const ProposalViewer = () => {
 
         // Now load the proposal
         setLoading(true)
-        const { data } = await supabase
-          .from("proposals")
-          .select("*")
-          .eq("id", proposalId)
-          .single()
+        const row = await fetchPublicProposal(slug)
 
-        if (data) {
-          setProposal({ ...data, ...data.data } as ProposalData)
+        if (row) {
+          setProposal(toProposalData(row))
 
           // Track view
-          if (data.status === "sent") {
-            const viewKey = `viewed_${data.id}`
+          if (row.status === "sent") {
+            const viewKey = `viewed_${row.id}`
             if (!sessionStorage.getItem(viewKey)) {
               sessionStorage.setItem(viewKey, "1")
               fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-view`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ proposalId: data.id }),
+                body: JSON.stringify({ proposalId: row.id }),
               }).catch(() => {})
             }
           }

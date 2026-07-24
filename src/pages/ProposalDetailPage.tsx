@@ -60,6 +60,7 @@ interface Submission {
   package_label: string | null
   total_price: number | null
   currency: string | null
+  email_sent: boolean | null
   created_at: string
 }
 
@@ -285,7 +286,7 @@ export default function ProposalDetailPage() {
         .order("sent_at", { ascending: false }),
       supabase
         .from("submissions")
-        .select("id, client_name, client_email, message, package_label, total_price, currency, created_at")
+        .select("id, client_name, client_email, message, package_label, total_price, currency, email_sent, created_at")
         .eq("proposal_id", id)
         .order("created_at", { ascending: false }),
     ])
@@ -800,15 +801,30 @@ export default function ProposalDetailPage() {
                         {sub.client_email}
                       </p>
                     </div>
-                    <p
-                      className="text-[11px] uppercase tracking-[0.12em]"
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        color: "var(--color-ochre)",
-                      }}
-                    >
-                      {timeSince(sub.created_at).toUpperCase()}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      {!sub.email_sent && (
+                        <span
+                          className="rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.12em]"
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            borderColor: "#A33B28",
+                            color: "#A33B28",
+                          }}
+                          title="This submission saved, but the notification email never went out."
+                        >
+                          NOT EMAILED
+                        </span>
+                      )}
+                      <p
+                        className="text-[11px] uppercase tracking-[0.12em]"
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          color: "var(--color-ochre)",
+                        }}
+                      >
+                        {timeSince(sub.created_at).toUpperCase()}
+                      </p>
+                    </div>
                   </div>
                   {sub.package_label && (
                     <p

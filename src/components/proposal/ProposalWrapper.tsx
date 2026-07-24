@@ -1,8 +1,14 @@
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { useScrollRevealAll } from "@/hooks/useScrollReveal"
 import BuilderPreviewContext from "@/contexts/BuilderPreviewContext"
 import { useBuilderStore } from "@/store/builderStore"
-import type { ProposalData, SectionKey, ConfirmedSelection } from "@/types/proposal"
+import { loadSelection, saveSelection, clearSelection } from "@/lib/selectionPersistence"
+import type {
+  ProposalData,
+  SectionKey,
+  ConfirmedSelection,
+  InvestmentConfig,
+} from "@/types/proposal"
 import ProposalNav from "./ProposalNav"
 import HeroSection from "./HeroSection"
 import SummarySection from "./SummarySection"
@@ -28,13 +34,66 @@ const SECTION_LABELS: Record<SectionKey, string> = {
   cta: "Next Steps",
 }
 
+/**
+ * A restored selection is only good while the proposal still offers what it
+ * names. The studio can rename a package or delete an add-on after the client
+ * confirmed, and a stale id would pass the CTA's blocking check, reach
+ * submit-proposal, and come back as a 400 the client has no way out of. When
+ * it no longer resolves we drop it, which puts the client back in front of the
+ * live options with a choice to make.
+ */
+function resolveStoredSelection(
+  selection: ConfirmedSelection | null,
+  investment: InvestmentConfig | undefined
+): ConfirmedSelection | null {
+  if (!selection) return null
+  const packages = investment?.packages ?? []
+  const addOns = investment?.addOns ?? []
+  if (!packages.some((p) => p.id === selection.packageId)) return null
+  if (!selection.addOns.every((a) => addOns.some((candidate) => candidate.id === a.id))) return null
+  return selection
+}
+
 const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: ProposalWrapperProps) => {
   const studioName = proposal.studioName || ""
   const studioLogoUrl = proposal.studioLogoUrl
   const heroImageLoading = useBuilderStore((s) => s.heroImageLoading)
-  const [confirmedSelection, setConfirmedSelection] = useState<ConfirmedSelection | null>(null)
+
+  // A confirmed selection survives a reload. The proposal id can arrive
+  // asynchronously, so the first read is keyed on it and a later id change
+  // re-reads rather than leaving stale state behind. We only ever write in
+  // response to an explicit confirm, so nothing empty can clobber storage.
+  const restoredSelection = useMemo(() => loadSelection(proposal.id), [proposal.id])
+  const storedSelection = useMemo(
+    () => resolveStoredSelection(restoredSelection, proposal.investment),
+    [restoredSelection, proposal.investment]
+  )
+  const [confirmedSelection, setConfirmedSelection] = useState<ConfirmedSelection | null>(
+    storedSelection
+  )
+  const hydratedForId = useRef(proposal.id)
+  useEffect(() => {
+    if (hydratedForId.current === proposal.id) return
+    hydratedForId.current = proposal.id
+    setConfirmedSelection(storedSelection)
+  }, [proposal.id, storedSelection])
+
   const [addMenuTarget, setAddMenuTarget] = useState<{ relativeTo: SectionKey; position: "above" | "below" } | null>(null)
   useScrollRevealAll({ disabled: isPreview })
+
+  const handleConfirm = useCallback(
+    (selection: ConfirmedSelection | null) => {
+      setConfirmedSelection(selection)
+      if (selection) saveSelection(proposal.id, selection)
+      else clearSelection(proposal.id)
+    },
+    [proposal.id]
+  )
+
+  // The client can only be held to a package choice when there is one to make.
+  const hasInvestment =
+    proposal.sections.includes("investment") &&
+    (proposal.investment?.packages?.length ?? 0) > 0
 
   // Section management: add a section relative to another
   const addSection = useCallback((relativeTo: SectionKey, position: "above" | "below") => {
@@ -99,11 +158,14 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
     timeline: <TimelineSection key="timeline" data={proposal.timeline} />,
     investment: (
       <InvestmentSection
-        key="investment"
+        // Keyed on the proposal so a different proposal remounts with its own
+        // restored selection rather than inheriting the last one.
+        key={`investment-${proposal.id}`}
         data={proposal.investment}
         currency={proposal.currency}
         recommendation={proposal.recommendation}
-        onConfirm={setConfirmedSelection}
+        initialConfirmed={storedSelection}
+        onConfirm={handleConfirm}
       />
     ),
     cta: (
@@ -111,12 +173,9 @@ const ProposalWrapper = ({ proposal, isPreview = false, viewportWidth }: Proposa
         key="cta"
         proposalId={proposal.id}
         proposalSlug={proposal.slug}
-        proposalTitle={proposal.title}
-        ctaEmail={proposal.ctaEmail}
         studioName={studioName}
-        brandColor1={proposal.brandColor1}
-        brandColor2={proposal.brandColor2}
         currency={proposal.currency}
+        hasInvestment={hasInvestment}
         confirmedSelection={confirmedSelection}
         isPreview={isPreview}
       />
