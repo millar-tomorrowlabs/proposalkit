@@ -109,7 +109,56 @@ create policy context_delete on public.proposal_context
 drop policy if exists public_read_invites_by_token on public.account_invites;
 
 -- ---------------------------------------------------------------------------
--- 5. Public proposal read, by slug only
+-- 5. account_members: joining an account requires an invite. INT-35.
+-- ---------------------------------------------------------------------------
+-- self_join_account was FOR INSERT TO authenticated WITH CHECK (user_id =
+-- auth.uid()). It checked only that you were adding yourself, never that you
+-- had been invited, so any signed up user could insert themselves into any
+-- account_id as owner and take it over. Verified end to end on staging: the
+-- insert returns 201 and the caller can then read that account's proposals and
+-- submissions, update the account, and remove the real owner.
+--
+-- Onboarding does not need this policy. The accept-invite edge function
+-- provisions brand new accounts with the service role, which bypasses RLS.
+-- The only client side caller is InviteAcceptPage, which is exactly the case
+-- that should have to prove an invite.
+
+-- The check has to run SECURITY DEFINER. A policy's subqueries are themselves
+-- subject to RLS, and account_invites is now readable only by existing members
+-- (members_view_invites), so an invitee cannot see the very invite that would
+-- let them join. Same pattern as user_account_id above.
+create or replace function public.has_valid_invite(p_account_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.account_invites i
+    where i.account_id = p_account_id
+      and lower(i.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      and i.accepted_at is null
+      and i.expires_at > now()
+  );
+$$;
+
+revoke all on function public.has_valid_invite(uuid) from public;
+grant execute on function public.has_valid_invite(uuid) to authenticated;
+
+drop policy if exists self_join_account on public.account_members;
+drop policy if exists join_account_with_invite on public.account_members;
+
+create policy join_account_with_invite on public.account_members
+  for insert to authenticated
+  with check (
+    user_id = auth.uid()
+    and public.has_valid_invite(account_id)
+  );
+
+-- ---------------------------------------------------------------------------
+-- 6. Public proposal read, by slug only
 -- ---------------------------------------------------------------------------
 -- Deliberately omits password_hash, brief, chat_messages, user_id, account_id
 -- and cta_email. The first three are internal and were previously served to the
@@ -180,7 +229,7 @@ revoke all on function public.get_public_proposal(text) from public;
 grant execute on function public.get_public_proposal(text) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- 6. Invite read, by token only
+-- 7. Invite read, by token only
 -- ---------------------------------------------------------------------------
 -- Returns nothing for an already accepted invite, so a used link cannot be
 -- replayed. Expired invites are still returned, with their expires_at, so the
