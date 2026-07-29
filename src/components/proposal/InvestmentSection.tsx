@@ -1,14 +1,29 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Check, Star } from "lucide-react"
-import type { InvestmentConfig, ConfirmedSelection } from "@/types/proposal"
+import type { InvestmentConfig, ConfirmedSelection, ProposalPackage } from "@/types/proposal"
 import { formatPrice as formatCurrency } from "@/lib/currency"
 import InlineEditable from "./InlineEditable"
 import AskAIGhost from "./AskAIGhost"
+
+/**
+ * The package a client has no way of not choosing: one package, no optional
+ * add-ons, no retainer and no post-launch. Anything else is a real choice and
+ * has to be confirmed by hand. Returns null when there is a choice to make.
+ */
+function soleFixedPackage(data: InvestmentConfig): ProposalPackage | null {
+  if (data.packages.length !== 1) return null
+  if (data.retainer || data.postLaunch) return null
+  const pkg = data.packages[0]
+  if (data.addOns.some((a) => a.packages[pkg.id]?.price !== undefined)) return null
+  return pkg
+}
 
 interface InvestmentSectionProps {
   data: InvestmentConfig
   currency?: string
   recommendation?: string
+  /** Selection restored from storage, so a reload does not lose the client's choice. */
+  initialConfirmed?: ConfirmedSelection | null
   onConfirm: (selection: ConfirmedSelection | null) => void
 }
 
@@ -16,17 +31,28 @@ const InvestmentSection = ({
   data,
   currency = "USD",
   recommendation,
+  initialConfirmed = null,
   onConfirm,
 }: InvestmentSectionProps) => {
   const formatPrice = (n: number) => formatCurrency(n, currency)
 
-  const [activePackageId, setActivePackageId] = useState(data.packages[0]?.id ?? "")
-  const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(new Set())
-  const [retainerHours, setRetainerHours] = useState(
-    data.retainer ? data.retainer.minHours + 2 : 0
+  // When there is nothing to pick the selection starts confirmed, so the client
+  // is never asked to confirm a choice that does not exist.
+  const fixedPackage = soleFixedPackage(data)
+
+  const [activePackageId, setActivePackageId] = useState(
+    initialConfirmed?.packageId ?? data.packages[0]?.id ?? ""
   )
-  const [confirmed, setConfirmed] = useState(false)
-  const [postLaunchSelected, setPostLaunchSelected] = useState(false)
+  const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(
+    () => new Set(initialConfirmed?.addOns.map((a) => a.id) ?? [])
+  )
+  const [retainerHours, setRetainerHours] = useState(
+    initialConfirmed?.retainerHours ?? (data.retainer ? data.retainer.minHours + 2 : 0)
+  )
+  const [confirmed, setConfirmed] = useState(initialConfirmed !== null || fixedPackage !== null)
+  const [postLaunchSelected, setPostLaunchSelected] = useState(
+    initialConfirmed?.postLaunchSelected ?? false
+  )
 
   // Reconcile stale state when packages/add-ons are removed
   const resolvedPackageId = data.packages.some((p) => p.id === activePackageId)
@@ -43,6 +69,25 @@ const InvestmentSection = ({
       setSelectedAddOnIds(new Set(Array.from(selectedAddOnIds).filter((id) => validIds.has(id))))
     }
   }, [data.addOns, selectedAddOnIds])
+
+  // Nothing reports an unconfirmed choice upward. A proposal with packages
+  // cannot be submitted until the client confirms one, so the only selection
+  // that ever leaves this component is the one they pressed Confirm on.
+
+  // Tell the parent about the auto-confirmed package once. "Change selection"
+  // still undoes it, and the ref keeps it from coming back afterwards.
+  const autoConfirmSent = useRef(false)
+  useEffect(() => {
+    if (autoConfirmSent.current || initialConfirmed || !fixedPackage) return
+    autoConfirmSent.current = true
+    onConfirm({
+      packageId: fixedPackage.id,
+      packageLabel: fixedPackage.label,
+      packagePrice: fixedPackage.basePrice,
+      addOns: [],
+      grandTotal: fixedPackage.basePrice,
+    })
+  }, [fixedPackage, initialConfirmed, onConfirm])
 
   if (data.packages.length === 0) {
     return (
@@ -68,6 +113,10 @@ const InvestmentSection = ({
   ]
 
   const switchPackage = (packageId: string) => {
+    // A confirmed selection is fixed until the client changes it back. Without
+    // this the card, the total and the add-ons all move to the new package
+    // while the confirmed choice, and so the submission, stays on the old one.
+    if (confirmed) return
     setActivePackageId(packageId)
     setSelectedAddOnIds((prev) => {
       const next = new Set<string>()
@@ -186,7 +235,8 @@ const InvestmentSection = ({
               <button
                 key={pkg.id}
                 onClick={() => switchPackage(pkg.id)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                disabled={confirmed}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed ${
                   resolvedPackageId === pkg.id
                     ? "bg-foreground text-background"
                     : "text-muted-foreground hover:text-foreground"
@@ -580,6 +630,7 @@ const InvestmentSection = ({
                   addOns: selectedAddOns,
                   retainerHours: data.retainer ? retainerHours : undefined,
                   retainerRate: data.retainer?.hourlyRate,
+                  postLaunchSelected: data.postLaunch ? postLaunchSelected : undefined,
                   grandTotal,
                 })
               }}

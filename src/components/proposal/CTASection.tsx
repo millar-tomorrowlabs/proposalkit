@@ -1,30 +1,35 @@
 import { useState } from "react"
 import { ArrowRight, X } from "lucide-react"
 import { formatPrice as formatCurrency } from "@/lib/currency"
-import type { ConfirmedSelection } from "@/types/proposal"
+import type { ConfirmedSelection, SelectionChoice } from "@/types/proposal"
 
 interface CTASectionProps {
   proposalId: string
   proposalSlug: string
-  proposalTitle: string
-  ctaEmail: string
   studioName: string
-  brandColor1?: string
-  brandColor2?: string
   currency?: string
+  /** True when this proposal has an investment section with at least one package. */
+  hasInvestment: boolean
   confirmedSelection: ConfirmedSelection | null
   isPreview?: boolean
+}
+
+/** What the submit-proposal function returns. Emails can fail after the row saves. */
+interface SubmitResponse {
+  success?: boolean
+  submissionId?: string
+  teamEmailSent?: boolean
+  clientEmailSent?: boolean
+  /** Set on every non-200. Written to be shown to the client as it stands. */
+  error?: string
 }
 
 const CTASection = ({
   proposalId,
   proposalSlug,
-  proposalTitle,
-  ctaEmail,
   studioName,
-  brandColor1,
-  brandColor2,
   currency = "USD",
+  hasInvestment,
   confirmedSelection,
   isPreview = false,
 }: CTASectionProps) => {
@@ -36,18 +41,40 @@ const CTASection = ({
   const [message, setMessage] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [emailFailed, setEmailFailed] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // A proposal with packages needs a confirmed choice before it can be sent.
+  const needsSelection = hasInvestment && !confirmedSelection
 
   const openModal = () => {
     if (isPreview) return
     setShowModal(true)
   }
 
+  const goToInvestment = () => {
+    setShowModal(false)
+    document.getElementById("investment")?.scrollIntoView({ behavior: "smooth" })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !email.trim()) return
+    if (!name.trim() || !email.trim() || needsSelection) return
     setSubmitting(true)
     setError(null)
+
+    // Ids and the client's own details only. Every price, label, email and brand
+    // value is derived server-side from the proposal row. A proposal with
+    // packages cannot reach this line unconfirmed, so what goes out is either a
+    // confirmed choice or no choice at all. Never a half made one.
+    const selection: SelectionChoice | null = confirmedSelection
+      ? {
+          packageId: confirmedSelection.packageId,
+          addOnIds: confirmedSelection.addOns.map((a) => a.id),
+          retainerHours: confirmedSelection.retainerHours,
+          postLaunchSelected: confirmedSelection.postLaunchSelected,
+        }
+      : null
 
     try {
       const res = await fetch(
@@ -58,28 +85,31 @@ const CTASection = ({
           body: JSON.stringify({
             proposalId,
             proposalSlug,
-            proposalTitle,
-            studioName,
-            brandColor1,
-            brandColor2,
-            ctaEmail,
             clientName: name.trim(),
             clientEmail: email.trim(),
-            currency,
-            packageId: confirmedSelection?.packageId,
-            packageLabel: confirmedSelection?.packageLabel,
-            packagePrice: confirmedSelection?.packagePrice,
-            addOns: confirmedSelection?.addOns,
-            retainerHours: confirmedSelection?.retainerHours,
-            retainerRate: confirmedSelection?.retainerRate,
-            grandTotal: confirmedSelection?.grandTotal,
             message: message.trim() || undefined,
+            confirmed: confirmedSelection !== null,
+            selection,
           }),
         }
       )
 
-      if (!res.ok) throw new Error("Request failed")
+      const result: SubmitResponse | null = await res.json().catch(() => null)
 
+      if (!res.ok || !result?.success) {
+        // The function writes copy for this screen on every outcome the client
+        // can act on: a rate limit says to wait, a proposal that is gone says
+        // to stop. Answering either with "try again" sends them back to the one
+        // thing that cannot work. A 5xx is ours to explain, not theirs.
+        const serverMessage = res.status < 500 ? result?.error : null
+        setError(serverMessage || "Something went wrong. Please try again.")
+        setSubmitting(false)
+        return
+      }
+
+      // The row can save while an email fails. Say so rather than showing a
+      // clean confirmation the client cannot rely on.
+      setEmailFailed(result.teamEmailSent === false || result.clientEmailSent === false)
       setSubmitting(false)
       setSubmitted(true)
     } catch {
@@ -102,7 +132,7 @@ const CTASection = ({
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-1 text-xs font-semibold text-white">
                   1
                 </span>
-                Confirm package selection and any add-ons
+                Choose your package and any add-ons, then confirm your selection
               </li>
               <li className="flex items-start gap-3 text-base text-foreground">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-2 text-xs font-semibold text-white">
@@ -169,11 +199,20 @@ const CTASection = ({
                   <ArrowRight className="h-5 w-5 text-white" />
                 </div>
                 <h3 className="font-display text-2xl font-semibold text-foreground">
-                  We'll be in touch.
+                  {emailFailed ? "Saved." : "We'll be in touch."}
                 </h3>
                 <p className="mt-3 text-sm text-muted-foreground">
-                  Thanks {name.split(" ")[0]}. We've received your submission and will
-                  follow up shortly with next steps.
+                  {emailFailed ? (
+                    <>
+                      Thanks {name.split(" ")[0]}. We could not email your copy, but we
+                      have your submission and will follow up shortly.
+                    </>
+                  ) : (
+                    <>
+                      Thanks {name.split(" ")[0]}. We've received your submission and will
+                      follow up shortly with next steps.
+                    </>
+                  )}
                 </p>
               </div>
             ) : (
@@ -207,6 +246,21 @@ const CTASection = ({
                         {formatPrice(confirmedSelection.retainerHours * confirmedSelection.retainerRate)}/mo)
                       </p>
                     )}
+                  </div>
+                ) : needsSelection ? (
+                  /* Blocking state. A proposal with packages needs a choice first. */
+                  <div className="rounded-lg border border-border bg-card p-4 text-sm space-y-3">
+                    <p className="text-muted-foreground">
+                      Pick a package before you send this. Confirm the one you want and it
+                      will appear here.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={goToInvestment}
+                      className="w-full rounded-full border border-foreground px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-foreground hover:text-background"
+                    >
+                      Choose your package
+                    </button>
                   </div>
                 ) : (
                   <div className="rounded-lg border border-dashed border-border bg-card p-4 text-sm text-muted-foreground">
@@ -267,7 +321,7 @@ const CTASection = ({
 
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || needsSelection}
                   className="w-full rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-colors hover:bg-foreground/80 disabled:opacity-50"
                 >
                   {submitting ? "Submitting…" : "Submit"}

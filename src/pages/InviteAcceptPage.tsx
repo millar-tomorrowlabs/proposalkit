@@ -47,12 +47,15 @@ export default function InviteAcceptPage() {
         return
       }
 
-      const { data, error: fetchError } = await supabase
-        .from("account_invites")
-        .select("*, accounts(studio_name)")
-        .eq("token", token)
-        .is("accepted_at", null)
-        .maybeSingle()
+      // Looked up through a security-definer RPC rather than a direct table read:
+      // the invites table is no longer readable by anon, so knowing the token is
+      // what proves the caller is the intended recipient (INT-33).
+      const { data: rows, error: fetchError } = await supabase.rpc(
+        "get_invite_by_token",
+        { p_token: token }
+      )
+
+      const data = rows?.[0]
 
       if (fetchError || !data) {
         setError("This invite link is invalid or has already been used.")
@@ -61,13 +64,12 @@ export default function InviteAcceptPage() {
       }
 
       const expired = new Date(data.expires_at) < new Date()
-      const accountRow = data.accounts as { studio_name: string } | null
 
       setInvite({
         id: data.id,
         email: data.email,
         role: data.role,
-        accountName: accountRow?.studio_name || "Unknown",
+        accountName: data.studio_name || "Unknown",
         accountId: data.account_id,
         expired,
       })
